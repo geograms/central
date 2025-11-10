@@ -351,15 +351,27 @@ Each relay that handles a message appends a stamp command to track the relay pat
 - relay-npub: npub1relay123...
 - relay-callsign: RELAY-K5ABC
 - timestamp: 2025-11-09T22:15:30Z
+- received-via: bluetooth
 - latitude: 40.7128
 - longitude: -74.0060
 - hop-number: 3
 - signature: abc123def456...
 ```
 
+**Received-Via Values**:
+- `bluetooth` - BLE mesh networking
+- `internet` - HTTP/HTTPS connection
+- `lora` - LoRa radio
+- `rf` - Amateur radio (APRS/FM)
+- `wifi-direct` - WiFi Direct connection
+- `nfc` - Near Field Communication
+- `serial` - Serial/USB connection
+- `mesh` - Mesh network protocol
+- `other` - Other communication method
+
 **Signature Computation**:
 ```python
-stamp_data = f"{message_id}\n{relay_npub}\n{timestamp}\n{latitude}\n{longitude}\n{hop_number}"
+stamp_data = f"{message_id}\n{relay_npub}\n{timestamp}\n{received_via}\n{latitude}\n{longitude}\n{hop_number}"
 stamp_hash = hashlib.sha256(stamp_data.encode('utf-8')).digest()
 signature = schnorr_sign(relay_nsec, stamp_hash)
 ```
@@ -427,6 +439,7 @@ U2FsdGVkX1+Jj5K9vN2Pk8Qw3Rt7Yx6Zv4Bu1Cm0Dn9...
 - relay-npub: npub1relayA111222333444555...
 - relay-callsign: RELAY-K5ABC
 - timestamp: 2025-11-09T22:05:00Z
+- received-via: bluetooth
 - latitude: 40.7128
 - longitude: -74.0060
 - hop-number: 1
@@ -460,6 +473,7 @@ U2FsdGVkX1+Jj5K9vN2Pk8Qw3Rt7Yx6Zv4Bu1Cm0Dn9...
 - relay-npub: npub1relayA111222333444555...
 - relay-callsign: RELAY-K5ABC
 - timestamp: 2025-11-09T22:05:00Z
+- received-via: bluetooth
 - latitude: 40.7128
 - longitude: -74.0060
 - hop-number: 1
@@ -469,6 +483,7 @@ U2FsdGVkX1+Jj5K9vN2Pk8Qw3Rt7Yx6Zv4Bu1Cm0Dn9...
 - relay-npub: npub1relayB666777888999000...
 - relay-callsign: RELAY-K7XYZ
 - timestamp: 2025-11-09T22:10:15Z
+- received-via: bluetooth
 - latitude: 40.7580
 - longitude: -73.9855
 - hop-number: 2
@@ -502,6 +517,7 @@ U2FsdGVkX1+Jj5K9vN2Pk8Qw3Rt7Yx6Zv4Bu1Cm0Dn9...
 - relay-npub: npub1relayA111222333444555...
 - relay-callsign: RELAY-K5ABC
 - timestamp: 2025-11-09T22:05:00Z
+- received-via: bluetooth
 - latitude: 40.7128
 - longitude: -74.0060
 - hop-number: 1
@@ -511,6 +527,7 @@ U2FsdGVkX1+Jj5K9vN2Pk8Qw3Rt7Yx6Zv4Bu1Cm0Dn9...
 - relay-npub: npub1relayB666777888999000...
 - relay-callsign: RELAY-K7XYZ
 - timestamp: 2025-11-09T22:10:15Z
+- received-via: bluetooth
 - latitude: 40.7580
 - longitude: -73.9855
 - hop-number: 2
@@ -520,6 +537,7 @@ U2FsdGVkX1+Jj5K9vN2Pk8Qw3Rt7Yx6Zv4Bu1Cm0Dn9...
 - relay-npub: npub1relayC333444555666777...
 - relay-callsign: RELAY-N0QST
 - timestamp: 2025-11-09T22:25:45Z
+- received-via: bluetooth
 - latitude: 40.7489
 - longitude: -73.9680
 - hop-number: 3
@@ -563,6 +581,7 @@ U2FsdGVkX1+Jj5K9vN2Pk8Qw3Rt7Yx6Zv4Bu1Cm0Dn9...
 - relay-npub: npub1relayA111222333444555...
 - relay-callsign: RELAY-K5ABC
 - timestamp: 2025-11-09T22:05:00Z
+- received-via: bluetooth
 - latitude: 40.7128
 - longitude: -74.0060
 - hop-number: 1
@@ -572,6 +591,7 @@ U2FsdGVkX1+Jj5K9vN2Pk8Qw3Rt7Yx6Zv4Bu1Cm0Dn9...
 - relay-npub: npub1relayB666777888999000...
 - relay-callsign: RELAY-K7XYZ
 - timestamp: 2025-11-09T22:10:15Z
+- received-via: bluetooth
 - latitude: 40.7580
 - longitude: -73.9855
 - hop-number: 2
@@ -581,6 +601,7 @@ U2FsdGVkX1+Jj5K9vN2Pk8Qw3Rt7Yx6Zv4Bu1Cm0Dn9...
 - relay-npub: npub1relayC333444555666777...
 - relay-callsign: RELAY-N0QST
 - timestamp: 2025-11-09T22:25:45Z
+- received-via: bluetooth
 - latitude: 40.7489
 - longitude: -73.9680
 - hop-number: 3
@@ -637,6 +658,7 @@ forward-path: RELAY-K5ABC → RELAY-K7XYZ → RELAY-N0QST → BOB-N7ABC
 - relay-npub: npub1relayD888999000111222...
 - relay-callsign: RELAY-W5LMN
 - timestamp: 2025-11-09T22:35:00Z
+- received-via: bluetooth
 - latitude: 40.7450
 - longitude: -73.9750
 - hop-number: 1
@@ -647,6 +669,7 @@ forward-path: RELAY-K5ABC → RELAY-K7XYZ → RELAY-N0QST → BOB-N7ABC
 - relay-npub: npub1relayE222333444555666...
 - relay-callsign: RELAY-K4TUV
 - timestamp: 2025-11-09T22:42:30Z
+- received-via: bluetooth
 - latitude: 40.7300
 - longitude: -74.0100
 - hop-number: 2
@@ -657,6 +680,7 @@ forward-path: RELAY-K5ABC → RELAY-K7XYZ → RELAY-N0QST → BOB-N7ABC
 - relay-npub: npub1relayF555666777888999...
 - relay-callsign: RELAY-N9WXY
 - timestamp: 2025-11-09T22:50:15Z
+- received-via: bluetooth
 - latitude: 40.7150
 - longitude: -74.0200
 - hop-number: 3
@@ -745,6 +769,7 @@ def verify_deletion_request(message, delete_cmd):
 - relay-npub: npub1relayC...
 - relay-callsign: RELAY-K9ZZZ
 - timestamp: 2025-11-09T23:05:00Z
+- received-via: bluetooth
 - latitude: 40.7500
 - longitude: -73.9900
 - hop-number: 1
@@ -765,6 +790,7 @@ def verify_deletion_request(message, delete_cmd):
 - relay-npub: npub1relayA...
 - relay-callsign: RELAY-K5ABC
 - timestamp: 2025-11-09T23:20:00Z
+- received-via: bluetooth
 - latitude: 40.7128
 - longitude: -74.0060
 - hop-number: 1
