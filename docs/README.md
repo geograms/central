@@ -64,6 +64,13 @@ Geogram consists of several interconnected components:
 3. **Application Layer**: Messaging, location sharing, relay routing
 4. **Storage Layer**: SQLite (Android), IndexedDB (Web), File-based (Server)
 
+### Architecture Documentation
+
+- **[ZIP Archive Format](architecture/zip-archive-format.md)** - Portable data bundling pattern
+  - User profile storage
+  - Message group archives
+  - Implementation details and best practices
+
 ---
 
 ## 📡 Protocols & Specifications
@@ -181,6 +188,7 @@ BLE protocol includes packet loss recovery:
 | Message Integrity | 1.1 | 2025-11-09 | Design |
 | BLE Protocol | 1.0 | 2025-11-09 | Design |
 | Android NACK | 1.0 | 2025-11-09 | Complete |
+| ZIP Archive Format | 1.0 | 2025-11-10 | Implemented |
 
 ---
 
@@ -213,6 +221,7 @@ Documentation improvements are welcome! To contribute:
 - **Build Android app**: [Claude Code Guide](development/claude-code-guide.md#geogram-android-android-app)
 - **Set up relay**: [Relay Functionality](relay/relay-functionality.md)
 - **Message format**: [Relay Protocol](relay/relay-protocol.md#message-format)
+- **ZIP archive structure**: [ZIP Archive Format](architecture/zip-archive-format.md)
 
 ### External Resources
 
