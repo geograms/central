@@ -4,6 +4,97 @@
 
 This document specifies the operational protocol for Geogram relay nodes, including message types, storage management, relay synchronization, geographic routing, and payment mechanisms.
 
+## Message Format
+
+Relay messages use the **Chat Message Format** for consistency with the Java server implementation. Messages are stored as markdown files using this structured syntax:
+
+### Basic Structure
+
+```markdown
+# Message Group Title
+
+> YYYY-MM-DD HH:MM_SS -- SENDER-CALLSIGN
+Message content here.
+Can span multiple lines with markdown formatting.
+
+--> to: RECIPIENT-CALLSIGN
+--> id: d4f2a8b1c3e5f7a9b2d4e6f8a0c2e4f6a8b0c2e4f6a8b0c2e4f6a8b0c2e4f6a8
+--> type: private
+--> priority: normal
+--> ttl: 604800
+--> signature: a7f3b9e1d2c4f6a8b0e2d4f6a8c0b2e4f6a8b0c2e4f6a8b0c2e4f6a8b0c2e4
+```
+
+### Format Elements
+
+**Message Header**:
+- `> YYYY-MM-DD HH:MM_SS -- SENDER-CALLSIGN`
+- Timestamp format: `YYYY-MM-DD` (date), `HH:MM_SS` (time with underscore)
+- Sender identified by callsign
+
+**Message Content**:
+- Follows the header (can be multi-line)
+- Supports full markdown formatting
+- Blank lines preserved
+
+**Metadata Fields** (prefix `-->`):
+- `to` - Recipient callsign or "ANY" for broadcast
+- `id` - Unique message ID (64-char hex SHA-256)
+- `type` - Message type (private, broadcast, news, group, emergency, commercial)
+- `priority` - Priority level (urgent, normal, low)
+- `ttl` - Time-to-live in seconds
+- `relay-path` - List of relay nodes that forwarded this message
+- `location` - Geographic coordinates
+- `signature` - Cryptographic signature (64-char hex)
+- Additional custom fields as needed
+
+**Example with Reactions**:
+```markdown
+> 2025-11-09 22:05_30 -- BOB-W6ABC
+Thanks for the update!
+
+--> to: ALICE-K5XYZ
+--> id: f3d8a2b1c4e5...
+--> type: private
+--> icon_like: CHARLIE, DAVE
+--> signature: b4e7c9...
+```
+
+**Example with Attachments**:
+```markdown
+> 2025-11-09 22:10_15 -- ALICE-K5XYZ
+Here are the photos from today's hike.
+
+--> to: BOB-W6ABC
+--> id: a8b7c6d5e4f3...
+--> type: private
+--> attachment-count: 2
+--> attachment-total-size: 524288
+--> signature: c9d8e7f6...
+
+## ATTACHMENT: 1
+- mime-type: image/jpeg
+- filename: sunset.jpg
+- size: 245678
+- encoding: base64
+- checksum: sha256:a1b2c3d4e5f6...
+
+# ATTACHMENT_DATA_START
+/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICAgIC...
+# ATTACHMENT_DATA_END
+
+## ATTACHMENT: 2
+- mime-type: image/jpeg
+- filename: landscape.jpg
+- size: 278610
+- encoding: base64
+- checksum: sha256:b7c8d9e0f1g2...
+
+# ATTACHMENT_DATA_START
+/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICAgIC...
+# ATTACHMENT_DATA_END
+```
+
 ## Message ID Generation (NOSTR-Style)
 
 ### Unique Message Identifier
@@ -166,22 +257,18 @@ Each attachment in a relay message includes:
 ### Attachment Example
 
 ```markdown
----
-version: 1.0
-id: 7f3b8c9d2e1a5f6c8b4d3e9a7c5b1f2d4e8a6c3b9f7d5e2a8c6b4f1d3e9a7c5b
-type: private
-from-npub: npub1alice...
-to-npub: npub1bob...
-attachment-count: 2
-attachment-total-size: 768000
-encrypted: true
-signature: abc123...
----
+> 2025-11-09 21:45_30 -- ALICE-K5XYZ
+Bob, here are the photos from today's event.
 
-# ENCRYPTED_CONTENT_START
-U2FsdGVkX1+Jj5K9vN2Pk8Qw3Rt7Yx6Zv4Bu1Cm0Dn9...
-(Encrypted message text: "Bob, here are the photos from today")
-# ENCRYPTED_CONTENT_END
+--> to: BOB-W6ABC
+--> id: 7f3b8c9d2e1a5f6c8b4d3e9a7c5b1f2d4e8a6c3b9f7d5e2a8c6b4f1d3e9a7c5b
+--> type: private
+--> from-npub: npub1alice...
+--> to-npub: npub1bob...
+--> attachment-count: 2
+--> attachment-total-size: 768000
+--> encrypted: true
+--> signature: abc123...
 
 ## ATTACHMENT: 0
 - mime-type: image/jpeg
@@ -642,24 +729,21 @@ def handle_incoming_message(message, relay_source):
 Only the relay that successfully delivered the message first can provide the authentic delivery receipt:
 
 ```markdown
----
-version: 1.0
-id: receipt_7f3b8c9d...
-type: relay-receipt
-from-npub: npub1bob...
-to-npub: npub1alice...
-original-message-id: 7f3b8c9d2e1a5f6c8b4d3e9a7c5b1f2d4e8a6c3b9f7d5e2a8c6b4f1d3e9a7c5b
-timestamp: 2025-11-09T22:25:47Z
-signature: bob_delivery_receipt_sig...
----
+> 2025-11-09 22:25_47 -- BOB-W6ABC
+Receipt: Message delivered successfully.
 
-# RECEIPT_CONTENT_START
-delivery-timestamp: 2025-11-09T22:25:47Z
-delivered-by: npub1relayC...
-delivered-by-callsign: RELAY-N0QST
-forward-path: [npub1relayA..., npub1relayB..., npub1relayC...]
-hop-count: 3
-# RECEIPT_CONTENT_END
+--> to: ALICE-K5XYZ
+--> id: receipt_7f3b8c9d...
+--> type: relay-receipt
+--> from-npub: npub1bob...
+--> to-npub: npub1alice...
+--> original-message-id: 7f3b8c9d2e1a5f6c8b4d3e9a7c5b1f2d4e8a6c3b9f7d5e2a8c6b4f1d3e9a7c5b
+--> delivery-timestamp: 2025-11-09T22:25:47Z
+--> delivered-by: npub1relayC...
+--> delivered-by-callsign: RELAY-N0QST
+--> forward-path: [npub1relayA..., npub1relayB..., npub1relayC...]
+--> hop-count: 3
+--> signature: bob_delivery_receipt_sig...
 ```
 
 **Key Properties**:
@@ -1531,10 +1615,12 @@ ZZZZ-ZZZZ = North Pole, Antimeridian
 Each relay message includes destination grid:
 
 ```markdown
----
-destination-grid: 5M0K9P3R
-destination-grid-radius: 5
----
+> 2025-11-09 22:00_00 -- ALICE-K5XYZ
+Message content here.
+
+--> to: BOB-W6ABC
+--> destination-grid: 5M0K9P3R
+--> destination-grid-radius: 5
 ```
 
 Fields:
@@ -1730,13 +1816,15 @@ LIMIT 100;
 Messages can optionally offer payment for successful delivery:
 
 ```markdown
----
-paid-delivery: true
-payment-amount: 1000
-payment-currency: sats
-payment-recipient: delivery-relay
-payment-conditions: delivery-receipt
----
+> 2025-11-09 22:00_00 -- ALICE-K5XYZ
+Urgent message - paid delivery.
+
+--> to: BOB-W6ABC
+--> paid-delivery: true
+--> payment-amount: 1000
+--> payment-currency: sats
+--> payment-recipient: delivery-relay
+--> payment-conditions: delivery-receipt
 ```
 
 **Fields**:
@@ -1759,32 +1847,36 @@ payment-conditions: delivery-receipt
 
 **Step 1**: Sender creates paid message:
 ```markdown
----
-id: 7f3b8c9d2e1a5f6c...
-from-npub: npub1alice...
-to-npub: npub1bob...
-paid-delivery: true
-payment-amount: 5000
-payment-currency: sats
-payment-recipient: delivery-relay
-payment-conditions: delivery-receipt
-signature: alice_msg_sig...
----
+> 2025-11-09 22:00_00 -- ALICE-K5XYZ
+Important contract document - paid delivery.
+
+--> to: BOB-W6ABC
+--> id: 7f3b8c9d2e1a5f6c...
+--> from-npub: npub1alice...
+--> to-npub: npub1bob...
+--> paid-delivery: true
+--> payment-amount: 5000
+--> payment-currency: sats
+--> payment-recipient: delivery-relay
+--> payment-conditions: delivery-receipt
+--> signature: alice_msg_sig...
 ```
 
 **Step 2**: Relay C delivers message to Bob
 
 **Step 3**: Bob generates delivery receipt (signed):
 ```markdown
----
-id: receipt_7f3b8c9d...
-type: relay-receipt
-from-npub: npub1bob...
-original-message-id: 7f3b8c9d2e1a5f6c...
-delivered-by: npub1relayC...
-forward-path: [npub1relayA..., npub1relayB..., npub1relayC...]
-signature: bob_receipt_sig...
----
+> 2025-11-09 22:30_15 -- BOB-W6ABC
+Receipt: Message delivered.
+
+--> to: ALICE-K5XYZ
+--> id: receipt_7f3b8c9d...
+--> type: relay-receipt
+--> from-npub: npub1bob...
+--> original-message-id: 7f3b8c9d2e1a5f6c...
+--> delivered-by: npub1relayC...
+--> forward-path: [npub1relayA..., npub1relayB..., npub1relayC...]
+--> signature: bob_receipt_sig...
 ```
 
 **Step 4**: Relay C returns receipt to Alice
@@ -1823,25 +1915,24 @@ def verify_payment_claim(original_message, delivery_receipt):
 **Step 7**: Relay C generates payment receipt:
 
 ```markdown
----
-id: payment_receipt_7f3b8c9d...
-type: payment-receipt
-from-npub: npub1relayC...
-to-npub: npub1alice...
-original-message-id: 7f3b8c9d2e1a5f6c...
-payment-received: true
-payment-amount: 5000
-payment-currency: sats
-payment-timestamp: 2025-11-09T23:15:30Z
-payment-proof: lntx_abc123def456...
-signature: relayC_payment_receipt_sig...
----
+> 2025-11-09 23:15_30 -- RELAY-C
+Payment receipt for message delivery service.
 
-# PAYMENT_RECEIPT_CONTENT_START
-payment-method: lightning
-transaction-id: lntx_abc123def456...
-delivery-receipt-id: receipt_7f3b8c9d...
-# PAYMENT_RECEIPT_CONTENT_END
+--> to: ALICE-K5XYZ
+--> id: payment_receipt_7f3b8c9d...
+--> type: payment-receipt
+--> from-npub: npub1relayC...
+--> to-npub: npub1alice...
+--> original-message-id: 7f3b8c9d2e1a5f6c...
+--> payment-received: true
+--> payment-amount: 5000
+--> payment-currency: sats
+--> payment-timestamp: 2025-11-09T23:15:30Z
+--> payment-proof: lntx_abc123def456...
+--> payment-method: lightning
+--> transaction-id: lntx_abc123def456...
+--> delivery-receipt-id: receipt_7f3b8c9d...
+--> signature: relayC_payment_receipt_sig...
 ```
 
 This payment receipt serves as **proof of payment** for the message delivery service and completes the paid relay transaction cycle.

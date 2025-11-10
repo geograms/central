@@ -488,35 +488,58 @@ MSG_<message-id-hash>.zip/
 **Created**: 2025-11-09 22:00:01
 **Participants**: ALICE, BOB, CHARLIE
 
----
-
-## 2025-11-09
-
-### 22:00:01 - ALICE
+> 2025-11-09 22:00_01 -- ALICE-K5XYZ
 Hey everyone! Who's up for hiking this weekend?
 
-**Attachments**: photo_001.jpg
+--> to: GROUP-WEEKEND
+--> type: group
+--> attachment-count: 1
+--> id: d4f2a8b1c3e5...
+--> signature: a7f3b9...
 
-### 22:03:15 - BOB
+> 2025-11-09 22:03_15 -- BOB-W6ABC
 I'm in! Saturday works for me.
 
-**Reactions**: 👍 CHARLIE
+--> to: GROUP-WEEKEND
+--> type: group
+--> icon_like: CHARLIE
+--> id: e5f6a8b0c2d4...
+--> signature: b8c0d2...
 
-### 22:05:42 - CHARLIE
+> 2025-11-09 22:05_42 -- CHARLIE-N0QST
 Saturday is perfect. What trail?
 
-### 22:07:20 - ALICE
+--> to: GROUP-WEEKEND
+--> type: group
+--> id: f7a9b2d4e6f8...
+--> signature: c9d1e3...
+
+> 2025-11-09 22:07_20 -- ALICE-K5XYZ
 How about Mount Wilson? Weather looks good.
 
-**Attachments**: document.pdf (trail map)
+--> to: GROUP-WEEKEND
+--> type: group
+--> attachment-count: 1
+--> id: a0c2e4f6a8b0...
+--> signature: d0e2f4...
+
+## ATTACHMENT: 1
+- mime-type: application/pdf
+- filename: trail-map.pdf
+- size: 125440
+- checksum: sha256:c9d8e7f6...
+
+# ATTACHMENT_DATA_START
+JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwov...
+# ATTACHMENT_DATA_END
 
 ---
 
 ## Delivery Status
 
-- **ALICE**: Sent 22:00:01
-- **BOB**: Delivered 22:01:30, Read 22:03:10
-- **CHARLIE**: Delivered 22:02:15, Read 22:05:35
+- **ALICE**: Local (sender)
+- **BOB**: Delivered 22:01:30 (RELAY-B), Read 22:03:10
+- **CHARLIE**: Delivered 22:02:15 (RELAY-C), Read 22:05:35
 
 ## Relay Path
 

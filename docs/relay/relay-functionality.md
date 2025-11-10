@@ -197,29 +197,32 @@ Users can configure which messages to auto-accept:
 
 ### Message Format
 
+Relay messages use the same format as chat messages for consistency:
+
 ```markdown
----
-id: unique-message-id
-from: sender-callsign
-to: recipient-callsign
-timestamp: 2025-11-09T21:00:00Z
-ttl: 604800  # 7 days in seconds
-priority: normal
-relay-path: [relay-a, relay-b, relay-c]
-receipts-requested: true
-location: 40.7128,-74.0060
----
+# Relay Message Group
 
-# Message Title
-
+> 2025-11-09 21:00_00 -- ALICE-K5XYZ
 Message content in markdown format.
+Can span multiple lines.
 
-## Data Fields
-
-- delivery-zone: 40.71,-74.00,5km
-- expiry-action: delete
-- attachments: [image-hash-1, file-hash-2]
+--> to: BOB-W6ABC
+--> id: d4f2a8b1c3e5f7a9b2d4e6f8a0c2e4f6a8b0c2e4f6a8b0c2e4f6a8b0c2e4f6a8
+--> type: private
+--> ttl: 604800
+--> priority: normal
+--> relay-path: [relay-a, relay-b, relay-c]
+--> receipts-requested: true
+--> location: 40.7128,-74.0060
+--> delivery-zone: 40.71,-74.00,5km
+--> signature: a7f3b9e1d2c4f6a8b0e2d4f6a8c0b2e4f6a8b0c2e4f6a8b0c2e4f6a8b0c2e4
 ```
+
+**Format Elements**:
+- `> YYYY-MM-DD HH:MM_SS -- AUTHOR` - Message header with timestamp and author
+- Message content follows (can be multi-line markdown)
+- `-->` prefix - Metadata fields
+- Blank line separates messages in a group
 
 ### Storage Structure
 
