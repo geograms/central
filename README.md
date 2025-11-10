@@ -36,6 +36,10 @@ Geogram enables communication through multiple complementary channels:
 - **[Documentation Index](docs/README.md)** - Complete documentation overview
 - **[Development Guide](docs/development/claude-code-guide.md)** - Setup and build instructions for all platforms
 
+### Privacy & Security
+
+- **[Permissions Explained](docs/privacy/permissions-explained.md)** - Comprehensive transparency about Android app permissions, exactly how they're used, and links to source code for verification
+
 ### Architecture & Protocols
 
 #### Relay System

@@ -150,6 +150,18 @@ BLE protocol includes packet loss recovery:
 
 ---
 
+## 🔒 Privacy & Security
+
+### Privacy Documentation
+
+- **[Permissions Explained](privacy/permissions-explained.md)** - Comprehensive explanation of Android app permissions
+  - Why each permission is needed
+  - Exactly how it's used in the code
+  - Links to specific source files for verification
+  - Privacy guarantees and transparency
+
+---
+
 ## 💻 Development
 
 ### Development Tools
