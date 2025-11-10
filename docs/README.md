@@ -162,6 +162,33 @@ BLE protocol includes packet loss recovery:
 
 ---
 
+## 🌉 Protocol Bridges
+
+### Interoperability with Other Networks
+
+Geogram bridges connect to external communication protocols and mesh networks:
+
+- **[Bridges Overview](bridges/README.md)** - Architecture and design patterns for protocol bridges
+  - Bridge types (client, server, hardware)
+  - Message translation principles
+  - Identity mapping strategies
+  - Security considerations
+
+- **[Meshtastic Bridge](bridges/meshtastic-bridge.md)** - Connect to LoRa mesh networks via MQTT (Design)
+  - Architecture and deployment models
+  - Message translation (Meshtastic ↔ Geogram)
+  - Identity mapping (Node ID ↔ Callsign)
+  - Implementation details (Android + Server)
+  - Configuration and testing
+
+**Future Bridges:**
+- APRS-IS (Amateur radio)
+- LoRaWAN (IoT networks)
+- Briar (P2P messaging)
+- XMPP/Matrix (Federated chat)
+
+---
+
 ## 💻 Development
 
 ### Development Tools

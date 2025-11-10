@@ -40,6 +40,11 @@ Geogram enables communication through multiple complementary channels:
 
 - **[Permissions Explained](docs/privacy/permissions-explained.md)** - Comprehensive transparency about Android app permissions, exactly how they're used, and links to source code for verification
 
+### Protocol Bridges
+
+- **[Bridges Overview](docs/bridges/README.md)** - Interoperability with other communication networks
+- **[Meshtastic Bridge](docs/bridges/meshtastic-bridge.md)** - Connect Geogram to LoRa mesh networks via MQTT
+
 ### Architecture & Protocols
 
 #### Relay System
