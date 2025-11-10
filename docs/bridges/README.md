@@ -94,6 +94,27 @@ External Protocol Network
 | LoRaWAN | Planned | Hardware | - |
 | Briar | Planned | Client | - |
 
+## Cross-Bridge Features
+
+### Global Geo Chat Integration
+
+**[Geo Chat Integration Documentation](geochat-integration.md)**
+
+The Global Geo Chat unifies messages from all bridges into a single geographic view, allowing users to see all nearby mesh activity regardless of protocol.
+
+**Key Features:**
+- Unified message stream from BLE, LoRa, NOSTR, and relay sources
+- Geographic filtering by radius (1-50km)
+- Source indicators and distance calculations
+- Real-time updates with LiveData
+- Privacy controls and location obfuscation
+
+**Use Cases:**
+- Complete situational awareness in emergencies
+- Event coordination (festivals, hiking groups)
+- Community mesh networking
+- Cross-protocol communication
+
 ---
 
 ## Security Considerations

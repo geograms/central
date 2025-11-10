@@ -181,6 +181,13 @@ Geogram bridges connect to external communication protocols and mesh networks:
   - Implementation details (Android + Server)
   - Configuration and testing
 
+- **[Global Geo Chat Integration](bridges/geochat-integration.md)** - Unified geographic message view (Design)
+  - Aggregates messages from all protocols (BLE, LoRa, NOSTR, relay)
+  - Geographic filtering (1-50km radius)
+  - Real-time updates and distance calculations
+  - Privacy controls and location obfuscation
+  - Complete situational awareness
+
 **Future Bridges:**
 - APRS-IS (Amateur radio)
 - LoRaWAN (IoT networks)
