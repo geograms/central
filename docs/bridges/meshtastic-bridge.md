@@ -527,6 +527,232 @@ public class MeshtasticBridgeService {
 
 ## Configuration
 
+### Automatic Region Detection
+
+Geogram automatically detects which Meshtastic region to use based on the user's GPS location, eliminating the need for manual region selection.
+
+#### Region Boundaries
+
+Meshtastic regions are defined by geographic boundaries:
+
+| Region | Name | Latitude Range | Longitude Range |
+|--------|------|----------------|-----------------|
+| **US** | United States | 24.4° to 49.4° N | -125.0° to -66.9° W |
+| **EU** | Europe | 36.0° to 71.0° N | -10.0° to 40.0° E |
+| **ANZ** | Australia/NZ | -47.0° to -10.0° S | 113.0° to 179.0° E |
+| **CN** | China | 18.0° to 54.0° N | 73.0° to 135.0° E |
+| **JP** | Japan | 24.0° to 46.0° N | 123.0° to 146.0° E |
+| **IN** | India | 8.0° to 35.0° N | 68.0° to 97.0° E |
+| **TW** | Taiwan | 21.9° to 25.3° N | 120.0° to 122.0° E |
+| **KR** | South Korea | 33.0° to 39.0° N | 124.0° to 132.0° E |
+| **TH** | Thailand | 5.6° to 20.5° N | 97.3° to 105.6° E |
+| **NZ** | New Zealand | -47.3° to -34.4° S | 166.4° to 178.6° E |
+| **MY** | Malaysia | 0.9° to 7.4° N | 99.6° to 119.3° E |
+
+**Note**: Meshtastic regions follow radio frequency regulations (LoRa ISM bands), so boundaries align with regulatory zones.
+
+#### Implementation: MeshtasticRegionDetector.java
+
+```java
+package offgrid.geogram.bridges;
+
+import android.location.Location;
+import java.util.ArrayList;
+import java.util.List;
+
+public class MeshtasticRegionDetector {
+
+    private static class RegionBounds {
+        final String code;
+        final String name;
+        final double minLat;
+        final double maxLat;
+        final double minLon;
+        final double maxLon;
+
+        RegionBounds(String code, String name, double minLat, double maxLat,
+                     double minLon, double maxLon) {
+            this.code = code;
+            this.name = name;
+            this.minLat = minLat;
+            this.maxLat = maxLat;
+            this.minLon = minLon;
+            this.maxLon = maxLon;
+        }
+
+        boolean contains(double lat, double lon) {
+            return lat >= minLat && lat <= maxLat &&
+                   lon >= minLon && lon <= maxLon;
+        }
+    }
+
+    private static final RegionBounds[] REGIONS = {
+        // North America
+        new RegionBounds("US", "United States", 24.4, 49.4, -125.0, -66.9),
+
+        // Europe
+        new RegionBounds("EU", "Europe", 36.0, 71.0, -10.0, 40.0),
+
+        // Australia & New Zealand (combined region)
+        new RegionBounds("ANZ", "Australia/NZ", -47.0, -10.0, 113.0, 179.0),
+
+        // Asia
+        new RegionBounds("CN", "China", 18.0, 54.0, 73.0, 135.0),
+        new RegionBounds("JP", "Japan", 24.0, 46.0, 123.0, 146.0),
+        new RegionBounds("IN", "India", 8.0, 35.0, 68.0, 97.0),
+        new RegionBounds("TW", "Taiwan", 21.9, 25.3, 120.0, 122.0),
+        new RegionBounds("KR", "South Korea", 33.0, 39.0, 124.0, 132.0),
+        new RegionBounds("TH", "Thailand", 5.6, 20.5, 97.3, 105.6),
+        new RegionBounds("MY", "Malaysia", 0.9, 7.4, 99.6, 119.3),
+
+        // Note: New Zealand is covered by ANZ region above
+    };
+
+    /**
+     * Detect Meshtastic region based on GPS coordinates.
+     *
+     * @param location User's current location
+     * @return Region code (e.g., "US", "EU") or null if no match
+     */
+    public static String detectRegion(Location location) {
+        if (location == null) {
+            return null;
+        }
+        return detectRegion(location.getLatitude(), location.getLongitude());
+    }
+
+    /**
+     * Detect Meshtastic region based on latitude/longitude.
+     *
+     * @param latitude Latitude in degrees
+     * @param longitude Longitude in degrees
+     * @return Region code (e.g., "US", "EU") or null if no match
+     */
+    public static String detectRegion(double latitude, double longitude) {
+        for (RegionBounds region : REGIONS) {
+            if (region.contains(latitude, longitude)) {
+                return region.code;
+            }
+        }
+        return null; // No matching region (e.g., ocean, Antarctica)
+    }
+
+    /**
+     * Get all regions that include the given coordinates.
+     * Useful for border areas where multiple regions might apply.
+     *
+     * @param latitude Latitude in degrees
+     * @param longitude Longitude in degrees
+     * @return List of matching region codes
+     */
+    public static List<String> detectAllRegions(double latitude, double longitude) {
+        List<String> matches = new ArrayList<>();
+        for (RegionBounds region : REGIONS) {
+            if (region.contains(latitude, longitude)) {
+                matches.add(region.code);
+            }
+        }
+        return matches;
+    }
+
+    /**
+     * Get human-readable region name.
+     *
+     * @param regionCode Region code (e.g., "US")
+     * @return Region name (e.g., "United States") or null if unknown
+     */
+    public static String getRegionName(String regionCode) {
+        for (RegionBounds region : REGIONS) {
+            if (region.code.equals(regionCode)) {
+                return region.name;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Check if coordinates are in a border area (within 100km of multiple regions).
+     * This can be used to suggest multi-region subscriptions.
+     *
+     * @param latitude Latitude in degrees
+     * @param longitude Longitude in degrees
+     * @return True if near a border
+     */
+    public static boolean isNearBorder(double latitude, double longitude) {
+        // Check if within ~100km of region boundary
+        // (approximately 1 degree = 111km at equator)
+        final double BORDER_MARGIN = 0.9; // degrees (~100km)
+
+        int nearbyCount = 0;
+        for (RegionBounds region : REGIONS) {
+            // Expand bounds by margin
+            double minLat = region.minLat - BORDER_MARGIN;
+            double maxLat = region.maxLat + BORDER_MARGIN;
+            double minLon = region.minLon - BORDER_MARGIN;
+            double maxLon = region.maxLon + BORDER_MARGIN;
+
+            if (latitude >= minLat && latitude <= maxLat &&
+                longitude >= minLon && longitude <= maxLon) {
+                nearbyCount++;
+            }
+        }
+
+        return nearbyCount > 1;
+    }
+}
+```
+
+#### Usage in Settings UI
+
+```java
+public class MeshtasticBridgeFragment extends Fragment {
+
+    private void initializeRegionSelection() {
+        Spinner regionSpinner = view.findViewById(R.id.regionSpinner);
+
+        // Try to auto-detect region
+        Location lastLocation = locationManager.getLastKnownLocation();
+        if (lastLocation != null) {
+            String detectedRegion = MeshtasticRegionDetector.detectRegion(lastLocation);
+
+            if (detectedRegion != null) {
+                // Auto-select detected region
+                regionSpinner.setSelection(getRegionIndex(detectedRegion));
+
+                // Show confirmation toast
+                String regionName = MeshtasticRegionDetector.getRegionName(detectedRegion);
+                Toast.makeText(getContext(),
+                    "Detected region: " + regionName,
+                    Toast.LENGTH_SHORT).show();
+
+                // Check if near border
+                if (MeshtasticRegionDetector.isNearBorder(
+                        lastLocation.getLatitude(),
+                        lastLocation.getLongitude())) {
+                    showBorderWarning();
+                }
+            } else {
+                // No region detected (ocean, Antarctica, etc.)
+                showManualSelectionDialog();
+            }
+        } else {
+            // No GPS location available
+            // Fall back to manual selection or use default (US)
+            regionSpinner.setSelection(getRegionIndex("US"));
+        }
+    }
+
+    private void showBorderWarning() {
+        // Suggest subscribing to multiple regions
+        new AlertDialog.Builder(getContext())
+            .setTitle("Near Region Border")
+            .setMessage("You're near a regional border. Consider subscribing to multiple regions for better coverage.")
+            .setPositiveButton("OK", null)
+            .show();
+    }
+}
+```
+
 ### Android Settings UI
 
 **New Fragment:** `MeshtasticBridgeFragment.java`
@@ -545,9 +771,11 @@ MQTT Server
 
 Region
 ┌────────────────────────────────┐
-│ US                          ▼  │
+│ US (Auto-detected)          ▼  │
 └────────────────────────────────┘
+📍 Detected from GPS location
 Options: US, EU, ANZ, CN, JP, etc.
+[Manual Override]
 
 Channel Name
 ┌────────────────────────────────┐
