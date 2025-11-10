@@ -404,180 +404,421 @@ When tapping "Meshtastic Bridge", open a dedicated screen:
 - Create massive queues (messages delayed hours)
 - Make the bridge unusable
 
-### Solution: Dedicated Conversation Model
+### Solution: Message Type Selector
 
-**Recommended Approach**: Messages are only sent to Meshtastic if they're typed in the special "Meshtastic: [CHANNEL]" conversation.
+**Recommended Approach**: Add a message type button in the compose UI that lets users explicitly choose which network(s) to send each message on.
 
 #### How It Works
 
-1. **Incoming messages from Meshtastic**:
-   - Appear in special conversation: "Meshtastic: LongFast"
-   - Visible in conversations list with 📡 icon
-   - Tagged with source: "via Meshtastic LoRa"
+Users explicitly choose which network(s) to send each message on using a **Message Type button** in the compose UI.
 
-2. **Outgoing messages to Meshtastic**:
-   - **Only** messages typed in "Meshtastic: LongFast" conversation are sent to LoRa
-   - Messages in other conversations stay on BLE/NOSTR/relay networks
-   - User explicitly chooses to "talk to Meshtastic users"
+**Compose UI Layout:**
 
-3. **Visual Separation**:
-   ```
-   Conversations List:
+```
+┌─────────────────────────────────────────┐
+│ ← Conversation                         │
+├─────────────────────────────────────────┤
+│                                         │
+│ [Previous messages displayed here]      │
+│                                         │
+│                                         │
+│                                         │
+├─────────────────────────────────────────┤
+│ ┌───────┐  ┌──────────────────────┐    │
+│ │  📡   │  │ Type a message...    │ 📤 │
+│ │  ▼   │  │                      │    │
+│ └───────┘  └──────────────────────┘    │
+│   Type         Input Field        Send │
+└─────────────────────────────────────────┘
+```
 
-   📡 Meshtastic: LongFast
-      Alice's Radio: Weather looking good
-      2 min ago · 12 nodes
+**Message Type Button (📡 with dropdown arrow):**
 
-   💬 CR7BBQ (BLE)
-      Hey, got your location
-      5 min ago
+When tapped, shows a multi-select dialog:
 
-   💬 Group: Hiking Team
-      Meeting at trailhead
-      10 min ago
-   ```
+```
+┌─────────────────────────────────────┐
+│ Select Message Delivery             │
+├─────────────────────────────────────┤
+│                                     │
+│ [✓] BLE (Bluetooth Mesh)            │
+│     Send to nearby devices          │
+│                                     │
+│ [ ] Meshtastic LoRa                 │
+│     Send to LoRa mesh (slow)        │
+│                                     │
+│ [✓] Internet (NOSTR)                │
+│     Send via internet relays        │
+│                                     │
+│ ─────────────────────────────────   │
+│                                     │
+│ Selected: BLE, Internet             │
+│                                     │
+│ [Cancel]              [Apply]       │
+└─────────────────────────────────────┘
+```
+
+**Default Selection:**
+- BLE: ✓ Enabled (primary mesh network)
+- Meshtastic: ✗ Disabled (must explicitly enable)
+- Internet: ✓ Enabled (when available)
+
+**Button Indicator:**
+The button icon changes based on selected networks:
+
+| Selection | Icon | Color | Tooltip |
+|-----------|------|-------|---------|
+| BLE only | 📲 | Blue | "BLE mesh" |
+| BLE + Internet | 🌐 | Green | "BLE + Internet" |
+| BLE + Meshtastic | 📡 | Orange | "BLE + LoRa" |
+| All three | 🌍 | Purple | "All networks" |
+| Meshtastic only | 📻 | Red | "LoRa only (slow!)" |
 
 #### User Experience Flow
 
-**Scenario 1: User wants to send to Meshtastic**
+**Scenario 1: Normal BLE/Internet message (default)**
 
-1. Open conversations list
-2. Tap "Meshtastic: LongFast"
-3. Type message: "Anyone near the summit?"
-4. Send
-5. Message is relayed to LoRa network (with rate limiting)
+1. Open any conversation
+2. Type message: "I can see you on the map"
+3. Message type button shows: 🌐 (BLE + Internet)
+4. Tap Send
+5. Message sent via BLE mesh and NOSTR relays
 
-**Scenario 2: User chatting with BLE peers**
+**Scenario 2: Adding Meshtastic to a message**
 
-1. Open conversations list
-2. Tap "CR7BBQ (BLE)"
-3. Type message: "I can see you on the map"
-4. Send
-5. Message sent via BLE only (NOT to Meshtastic)
+1. Open any conversation
+2. Tap message type button 📡
+3. Select: [✓] BLE, [✓] Meshtastic, [✓] Internet
+4. Button changes to: 🌍 (All networks)
+5. Type message: "Anyone near the summit?"
+6. Tap Send
+7. Message sent on all three networks:
+   - BLE: Immediate delivery to nearby devices
+   - Internet: Immediate NOSTR relay
+   - Meshtastic: Queued for LoRa (with rate limiting)
 
-#### Implementation: MeshtasticMessageFilter.java
+**Scenario 3: Meshtastic-only message (rare)**
+
+1. Open any conversation
+2. Tap message type button
+3. Uncheck BLE and Internet, check only Meshtastic
+4. Button changes to: 📻 (LoRa only) with warning icon
+5. Type message: "Testing LoRa range"
+6. Tap Send
+7. Message sent ONLY to Meshtastic LoRa network
+8. Warning toast: "⚠️ Slow delivery - LoRa only (no BLE/Internet)"
+
+#### Implementation: Message Delivery Flags
+
+Each message will have delivery flags indicating which networks to send on:
 
 ```java
-package offgrid.geogram.bridges;
+package offgrid.geogram.core;
 
-import offgrid.geogram.core.Message;
-import offgrid.geogram.core.Conversation;
+public class Message {
+    // Delivery network flags (bitmask)
+    public static final int NETWORK_BLE = 1 << 0;        // 0001 = BLE mesh
+    public static final int NETWORK_INTERNET = 1 << 1;   // 0010 = NOSTR/Internet
+    public static final int NETWORK_MESHTASTIC = 1 << 2; // 0100 = Meshtastic LoRa
 
-public class MeshtasticMessageFilter {
+    // Default: BLE + Internet
+    public static final int NETWORKS_DEFAULT = NETWORK_BLE | NETWORK_INTERNET;
+
+    private int deliveryNetworks = NETWORKS_DEFAULT;
 
     /**
-     * Determines if a message should be sent to Meshtastic.
-     *
-     * @param message The message to check
-     * @param conversation The conversation it's being sent in
-     * @return true if should relay to Meshtastic
+     * Set which networks this message should be delivered on.
      */
-    public static boolean shouldSendToMeshtastic(Message message,
-                                                  Conversation conversation) {
-
-        // Check send mode preference
-        String sendMode = getSendModePreference();
-
-        switch (sendMode) {
-            case "dedicated_conversation":
-                // Only send if in Meshtastic conversation
-                return conversation.isMeshtasticBridge();
-
-            case "manual_button":
-                // Only send if explicitly marked
-                return message.hasFlag(Message.FLAG_SEND_TO_MESHTASTIC);
-
-            case "mention_trigger":
-                // Send if message contains @MESH- mention
-                return containsMeshtasticMention(message.getContent());
-
-            default:
-                return false;
-        }
+    public void setDeliveryNetworks(int networks) {
+        this.deliveryNetworks = networks;
     }
 
     /**
-     * Check if conversation is a Meshtastic bridge conversation.
+     * Check if message should be sent on a specific network.
      */
-    public static boolean isMeshtasticConversation(Conversation conv) {
-        return conv.getType() == Conversation.TYPE_MESHTASTIC_BRIDGE;
+    public boolean shouldSendOn(int network) {
+        return (deliveryNetworks & network) != 0;
     }
 
     /**
-     * Get the Meshtastic conversation for a channel.
-     * Creates it if it doesn't exist.
+     * Enable a delivery network.
      */
-    public static Conversation getMeshtasticConversation(String channelName) {
-        String conversationId = "meshtastic_" + channelName.toLowerCase();
-
-        Conversation existing = conversationDao.findById(conversationId);
-        if (existing != null) {
-            return existing;
-        }
-
-        // Create new Meshtastic conversation
-        Conversation conv = new Conversation();
-        conv.setId(conversationId);
-        conv.setName("Meshtastic: " + channelName);
-        conv.setType(Conversation.TYPE_MESHTASTIC_BRIDGE);
-        conv.setIcon("📡");
-        conv.setDescription("LoRa mesh network");
-
-        conversationDao.insert(conv);
-        return conv;
+    public void enableNetwork(int network) {
+        deliveryNetworks |= network;
     }
 
     /**
-     * Check if message content contains a Meshtastic mention.
+     * Disable a delivery network.
      */
-    private static boolean containsMeshtasticMention(String content) {
-        return content.contains("@MESH-");
-    }
-
-    private static String getSendModePreference() {
-        SharedPreferences prefs = getSharedPreferences("MeshtasticBridge");
-        return prefs.getString("send_mode", "dedicated_conversation");
+    public void disableNetwork(int network) {
+        deliveryNetworks &= ~network;
     }
 }
 ```
 
-#### Database Schema for Conversations
+#### UI Component: MessageTypeButton.java
 
-```sql
--- Add conversation type for Meshtastic
-ALTER TABLE conversations ADD COLUMN type TEXT DEFAULT 'direct';
+```java
+package offgrid.geogram.ui;
 
--- Types:
--- 'direct' - 1:1 BLE/NOSTR chat
--- 'group' - Group conversation
--- 'broadcast' - Broadcast channel
--- 'meshtastic_bridge' - Meshtastic LoRa bridge
--- 'aprs_bridge' - APRS bridge (future)
+import android.content.Context;
+import android.widget.ImageButton;
+import androidx.appcompat.app.AlertDialog;
+import offgrid.geogram.core.Message;
+
+public class MessageTypeButton extends ImageButton {
+
+    private int selectedNetworks = Message.NETWORKS_DEFAULT;
+    private OnNetworkSelectionChangedListener listener;
+
+    public interface OnNetworkSelectionChangedListener {
+        void onChanged(int networks);
+    }
+
+    public MessageTypeButton(Context context) {
+        super(context);
+        updateIcon();
+        setOnClickListener(v -> showNetworkSelector());
+    }
+
+    private void showNetworkSelector() {
+        boolean[] selections = {
+            (selectedNetworks & Message.NETWORK_BLE) != 0,
+            (selectedNetworks & Message.NETWORK_MESHTASTIC) != 0,
+            (selectedNetworks & Message.NETWORK_INTERNET) != 0
+        };
+
+        String[] options = {
+            "BLE (Bluetooth Mesh)\nSend to nearby devices",
+            "Meshtastic LoRa\nSend to LoRa mesh (slow)",
+            "Internet (NOSTR)\nSend via internet relays"
+        };
+
+        new AlertDialog.Builder(getContext())
+            .setTitle("Select Message Delivery")
+            .setMultiChoiceItems(options, selections, (dialog, which, isChecked) -> {
+                selections[which] = isChecked;
+            })
+            .setPositiveButton("Apply", (dialog, which) -> {
+                // Build network bitmask from selections
+                int networks = 0;
+                if (selections[0]) networks |= Message.NETWORK_BLE;
+                if (selections[1]) networks |= Message.NETWORK_MESHTASTIC;
+                if (selections[2]) networks |= Message.NETWORK_INTERNET;
+
+                // Validate: at least one network must be selected
+                if (networks == 0) {
+                    Toast.makeText(getContext(),
+                        "At least one network must be selected",
+                        Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // Warn if Meshtastic only
+                if (networks == Message.NETWORK_MESHTASTIC) {
+                    Toast.makeText(getContext(),
+                        "⚠️ Slow delivery - LoRa only (no BLE/Internet)",
+                        Toast.LENGTH_LONG).show();
+                }
+
+                selectedNetworks = networks;
+                updateIcon();
+                if (listener != null) {
+                    listener.onChanged(networks);
+                }
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void updateIcon() {
+        // Update icon and color based on selected networks
+        if (selectedNetworks == Message.NETWORK_BLE) {
+            setImageResource(R.drawable.ic_bluetooth);
+            setColorFilter(0xFF42A5F5); // Blue
+        } else if (selectedNetworks == (Message.NETWORK_BLE | Message.NETWORK_INTERNET)) {
+            setImageResource(R.drawable.ic_network);
+            setColorFilter(0xFF66BB6A); // Green
+        } else if ((selectedNetworks & Message.NETWORK_MESHTASTIC) != 0) {
+            if (selectedNetworks == (Message.NETWORK_BLE | Message.NETWORK_MESHTASTIC | Message.NETWORK_INTERNET)) {
+                setImageResource(R.drawable.ic_network_all);
+                setColorFilter(0xFF9C27B0); // Purple - all three
+            } else {
+                setImageResource(R.drawable.ic_lora);
+                setColorFilter(0xFFFF9800); // Orange - includes LoRa
+            }
+        }
+    }
+
+    public void setOnNetworkSelectionChangedListener(OnNetworkSelectionChangedListener listener) {
+        this.listener = listener;
+    }
+
+    public int getSelectedNetworks() {
+        return selectedNetworks;
+    }
+}
 ```
 
-### Alternative Filtering Options
+#### Updated ConversationChatFragment.java
 
-If user selects different send modes:
+```java
+// In ConversationChatFragment.java
 
-#### Option 2: Manual Send Button
+private MessageTypeButton btnMessageType;
+private int currentDeliveryNetworks = Message.NETWORKS_DEFAULT;
 
-- User types message in any conversation
-- Long-press message → "Send to Meshtastic"
-- Dialog: "Send to which channel? [LongFast ▼]"
-- Message added to queue with rate limiting
+@Override
+public View onCreateView(@NonNull LayoutInflater inflater, ...) {
+    View view = inflater.inflate(R.layout.fragment_conversation_chat, container, false);
 
-**Pros**: Maximum control, works from any conversation
-**Cons**: Extra steps, easy to forget
+    // ... existing code ...
 
-#### Option 3: @mention Triggering
+    btnMessageType = view.findViewById(R.id.btn_message_type);
+    btnMessageType.setOnNetworkSelectionChangedListener(networks -> {
+        currentDeliveryNetworks = networks;
+    });
 
-- User types: "Hey everyone @MESH-BROADCAST the weather is clearing up"
-- Message sent on BLE normally
-- Also queued for Meshtastic because of @MESH- mention
-- @MESH-A1B2C3D4 for specific node, @MESH-BROADCAST for all
+    btnSend.setOnClickListener(v -> {
+        String message = messageInput.getText().toString().trim();
+        if (!message.isEmpty()) {
+            sendMessage(message, currentDeliveryNetworks);
+            messageInput.setText("");
+        }
+    });
 
-**Pros**: Inline with normal chat, familiar pattern
-**Cons**: Can be accidentally triggered, clutters message content
+    return view;
+}
+
+private void sendMessage(String messageText, int deliveryNetworks) {
+    // Create message with delivery flags
+    Message message = new Message();
+    message.setContent(messageText);
+    message.setDeliveryNetworks(deliveryNetworks);
+
+    // Send on each selected network
+    if (message.shouldSendOn(Message.NETWORK_BLE)) {
+        sendViaBLE(message);
+    }
+    if (message.shouldSendOn(Message.NETWORK_INTERNET)) {
+        sendViaInternet(message);
+    }
+    if (message.shouldSendOn(Message.NETWORK_MESHTASTIC)) {
+        sendViaMeshtastic(message);
+    }
+}
+```
+
+#### Database Schema for Messages
+
+```sql
+-- Add delivery_networks column to messages table
+ALTER TABLE messages ADD COLUMN delivery_networks INTEGER DEFAULT 3;
+-- Default 3 = 0011 binary = BLE + Internet
+
+-- Add delivery_status column to track per-network status
+ALTER TABLE messages ADD COLUMN delivery_status TEXT;
+-- JSON: {"ble": "sent", "internet": "sent", "meshtastic": "queued"}
+```
+
+### Updated Layout XML
+
+#### fragment_conversation_chat.xml
+
+Add message type button to the compose area:
+
+```xml
+<!-- Message input area -->
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:background="#252525">
+
+    <!-- Message Type Button (NEW) -->
+    <offgrid.geogram.ui.MessageTypeButton
+        android:id="@+id/btn_message_type"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_network"
+        android:tint="@color/white"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Select delivery networks"
+        android:layout_marginEnd="4dp" />
+
+    <!-- Message Input Field -->
+    <EditText
+        android:id="@+id/message_input"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:hint="Type a message..."
+        android:textColor="@color/white"
+        android:textColorHint="#888888"
+        android:background="@drawable/input_background"
+        android:padding="12dp"
+        android:maxLines="4"
+        android:inputType="textMultiLine|textCapSentences" />
+
+    <!-- Send Button -->
+    <ImageButton
+        android:id="@+id/btn_send"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_send"
+        android:tint="@color/white"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Send message"
+        android:layout_marginStart="8dp" />
+
+</LinearLayout>
+```
+
+### Mode Dropdown Integration
+
+**Note**: The user mentioned a "Mode dropdown" where Meshtastic types should be added. This likely refers to a message mode selector somewhere in the app UI.
+
+If there's an existing Mode dropdown (location TBD), add these Meshtastic-specific modes:
+
+```
+Message Mode:
+┌─────────────────────────────────┐
+│ Normal                       ▼  │
+├─────────────────────────────────┤
+│ Normal (BLE + Internet)         │
+│ Broadcast                       │
+│ Emergency                       │
+│ ─────────────────────────────   │
+│ Meshtastic: LongFast (US)       │
+│ Meshtastic: LongSlow (US)       │
+│ Meshtastic: MediumFast (US)     │
+└─────────────────────────────────┘
+```
+
+When a Meshtastic mode is selected:
+- Message type button automatically enables `NETWORK_MESHTASTIC`
+- Mode dropdown shows current Meshtastic channel
+- Can still modify delivery networks via message type button
+- Meshtastic mode persists until user changes it
+
+**Integration:**
+
+```java
+// When Mode dropdown changes to Meshtastic mode
+public void onModeSelected(String mode) {
+    if (mode.startsWith("Meshtastic:")) {
+        // Extract channel name
+        String channel = mode.substring("Meshtastic: ".length());
+
+        // Enable Meshtastic network
+        btnMessageType.enableNetwork(Message.NETWORK_MESHTASTIC);
+
+        // Set active Meshtastic channel
+        MeshtasticBridge.getInstance().setActiveChannel(channel);
+    }
+}
+```
 
 ### Rate Limiting Integration
 
