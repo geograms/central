@@ -1,0 +1,82 @@
+use binary diff (e.g., zsync, bsdiff)
+   - Download only changed bytes between ZIP versions
+   - Requires server-side diff generation
+   - Significantly reduces bandwidth for small changes
+
+4. **Smart Sync**:
+   - Download collection metadata first (extract only `collection.json` and `tree.json` from ZIP)
+   - Let user choose what to download
+   - Selective file extraction from ZIP (supported by ZIP format)
+
+**Update Detection:**
+1. Client checks collection's NOSTR event for latest version
+2. Compares `tree.json` hash with local version
+3. If different, downloads new `.colz` file
+4. Extracts and replaces local copy
+
+**Conflict Resolution:**
+- Collections are immutable once published (each version is unique)
+- Updates create new versions (incremented version number)
+- Local modifications create a fork (new collection ID)
+- No merge conflicts (owner/admin changes are authoritative)
+
+### Performance
+
+**Optimization Strategies:**
+
+1. **Lazy Loading**: Don't parse entire `tree.json` upfront
+2. **Indexing**: Create local database index of tree
+3. **Caching**: Cache frequently accessed metadata
+4. **Compression**: Compress `tree.json` for large collections
+5. **Chunking**: Split large `tree.json` into multiple files
+
+### Migration
+
+**Version Compatibility:**
+- Collections specify schema version
+- Clients support multiple schema versions
+- Migration tools for upgrading old collections
+
+### ZIP Archive Technical Details
+
+**Compression:**
+- Use standard DEFLATE compression (ZIP standard)
+- Compression level: Configurable (6-9 recommended for balance)
+- Store mode for already-compressed files (JPG, PNG, MP4, etc.)
+- Maximum compression for text files (JSON, TXT, MD)
+
+**ZIP File Naming:**
+- Primary format: `collection-name.collection.zip`
+- Short form: `collection-name.colz` (optional, for brevity)
+- Include version in filename: `collection-name-2025-11-12.collection.zip`
+- Or with time if multiple releases per day: `collection-name-2025-11-20_14-30.collection.zip`
+- Use URL-safe characters (no spaces, special chars)
+
+**Arch   │   └── foundation-cover.jpg
+│   ├── heinlein/
+│   │   ├── stranger-in-a-strange-land.epub
+│   │   └── stranger-cover.jpg
+│   └── herbert/
+│       ├── dune.epub
+│       └── dune-cover.jpg
+└── covers/
+    ├── collection-banner.png
+    └── ascii-art-logo.txt
+```
+
+**Working with this collection:**
+```bash
+# Download the collection
+wget https://collections.example.com/classic-scifi-books-2025-11-12.collection.zip
+
+# Verify integrity
+sha256sum classic-scifi-books-2025-11-12.collection.zip
+
+# Extract to view/use
+unzip classic-scifi-books-2025-11-12.collection.zip -d ./collections/
+
+# Quick metadata check (without full extraction)
+unzip -p classic-scifi-books-2025-11-12.collection.zip collection.json | jq .
+
+# List contents
+unzi
