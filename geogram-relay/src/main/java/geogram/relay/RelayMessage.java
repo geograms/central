@@ -23,6 +23,10 @@ public class RelayMessage {
     public static final String TYPE_PING = "PING";
     public static final String TYPE_PONG = "PONG";
     public static final String TYPE_ERROR = "ERROR";
+    public static final String TYPE_COLLECTIONS_REQUEST = "COLLECTIONS_REQUEST";
+    public static final String TYPE_COLLECTIONS_RESPONSE = "COLLECTIONS_RESPONSE";
+    public static final String TYPE_COLLECTION_FILE_REQUEST = "COLLECTION_FILE_REQUEST";
+    public static final String TYPE_COLLECTION_FILE_RESPONSE = "COLLECTION_FILE_RESPONSE";
 
     // Common fields
     public String type;
@@ -42,6 +46,16 @@ public class RelayMessage {
 
     // ERROR fields
     public String error;
+
+    // COLLECTIONS_RESPONSE fields
+    public String[] collections; // Array of collection names
+
+    // COLLECTION_FILE_REQUEST fields
+    public String collectionName;
+    public String fileName; // "collection" or "tree-data"
+
+    // COLLECTION_FILE_RESPONSE fields
+    public String fileContent;
 
     // Constructors
     public RelayMessage() {}
@@ -89,6 +103,34 @@ public class RelayMessage {
     public static RelayMessage createError(String error) {
         RelayMessage msg = new RelayMessage(TYPE_ERROR);
         msg.error = error;
+        return msg;
+    }
+
+    public static RelayMessage createCollectionsRequest(String requestId) {
+        RelayMessage msg = new RelayMessage(TYPE_COLLECTIONS_REQUEST);
+        msg.requestId = requestId;
+        return msg;
+    }
+
+    public static RelayMessage createCollectionsResponse(String requestId, String[] collections) {
+        RelayMessage msg = new RelayMessage(TYPE_COLLECTIONS_RESPONSE);
+        msg.requestId = requestId;
+        msg.collections = collections;
+        return msg;
+    }
+
+    public static RelayMessage createCollectionFileRequest(String requestId, String collectionName, String fileName) {
+        RelayMessage msg = new RelayMessage(TYPE_COLLECTION_FILE_REQUEST);
+        msg.requestId = requestId;
+        msg.collectionName = collectionName;
+        msg.fileName = fileName;
+        return msg;
+    }
+
+    public static RelayMessage createCollectionFileResponse(String requestId, String fileContent) {
+        RelayMessage msg = new RelayMessage(TYPE_COLLECTION_FILE_RESPONSE);
+        msg.requestId = requestId;
+        msg.fileContent = fileContent;
         return msg;
     }
 

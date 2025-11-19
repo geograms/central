@@ -25,6 +25,10 @@ keystore.jks
 relay-server.log
 logs/
 
+# Device storage
+devices/
+collections/
+
 # OS
 .DS_Store
 Thumbs.db

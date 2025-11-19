@@ -97,6 +97,12 @@ public class RelayServer {
                 case RelayMessage.TYPE_PING:
                     handlePing(ctx);
                     break;
+                case RelayMessage.TYPE_COLLECTIONS_RESPONSE:
+                    handleCollectionsResponse(ctx, message);
+                    break;
+                case RelayMessage.TYPE_COLLECTION_FILE_RESPONSE:
+                    handleCollectionFileResponse(ctx, message);
+                    break;
                 default:
                     LOG.warn("Unknown message type: {}", message.type);
                     sendError(ctx, "Unknown message type: " + message.type);
@@ -239,6 +245,9 @@ public class RelayServer {
                     callsign, ctx.session.getRemoteAddress(),
                     pubkey.substring(0, Math.min(16, pubkey.length()))));
             }
+
+            // Request collections from device
+            requestCollections(ctx, callsign);
 
         } catch (Exception e) {
             LOG.error("Error handling hello message", e);
@@ -510,6 +519,107 @@ public class RelayServer {
         } catch (Exception e) {
             LOG.error("Failed to create device storage for callsign: {}", callsign, e);
             return null;
+        }
+    }
+
+    /**
+     * Request collections list from device
+     */
+    private void requestCollections(WsContext ctx, String callsign) {
+        String requestId = "coll-" + System.currentTimeMillis();
+        RelayMessage request = RelayMessage.createCollectionsRequest(requestId);
+
+        ctx.send(request.toJson());
+        LOG.info("Requested collections from device: {}", callsign);
+    }
+
+    /**
+     * Handle COLLECTIONS_RESPONSE from device
+     */
+    private void handleCollectionsResponse(WsContext ctx, RelayMessage message) {
+        String callsign = contextToCallsign.get(ctx);
+        if (callsign == null) {
+            LOG.warn("Received collections response from unregistered device");
+            return;
+        }
+
+        if (message.collections == null || message.collections.length == 0) {
+            LOG.info("Device {} has no collections", callsign);
+            return;
+        }
+
+        LOG.info("Received {} collections from device {}", message.collections.length, callsign);
+
+        // Request each collection's files (collection and tree-data)
+        for (String collection : message.collections) {
+            requestCollectionFile(ctx, callsign, collection, "collection");
+            requestCollectionFile(ctx, callsign, collection, "tree-data");
+        }
+    }
+
+    /**
+     * Request a specific file from a collection
+     */
+    private void requestCollectionFile(WsContext ctx, String callsign, String collectionName, String fileName) {
+        String requestId = "file-" + System.currentTimeMillis() + "-" + fileName;
+        RelayMessage request = RelayMessage.createCollectionFileRequest(requestId, collectionName, fileName);
+
+        ctx.send(request.toJson());
+        LOG.debug("Requested {} file for collection {} from device {}", fileName, collectionName, callsign);
+    }
+
+    /**
+     * Handle COLLECTION_FILE_RESPONSE from device
+     */
+    private void handleCollectionFileResponse(WsContext ctx, RelayMessage message) {
+        String callsign = contextToCallsign.get(ctx);
+        if (callsign == null) {
+            LOG.warn("Received collection file response from unregistered device");
+            return;
+        }
+
+        if (message.collectionName == null || message.fileName == null || message.fileContent == null) {
+            LOG.warn("Invalid collection file response from device {}", callsign);
+            return;
+        }
+
+        // Store the file
+        storeCollectionFile(callsign, message.collectionName, message.fileName, message.fileContent);
+    }
+
+    /**
+     * Store collection file to disk
+     */
+    private void storeCollectionFile(String callsign, String collectionName, String fileName, String content) {
+        try {
+            // Create directory structure: collections/{callsign}/{collectionName}/
+            java.nio.file.Path collectionsBase = java.nio.file.Paths.get(config.collectionsStoragePath);
+            if (!java.nio.file.Files.exists(collectionsBase)) {
+                java.nio.file.Files.createDirectories(collectionsBase);
+                LOG.info("Created collections storage directory: {}", collectionsBase.toAbsolutePath());
+            }
+
+            java.nio.file.Path callsignDir = collectionsBase.resolve(callsign);
+            if (!java.nio.file.Files.exists(callsignDir)) {
+                java.nio.file.Files.createDirectories(callsignDir);
+                LOG.info("Created callsign directory: {}", callsignDir.toAbsolutePath());
+            }
+
+            java.nio.file.Path collectionDir = callsignDir.resolve(collectionName);
+            if (!java.nio.file.Files.exists(collectionDir)) {
+                java.nio.file.Files.createDirectories(collectionDir);
+                LOG.info("Created collection directory: {}", collectionDir.toAbsolutePath());
+            }
+
+            // Write file
+            java.nio.file.Path filePath = collectionDir.resolve(fileName);
+            java.nio.file.Files.writeString(filePath, content);
+
+            LOG.info("Stored {} for collection {} from device {} ({} bytes)",
+                fileName, collectionName, callsign, content.length());
+
+        } catch (Exception e) {
+            LOG.error("Failed to store collection file: {}/{}/{}", callsign, collectionName, fileName, e);
         }
     }
 
