@@ -43,10 +43,14 @@ public class RelayServer {
     // Cleanup scheduler
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
+    // Collection searcher
+    private final CollectionSearcher collectionSearcher;
+
     public RelayServer(Config config) {
         this.config = config;
         this.startTime = System.currentTimeMillis();
         this.callsignPattern = Pattern.compile(config.callsignPattern);
+        this.collectionSearcher = new CollectionSearcher(config.deviceStoragePath);
 
         // Schedule periodic cleanup
         scheduler.scheduleAtFixedRate(this::cleanup, config.cleanupInterval,
@@ -441,6 +445,17 @@ public class RelayServer {
     }
 
     /**
+     * Search collections across all devices
+     *
+     * @param query Search query string
+     * @param limit Maximum number of results (default: 50)
+     * @return List of search results
+     */
+    public List<SearchResult> searchCollections(String query, int limit) {
+        return collectionSearcher.search(query, limit);
+    }
+
+    /**
      * Fail all pending requests for a device
      */
     private void failPendingRequestsForDevice(String callsign) {
@@ -550,10 +565,11 @@ public class RelayServer {
 
         LOG.info("Received {} collections from device {}", message.collections.length, callsign);
 
-        // Request each collection's files (collection and tree-data)
+        // Request each collection's files (collection, tree, and data)
         for (String collection : message.collections) {
             requestCollectionFile(ctx, callsign, collection, "collection");
-            requestCollectionFile(ctx, callsign, collection, "tree-data");
+            requestCollectionFile(ctx, callsign, collection, "tree"); // Basic file info (tree.json)
+            requestCollectionFile(ctx, callsign, collection, "data"); // Full metadata (data.js)
         }
     }
 

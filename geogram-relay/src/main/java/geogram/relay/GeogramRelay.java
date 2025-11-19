@@ -157,6 +157,41 @@ public class GeogramRelay {
             ctx.json(response);
         });
 
+        // Search collections endpoint
+        app.get("/search", ctx -> {
+            String query = ctx.queryParam("q");
+            String limitParam = ctx.queryParam("limit");
+
+            if (query == null || query.trim().isEmpty()) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "Missing query parameter 'q'");
+                ctx.status(400).json(error);
+                return;
+            }
+
+            int limit = 50; // Default limit
+            if (limitParam != null) {
+                try {
+                    limit = Integer.parseInt(limitParam);
+                    if (limit < 1 || limit > 500) {
+                        limit = 50;
+                    }
+                } catch (NumberFormatException e) {
+                    limit = 50;
+                }
+            }
+
+            List<SearchResult> results = relayServer.searchCollections(query, limit);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("query", query);
+            response.put("total_results", results.size());
+            response.put("limit", limit);
+            response.put("results", results);
+
+            ctx.json(response);
+        });
+
         // Get device info
         app.get("/device/{callsign}", ctx -> {
             String callsign = ctx.pathParam("callsign").toUpperCase();
@@ -273,6 +308,7 @@ public class GeogramRelay {
         LOG.info("WebSocket endpoint: {}://{}:{}/", wsProtocol, host, config.port);
         LOG.info("HTTP endpoints:");
         LOG.info("  GET  {}://{}:{}/relay/status - List connected devices", protocol, host, config.port);
+        LOG.info("  GET  {}://{}:{}/search?q=<query>&limit=<n> - Search collections", protocol, host, config.port);
         LOG.info("  GET  {}://{}:{}/device/{{callsign}} - Get device info", protocol, host, config.port);
         LOG.info("  ANY  {}://{}:{}/device/{{callsign}}/{{path}} - Proxy to device", protocol, host, config.port);
         LOG.info("Configuration file: config.json");
