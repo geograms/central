@@ -127,6 +127,10 @@ public class GeogramRelay {
             ws.onMessage(ctx -> relayServer.onMessage(ctx));
             ws.onClose(ctx -> relayServer.onClose(ctx));
             ws.onError(ctx -> relayServer.onError(ctx, ctx.error()));
+        }, wsConfig -> {
+            // Increase max message size to 10MB for large collection transfers
+            wsConfig.setMaxTextMessageSize(10 * 1024 * 1024); // 10MB
+            wsConfig.setMaxBinaryMessageSize(10 * 1024 * 1024); // 10MB
         });
 
         // HTTP endpoints
