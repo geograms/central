@@ -123,14 +123,15 @@ public class GeogramRelay {
 
         // WebSocket endpoint for device connections
         app.ws("/", ws -> {
-            ws.onConnect(ctx -> relayServer.onConnect(ctx));
+            ws.onConnect(ctx -> {
+                // Increase max message size to 10MB for large collection transfers
+                ctx.session.setMaxTextMessageSize(10 * 1024 * 1024); // 10MB
+                ctx.session.setMaxBinaryMessageSize(10 * 1024 * 1024); // 10MB
+                relayServer.onConnect(ctx);
+            });
             ws.onMessage(ctx -> relayServer.onMessage(ctx));
             ws.onClose(ctx -> relayServer.onClose(ctx));
             ws.onError(ctx -> relayServer.onError(ctx, ctx.error()));
-        }, wsConfig -> {
-            // Increase max message size to 10MB for large collection transfers
-            wsConfig.setMaxTextMessageSize(10 * 1024 * 1024); // 10MB
-            wsConfig.setMaxBinaryMessageSize(10 * 1024 * 1024); // 10MB
         });
 
         // HTTP endpoints
