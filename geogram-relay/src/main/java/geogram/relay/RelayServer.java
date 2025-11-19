@@ -592,20 +592,12 @@ public class RelayServer {
      */
     private void storeCollectionFile(String callsign, String collectionName, String fileName, String content) {
         try {
-            // Create directory structure: collections/{callsign}/{collectionName}/
-            java.nio.file.Path collectionsBase = java.nio.file.Paths.get(config.collectionsStoragePath);
-            if (!java.nio.file.Files.exists(collectionsBase)) {
-                java.nio.file.Files.createDirectories(collectionsBase);
-                LOG.info("Created collections storage directory: {}", collectionsBase.toAbsolutePath());
-            }
+            // Create directory structure: devices/{callsign}/collections/{collectionName}/
+            java.nio.file.Path devicesBase = java.nio.file.Paths.get(config.deviceStoragePath);
+            java.nio.file.Path callsignDir = devicesBase.resolve(callsign);
+            java.nio.file.Path collectionsDir = callsignDir.resolve("collections");
+            java.nio.file.Path collectionDir = collectionsDir.resolve(collectionName);
 
-            java.nio.file.Path callsignDir = collectionsBase.resolve(callsign);
-            if (!java.nio.file.Files.exists(callsignDir)) {
-                java.nio.file.Files.createDirectories(callsignDir);
-                LOG.info("Created callsign directory: {}", callsignDir.toAbsolutePath());
-            }
-
-            java.nio.file.Path collectionDir = callsignDir.resolve(collectionName);
             if (!java.nio.file.Files.exists(collectionDir)) {
                 java.nio.file.Files.createDirectories(collectionDir);
                 LOG.info("Created collection directory: {}", collectionDir.toAbsolutePath());

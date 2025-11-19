@@ -27,7 +27,6 @@ logs/
 
 # Device storage
 devices/
-collections/
 
 # OS
 .DS_Store

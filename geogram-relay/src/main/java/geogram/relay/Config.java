@@ -84,9 +84,6 @@ public class Config {
     // Device storage
     public String deviceStoragePath = "./devices";
 
-    // Collections storage
-    public String collectionsStoragePath = "./collections";
-
     /**
      * Load configuration from config.json file
      */
