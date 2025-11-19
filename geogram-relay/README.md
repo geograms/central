@@ -1,10 +1,18 @@
 # Geogram Relay Server
 
-A WebSocket/HTTP relay server for the Geogram mesh messaging system. This relay server enables remote access to Android devices running Geogram, allowing HTTP requests to be proxied through WebSocket connections.
+A WebSocket/HTTP relay server for the Geogram mesh messaging system. This relay server enables devices behind NAT (Network Address Translation) to communicate with each other, providing NAT traversal for services like VoIP, web servers, remote access, and peer-to-peer applications.
 
 ## Overview
 
-The Geogram Relay Server acts as a bridge between HTTP clients and Geogram devices connected via WebSocket. Devices register with the relay using their callsign, and HTTP requests can be proxied to them through the relay.
+The Geogram Relay Server acts as a public meeting point for devices that cannot directly connect due to NAT firewalls, enabling:
+
+- **NAT Traversal**: Connect devices behind different routers/firewalls
+- **Service Relay**: Access web servers, VoIP services, SSH, and more running on remote devices
+- **Device Mesh**: Create virtual networks spanning multiple physical networks
+- **Real-time Communication**: Low-latency message forwarding between devices
+- **Anonymous Routing**: Optional I2P integration for censorship-resistant connectivity
+
+For detailed information about NAT traversal and use cases, see [NAT_TRAVERSAL.md](NAT_TRAVERSAL.md).
 
 ## Architecture
 
@@ -647,7 +655,18 @@ This is a basic relay implementation. For production use, consider:
 
 Apache-2.0
 
-## Related Documentation
+## Documentation
+
+### Core Documentation
+
+- **[NAT_TRAVERSAL.md](NAT_TRAVERSAL.md)** - Complete guide to NAT traversal, service relay, and use cases (VoIP, web servers, remote access, IoT)
+- **[STATUS_API.md](STATUS_API.md)** - HTTP status API endpoints and device management
+- **[I2P_INTEGRATION.md](I2P_INTEGRATION.md)** - Anonymous relay deployment over I2P network
+- **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide for running the relay
+- **[CONFIG_MIGRATION.md](CONFIG_MIGRATION.md)** - Configuration migration between versions
+- **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** - Current implementation status and roadmap
+
+### Related Documentation
 
 - [Android Relay Implementation](../docs/implementation/android-relay-implementation.md)
 - [Relay Protocol](../docs/relay/relay-protocol.md)
