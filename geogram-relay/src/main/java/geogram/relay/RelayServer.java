@@ -603,8 +603,16 @@ public class RelayServer {
                 LOG.info("Created collection directory: {}", collectionDir.toAbsolutePath());
             }
 
-            // Write file
+            // Write file (fileName may contain subdirectory like "extra/tree-data.js")
             java.nio.file.Path filePath = collectionDir.resolve(fileName);
+
+            // Create parent directory if fileName contains subdirectories
+            java.nio.file.Path parentDir = filePath.getParent();
+            if (parentDir != null && !java.nio.file.Files.exists(parentDir)) {
+                java.nio.file.Files.createDirectories(parentDir);
+                LOG.info("Created subdirectory: {}", parentDir.toAbsolutePath());
+            }
+
             java.nio.file.Files.writeString(filePath, content);
 
             LOG.info("Stored {} for collection {} from device {} ({} bytes)",
