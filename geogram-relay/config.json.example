@@ -1,0 +1,15 @@
+{
+  "port": 45679,
+  "host": "0.0.0.0",
+  "enableLogging": true,
+  "httpRequestTimeout": 30,
+  "idleDeviceTimeout": 300,
+  "cleanupInterval": 300,
+  "maxConnectedDevices": 1000,
+  "maxPendingRequests": 10000,
+  "callsignPattern": "^[A-Za-z0-9]{3,10}(-[A-Za-z0-9]{1,3})?$",
+  "enableCors": false,
+  "corsAllowedOrigins": "*",
+  "enableRateLimiting": false,
+  "maxRequestsPerMinute": 60
+}

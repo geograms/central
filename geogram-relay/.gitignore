@@ -1,0 +1,30 @@
+# Build output
+target/
+dependency-reduced-pom.xml
+
+# Configuration
+config.json
+config.json.backup
+
+# SSL/TLS Keystore
+keystore.jks
+*.jks
+*.p12
+*.pem
+*.key
+*.crt
+*.der
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+relay-server.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
