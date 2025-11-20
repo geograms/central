@@ -364,17 +364,30 @@ public class GeogramRelay {
      */
     private static void handleWwwCollectionRequest(Context ctx, String pathOverride) {
         String callsign = ctx.pathParam("callsign").toUpperCase();
+        LOG.info("WWW collection request for callsign: {}", callsign);
 
         // Validate callsign format to avoid conflicts with API paths
         if (!isValidCallsign(callsign)) {
             // Not a valid callsign, let it fall through to other handlers
+            LOG.warn("Invalid callsign format: {}", callsign);
             ctx.status(404).result("Not found");
             return;
         }
 
+        LOG.debug("Callsign validation passed for: {}", callsign);
+
         // Check if device is connected
         DeviceConnection device = relayServer.getDevice(callsign);
+        LOG.info("Device lookup for {}: {}", callsign, device != null ? "FOUND" : "NOT FOUND");
+
         if (device == null) {
+            // Log all connected devices for debugging
+            Collection<DeviceConnection> allDevices = relayServer.getDevices();
+            LOG.warn("Device {} not found. Connected devices ({}):", callsign, allDevices.size());
+            for (DeviceConnection d : allDevices) {
+                LOG.warn("  - {}", d.getCallsign());
+            }
+
             Map<String, String> error = new HashMap<>();
             error.put("error", "Device not connected");
             error.put("callsign", callsign);
@@ -465,12 +478,18 @@ public class GeogramRelay {
             callsign.equalsIgnoreCase("search") ||
             callsign.equalsIgnoreCase("device") ||
             callsign.equalsIgnoreCase("api")) {
+            LOG.debug("Callsign {} rejected - reserved word", callsign);
             return false;
         }
 
         // Validate against configured callsign pattern
-        return config.callsignPattern != null &&
+        boolean matches = config.callsignPattern != null &&
                java.util.regex.Pattern.matches(config.callsignPattern, callsign);
+
+        LOG.debug("Callsign {} validation against pattern '{}': {}",
+                callsign, config.callsignPattern, matches);
+
+        return matches;
     }
 
     /**
