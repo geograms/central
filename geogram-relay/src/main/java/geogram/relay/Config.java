@@ -39,7 +39,7 @@ public class Config {
 
     // Timeout settings (seconds)
     public long httpRequestTimeout = 30;
-    public long idleDeviceTimeout = 300;      // 5 minutes
+    public long idleDeviceTimeout = 600;      // 10 minutes (devices send PING every 60s)
     public long cleanupInterval = 300;         // 5 minutes
 
     // Connection limits
