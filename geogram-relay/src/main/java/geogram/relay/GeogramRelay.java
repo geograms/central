@@ -799,12 +799,15 @@ public class GeogramRelay {
             "                \n" +
             "                if (data.results && data.results.length > 0) {\n" +
             "                    resultsCount.textContent = `Found ${data.total_results} result${data.total_results > 1 ? 's' : ''} for \"${query}\"`;\n" +
-            "                    resultsContent.innerHTML = data.results.map(result => `\n" +
+            "                    resultsContent.innerHTML = data.results.map(result => {\n" +
+            "                        const fileName = result.fileName || result.name || 'Unnamed';\n" +
+            "                        const baseName = fileName.split('/').pop();\n" +
+            "                        return `\n" +
             "                        <div class=\"result-item\">\n" +
-            "                            <div class=\"result-title\">${escapeHtml(result.fileName || result.name || 'Unnamed')}</div>\n" +
-            "                            <div class=\"result-path\">${escapeHtml(result.collectionName)} - ${escapeHtml(result.deviceCallsign)}</div>\n" +
+            "                            <div class=\"result-title\">${escapeHtml(baseName)}</div>\n" +
+            "                            <div class=\"result-path\">${escapeHtml(result.collectionName || result.collectionTitle)} - ${escapeHtml(result.callsign)}</div>\n" +
             "                        </div>\n" +
-            "                    `).join('');\n" +
+            "                    `}).join('');\n" +
             "                } else {\n" +
             "                    resultsCount.textContent = `No results found for \"${query}\"`;\n" +
             "                    resultsContent.innerHTML = '';\n" +
@@ -825,6 +828,16 @@ public class GeogramRelay {
             "        document.getElementById('searchInput').addEventListener('keypress', function(e) {\n" +
             "            if (e.key === 'Enter') performSearch();\n" +
             "        });\n" +
+            "        \n" +
+            "        // Auto-search when 4+ characters are typed\n" +
+            "        document.getElementById('searchInput').addEventListener('input', function(e) {\n" +
+            "            const query = e.target.value.trim();\n" +
+            "            if (query.length >= 4) {\n" +
+            "                performSearch();\n" +
+            "            } else if (query.length === 0) {\n" +
+            "                document.getElementById('searchResults').style.display = 'none';\n" +
+            "            }\n" +
+            "        });\n" +
             "\n" +
             "        function formatTime(seconds) {\n" +
             "            if (seconds < 60) return seconds + ' seconds';\n" +
@@ -835,8 +848,8 @@ public class GeogramRelay {
             "\n" +
             "        // Load status on page load\n" +
             "        loadStatus();\n" +
-            "        // Refresh status every 30 seconds\n" +
-            "        setInterval(loadStatus, 30000);\n" +
+            "        // Refresh status every 60 seconds\n" +
+            "        setInterval(loadStatus, 60000);\n" +
             "    </script>\n" +
             "</body>\n" +
             "</html>";
