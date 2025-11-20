@@ -168,15 +168,11 @@ public class CollectionSearcher {
                     continue;
                 }
 
-                // Check if path or name matches query
-                String pathLower = path.toLowerCase();
+                // Check if name matches query (filename only, not path)
                 String nameLower = name.toLowerCase();
 
-                if (pathLower.contains(query) || nameLower.contains(query)) {
-                    double relevance = Math.max(
-                        calculateRelevance(pathLower, query),
-                        calculateRelevance(nameLower, query)
-                    );
+                if (nameLower.contains(query)) {
+                    double relevance = calculateRelevance(nameLower, query);
 
                     results.add(new SearchResult(
                         callsign,
