@@ -221,6 +221,11 @@ public class GeogramRelay {
         app.head("/device/{callsign}/*", ctx -> handleDeviceRequest(ctx));
         app.options("/device/{callsign}/*", ctx -> handleDeviceRequest(ctx));
 
+        // Serve www collection from device - direct callsign access
+        app.get("/{callsign}", ctx -> handleWwwCollectionRequest(ctx, ""));
+        app.get("/{callsign}/", ctx -> handleWwwCollectionRequest(ctx, "/"));
+        app.get("/{callsign}/*", ctx -> handleWwwCollectionRequest(ctx, null));
+
         // Root endpoint - Status API
         app.get("/", ctx -> {
             long uptimeMs = System.currentTimeMillis() - relayServer.getStartTime();
@@ -311,6 +316,8 @@ public class GeogramRelay {
         LOG.info("  GET  {}://{}:{}/search?q=<query>&limit=<n> - Search collections", protocol, host, config.port);
         LOG.info("  GET  {}://{}:{}/device/{{callsign}} - Get device info", protocol, host, config.port);
         LOG.info("  ANY  {}://{}:{}/device/{{callsign}}/{{path}} - Proxy to device", protocol, host, config.port);
+        LOG.info("  GET  {}://{}:{}/{{callsign}} - Serve www collection from device", protocol, host, config.port);
+        LOG.info("  GET  {}://{}:{}/{{callsign}}/{{path}} - Serve file from www collection", protocol, host, config.port);
         LOG.info("Configuration file: config.json");
         LOG.info("Server location: {}, {} (lat: {}, lon: {})",
                 config.city, config.country,
@@ -350,6 +357,120 @@ public class GeogramRelay {
         } else {
             return String.format("%ds", secs);
         }
+    }
+
+    /**
+     * Handle www collection request - serve static files from device's www collection
+     */
+    private static void handleWwwCollectionRequest(Context ctx, String pathOverride) {
+        String callsign = ctx.pathParam("callsign").toUpperCase();
+
+        // Validate callsign format to avoid conflicts with API paths
+        if (!isValidCallsign(callsign)) {
+            // Not a valid callsign, let it fall through to other handlers
+            ctx.status(404).result("Not found");
+            return;
+        }
+
+        // Check if device is connected
+        DeviceConnection device = relayServer.getDevice(callsign);
+        if (device == null) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Device not connected");
+            error.put("callsign", callsign);
+            ctx.status(503).json(error);
+            return;
+        }
+
+        // Determine the file path within the www collection
+        String filePath;
+        if (pathOverride != null) {
+            filePath = pathOverride;
+        } else {
+            // Extract path after /{callsign}/
+            String[] parts = ctx.path().split("/", 3);
+            filePath = parts.length > 2 ? "/" + parts[2] : "/";
+        }
+
+        // Default to index.html for root or directory paths
+        if (filePath.equals("") || filePath.equals("/")) {
+            filePath = "/index.html";
+        }
+
+        // Construct the collection path: /collections/www/{filePath}
+        String collectionPath = "/collections/www" + filePath;
+
+        // Generate request ID
+        String requestId = UUID.randomUUID().toString();
+
+        // Create minimal headers for the request
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Accept", ctx.header("Accept") != null ? ctx.header("Accept") : "*/*");
+
+        try {
+            // Forward request to device
+            PendingRequest pending = relayServer.forwardHttpRequest(
+                    callsign, requestId, "GET", collectionPath, headers, "");
+
+            // Wait for response with timeout
+            RelayMessage response = pending.getResponseFuture()
+                    .get(config.httpRequestTimeout, TimeUnit.SECONDS);
+
+            // Send response to client
+            ctx.status(response.statusCode);
+
+            // Set response headers
+            if (response.responseHeaders != null && !response.responseHeaders.isEmpty()) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    Map<String, String> responseHeaders = GSON.fromJson(
+                            response.responseHeaders, Map.class);
+                    responseHeaders.forEach((key, value) -> {
+                        if (!key.equalsIgnoreCase("content-length")) {
+                            ctx.header(key, value);
+                        }
+                    });
+                } catch (Exception e) {
+                    LOG.warn("Failed to parse response headers", e);
+                }
+            }
+
+            // Send response body
+            if (response.responseBody != null && !response.responseBody.isEmpty()) {
+                ctx.result(response.responseBody);
+            }
+
+        } catch (TimeoutException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Request timeout");
+            error.put("callsign", callsign);
+            error.put("path", filePath);
+            ctx.status(504).json(error);
+        } catch (Exception e) {
+            LOG.error("Error serving www collection", e);
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Proxy error: " + e.getMessage());
+            error.put("callsign", callsign);
+            error.put("path", filePath);
+            ctx.status(502).json(error);
+        }
+    }
+
+    /**
+     * Validate callsign format - must match amateur radio callsign pattern
+     */
+    private static boolean isValidCallsign(String callsign) {
+        // Check against known non-callsign paths first
+        if (callsign.equalsIgnoreCase("relay") ||
+            callsign.equalsIgnoreCase("search") ||
+            callsign.equalsIgnoreCase("device") ||
+            callsign.equalsIgnoreCase("api")) {
+            return false;
+        }
+
+        // Validate against configured callsign pattern
+        return config.callsignPattern != null &&
+               java.util.regex.Pattern.matches(config.callsignPattern, callsign);
     }
 
     /**
