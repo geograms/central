@@ -763,18 +763,21 @@ public class GeogramRelay {
             "                document.getElementById('serverValue').textContent = data.location.city || 'Unknown';\n" +
             "                \n" +
             "                const deviceList = document.getElementById('deviceList');\n" +
-            "                if (data.devices && data.devices.length > 0) {\n" +
-            "                    deviceList.innerHTML = '<h2>Connected Devices</h2>' + \n" +
-            "                        data.devices.map(device => `\n" +
-            "                            <div class=\"device-item\">\n" +
-            "                                <div class=\"device-callsign\">\n" +
-            "                                    <a href=\"/${device.callsign}\" class=\"device-link\" target=\"_blank\">${device.callsign}</a>\n" +
+            "                // Only update if we have device data to prevent flickering\n" +
+            "                if (data.devices) {\n" +
+            "                    if (data.devices.length > 0) {\n" +
+            "                        deviceList.innerHTML = '<h2>Connected Devices</h2>' +\n" +
+            "                            data.devices.map(device => `\n" +
+            "                                <div class=\"device-item\">\n" +
+            "                                    <div class=\"device-callsign\">\n" +
+            "                                        <a href=\"/${device.callsign}\" class=\"device-link\">${device.callsign}</a>\n" +
+            "                                    </div>\n" +
+            "                                    <div class=\"device-info\">Connected ${formatTime(device.uptime_seconds)} ago</div>\n" +
             "                                </div>\n" +
-            "                                <div class=\"device-info\">Connected ${formatTime(device.uptime_seconds)} ago</div>\n" +
-            "                            </div>\n" +
-            "                        `).join('');\n" +
-            "                } else {\n" +
-            "                    deviceList.innerHTML = '<h2>Connected Devices</h2><div class=\"loading\">No devices connected</div>';\n" +
+            "                            `).join('');\n" +
+            "                    } else {\n" +
+            "                        deviceList.innerHTML = '<h2>Connected Devices</h2><div class=\"loading\">No devices connected</div>';\n" +
+            "                    }\n" +
             "                }\n" +
             "            } catch (error) {\n" +
             "                console.error('Error loading status:', error);\n" +
@@ -802,11 +805,13 @@ public class GeogramRelay {
             "                    resultsContent.innerHTML = data.results.map(result => {\n" +
             "                        const fileName = result.fileName || result.name || 'Unnamed';\n" +
             "                        const baseName = fileName.split('/').pop();\n" +
+            "                        const fileSizeStr = result.fileSize ? formatFileSize(result.fileSize) : '';\n" +
+            "                        const url = `/device/${result.callsign}/collections/${result.collectionName}${result.filePath || ''}`;\n" +
             "                        return `\n" +
-            "                        <div class=\"result-item\">\n" +
-            "                            <div class=\"result-title\">${escapeHtml(baseName)}</div>\n" +
+            "                        <a href=\"${url}\" class=\"result-item\" style=\"text-decoration: none; color: inherit; display: block;\">\n" +
+            "                            <div class=\"result-title\">${escapeHtml(baseName)}${fileSizeStr ? ` <span style=\"color: #999; font-size: 0.9em;\">(${fileSizeStr})</span>` : ''}</div>\n" +
             "                            <div class=\"result-path\">${escapeHtml(result.collectionName || result.collectionTitle)} - ${escapeHtml(result.callsign)}</div>\n" +
-            "                        </div>\n" +
+            "                        </a>\n" +
             "                    `}).join('');\n" +
             "                } else {\n" +
             "                    resultsCount.textContent = `No results found for \"${query}\"`;\n" +
@@ -844,6 +849,13 @@ public class GeogramRelay {
             "            if (seconds < 3600) return Math.floor(seconds / 60) + ' minutes';\n" +
             "            if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours';\n" +
             "            return Math.floor(seconds / 86400) + ' days';\n" +
+            "        }\n" +
+            "        \n" +
+            "        function formatFileSize(bytes) {\n" +
+            "            if (bytes < 1024) return bytes + ' B';\n" +
+            "            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';\n" +
+            "            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';\n" +
+            "            return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';\n" +
             "        }\n" +
             "\n" +
             "        // Load status on page load\n" +

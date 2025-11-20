@@ -133,6 +133,7 @@ public class CollectionSearcher {
                 null,
                 null,
                 null,
+                null, // No file size for collections
                 "collection",
                 collectionRelevance
             ));
@@ -163,6 +164,8 @@ public class CollectionSearcher {
                 String path = fileEntry.has("path") ? fileEntry.get("path").getAsString() : null;
                 String name = fileEntry.has("name") ? fileEntry.get("name").getAsString() : null;
                 String type = fileEntry.has("type") ? fileEntry.get("type").getAsString() : null;
+                Long size = fileEntry.has("size") && !fileEntry.get("size").isJsonNull() ?
+                    fileEntry.get("size").getAsLong() : null;
 
                 if (path == null || name == null) {
                     continue;
@@ -182,6 +185,7 @@ public class CollectionSearcher {
                         path,
                         name,
                         type,
+                        size,
                         "file",
                         relevance
                     ));

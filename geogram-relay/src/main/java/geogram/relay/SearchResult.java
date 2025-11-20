@@ -19,12 +19,13 @@ public class SearchResult {
     public String filePath;
     public String fileName;
     public String fileType;
+    public Long fileSize; // File size in bytes (may be null)
     public String matchType; // "collection", "file", "path"
     public double relevance; // 0.0 to 1.0
 
     public SearchResult(String callsign, String collectionName, String collectionTitle,
                        String collectionDescription, String filePath, String fileName,
-                       String fileType, String matchType, double relevance) {
+                       String fileType, Long fileSize, String matchType, double relevance) {
         this.callsign = callsign;
         this.collectionName = collectionName;
         this.collectionTitle = collectionTitle;
@@ -32,6 +33,7 @@ public class SearchResult {
         this.filePath = filePath;
         this.fileName = fileName;
         this.fileType = fileType;
+        this.fileSize = fileSize;
         this.matchType = matchType;
         this.relevance = relevance;
     }
