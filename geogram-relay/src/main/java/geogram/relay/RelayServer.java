@@ -206,6 +206,10 @@ public class RelayServer {
                 return;
             }
 
+            // Normalize callsign to uppercase
+            callsign = callsign.toUpperCase();
+            LOG.info("Normalized callsign: {}", callsign);
+
             // TODO: Verify signature using secp256k1
             // For now, accept all signatures and log warning
             LOG.warn("SIGNATURE NOT VERIFIED - Using simplified validation (to be upgraded to secp256k1)");

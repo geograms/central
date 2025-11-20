@@ -657,17 +657,13 @@ Apache-2.0
 
 ## Documentation
 
-### Core Documentation
+Detailed documentation is available in the [docs](docs/) folder:
 
-- **[NAT_TRAVERSAL.md](NAT_TRAVERSAL.md)** - Complete guide to NAT traversal, service relay, and use cases (VoIP, web servers, remote access, IoT)
-- **[STATUS_API.md](STATUS_API.md)** - HTTP status API endpoints and device management
-- **[I2P_INTEGRATION.md](I2P_INTEGRATION.md)** - Anonymous relay deployment over I2P network
-- **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide for running the relay
-- **[CONFIG_MIGRATION.md](CONFIG_MIGRATION.md)** - Configuration migration between versions
-- **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** - Current implementation status and roadmap
+- **[API.md](docs/API.md)** - Complete API documentation (HTTP REST endpoints and WebSocket protocol)
+- **[NAT_TRAVERSAL.md](docs/NAT_TRAVERSAL.md)** - Complete guide to NAT traversal, service relay, and use cases (VoIP, web servers, remote access, IoT)
+- **[STATUS_API.md](docs/STATUS_API.md)** - HTTP status API endpoints and device management
+- **[QUICKSTART.md](docs/QUICKSTART.md)** - Quick start guide for running the relay
+- **[CONFIG_MIGRATION.md](docs/CONFIG_MIGRATION.md)** - Configuration migration between versions
+- **[IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)** - Current implementation status and roadmap
 
-### Related Documentation
-
-- [Android Relay Implementation](../docs/implementation/android-relay-implementation.md)
-- [Relay Protocol](../docs/relay/relay-protocol.md)
-- [Relay Functionality](../docs/relay/relay-functionality.md)
+For complete documentation, see the [docs folder](docs/).
