@@ -657,36 +657,45 @@ public class GeogramRelay {
             "    <style>\n" +
             "        * { margin: 0; padding: 0; box-sizing: border-box; }\n" +
             "        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; }\n" +
-            "        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }\n" +
+            "        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }\n" +
             "        header { background: #2c3e50; color: white; padding: 30px 0; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }\n" +
             "        h1 { font-size: 2.5em; margin-bottom: 10px; }\n" +
             "        .subtitle { opacity: 0.9; font-size: 1.1em; }\n" +
-            "        .search-box { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }\n" +
+            "        .main-layout { display: grid; grid-template-columns: 1fr 400px; gap: 30px; }\n" +
+            "        @media (max-width: 1024px) { .main-layout { grid-template-columns: 1fr; } .sidebar { order: -1; } }\n" +
+            "        .main-content { min-width: 0; }\n" +
+            "        .sidebar { position: sticky; top: 20px; height: fit-content; }\n" +
+            "        .search-box { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }\n" +
+            "        .search-box h2 { margin-bottom: 15px; color: #2c3e50; font-size: 1.5em; }\n" +
             "        .search-input { width: 100%; padding: 15px; font-size: 1.1em; border: 2px solid #ddd; border-radius: 5px; transition: border-color 0.3s; }\n" +
             "        .search-input:focus { outline: none; border-color: #3498db; }\n" +
-            "        .search-btn { background: #3498db; color: white; border: none; padding: 15px 30px; font-size: 1.1em; border-radius: 5px; cursor: pointer; margin-top: 15px; transition: background 0.3s; }\n" +
+            "        .search-btn { background: #3498db; color: white; border: none; padding: 15px 30px; font-size: 1.1em; border-radius: 5px; cursor: pointer; margin-top: 15px; transition: background 0.3s; width: 100%; }\n" +
             "        .search-btn:hover { background: #2980b9; }\n" +
-            "        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }\n" +
-            "        .status-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }\n" +
-            "        .status-card h3 { color: #2c3e50; margin-bottom: 10px; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px; }\n" +
-            "        .status-card .value { font-size: 2em; font-weight: bold; color: #3498db; }\n" +
-            "        .device-list { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }\n" +
-            "        .device-list h2 { color: #2c3e50; margin-bottom: 20px; }\n" +
-            "        .device-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; }\n" +
+            "        .search-results { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none; margin-bottom: 20px; }\n" +
+            "        .search-results h3 { color: #2c3e50; margin-bottom: 20px; font-size: 1.3em; }\n" +
+            "        .result-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; }\n" +
+            "        .result-item:hover { background: #f8f9fa; }\n" +
+            "        .result-item:last-child { border-bottom: none; }\n" +
+            "        .result-title { font-weight: bold; color: #2c3e50; margin-bottom: 5px; font-size: 1.1em; }\n" +
+            "        .result-path { color: #666; font-size: 0.9em; }\n" +
+            "        .status-box { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }\n" +
+            "        .status-box h2 { color: #2c3e50; margin-bottom: 20px; font-size: 1.3em; }\n" +
+            "        .status-item { padding: 15px 0; border-bottom: 1px solid #eee; }\n" +
+            "        .status-item:last-child { border-bottom: none; }\n" +
+            "        .status-label { color: #666; font-size: 0.9em; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }\n" +
+            "        .status-value { font-size: 1.5em; font-weight: bold; color: #3498db; }\n" +
+            "        .device-list { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }\n" +
+            "        .device-list h2 { color: #2c3e50; margin-bottom: 20px; font-size: 1.3em; }\n" +
+            "        .device-item { padding: 15px; border-bottom: 1px solid #eee; transition: background 0.2s; }\n" +
             "        .device-item:hover { background: #f8f9fa; }\n" +
             "        .device-item:last-child { border-bottom: none; }\n" +
-            "        .device-callsign { font-size: 1.3em; font-weight: bold; color: #2c3e50; margin-bottom: 5px; }\n" +
+            "        .device-callsign { font-size: 1.2em; font-weight: bold; color: #2c3e50; margin-bottom: 5px; }\n" +
             "        .device-info { color: #666; font-size: 0.9em; }\n" +
             "        .device-link { color: #3498db; text-decoration: none; }\n" +
             "        .device-link:hover { text-decoration: underline; }\n" +
-            "        .search-results { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none; }\n" +
-            "        .search-results h2 { color: #2c3e50; margin-bottom: 20px; }\n" +
-            "        .result-item { padding: 15px; border-bottom: 1px solid #eee; }\n" +
-            "        .result-item:last-child { border-bottom: none; }\n" +
-            "        .result-title { font-weight: bold; color: #2c3e50; margin-bottom: 5px; }\n" +
-            "        .result-path { color: #666; font-size: 0.9em; }\n" +
             "        .loading { text-align: center; padding: 20px; color: #666; }\n" +
             "        .error { background: #fee; color: #c33; padding: 15px; border-radius: 5px; margin: 20px 0; }\n" +
+            "        .results-count { color: #666; font-size: 0.9em; margin-bottom: 15px; }\n" +
             "    </style>\n" +
             "</head>\n" +
             "<body>\n" +
@@ -698,39 +707,47 @@ public class GeogramRelay {
             "    </header>\n" +
             "\n" +
             "    <div class=\"container\">\n" +
-            "        <div class=\"search-box\">\n" +
-            "            <h2 style=\"margin-bottom: 15px; color: #2c3e50;\">Search Collections</h2>\n" +
-            "            <input type=\"text\" id=\"searchInput\" class=\"search-input\" placeholder=\"Search for files in all connected devices...\" />\n" +
-            "            <button class=\"search-btn\" onclick=\"performSearch()\">Search</button>\n" +
-            "        </div>\n" +
+            "        <div class=\"main-layout\">\n" +
+            "            <div class=\"main-content\">\n" +
+            "                <div class=\"search-box\">\n" +
+            "                    <h2>Search Collections</h2>\n" +
+            "                    <input type=\"text\" id=\"searchInput\" class=\"search-input\" placeholder=\"Search for files in all connected devices...\" />\n" +
+            "                    <button class=\"search-btn\" onclick=\"performSearch()\">Search</button>\n" +
+            "                </div>\n" +
             "\n" +
-            "        <div class=\"status-grid\" id=\"statusGrid\">\n" +
-            "            <div class=\"status-card\">\n" +
-            "                <h3>Status</h3>\n" +
-            "                <div class=\"value\" id=\"statusValue\">Loading...</div>\n" +
+            "                <div class=\"search-results\" id=\"searchResults\">\n" +
+            "                    <h3>Search Results</h3>\n" +
+            "                    <div class=\"results-count\" id=\"resultsCount\"></div>\n" +
+            "                    <div id=\"resultsContent\"></div>\n" +
+            "                </div>\n" +
             "            </div>\n" +
-            "            <div class=\"status-card\">\n" +
-            "                <h3>Connected Devices</h3>\n" +
-            "                <div class=\"value\" id=\"devicesValue\">-</div>\n" +
-            "            </div>\n" +
-            "            <div class=\"status-card\">\n" +
-            "                <h3>Uptime</h3>\n" +
-            "                <div class=\"value\" id=\"uptimeValue\">-</div>\n" +
-            "            </div>\n" +
-            "            <div class=\"status-card\">\n" +
-            "                <h3>Server</h3>\n" +
-            "                <div class=\"value\" style=\"font-size: 1.2em;\" id=\"serverValue\">-</div>\n" +
-            "            </div>\n" +
-            "        </div>\n" +
             "\n" +
-            "        <div class=\"device-list\" id=\"deviceList\">\n" +
-            "            <h2>Connected Devices</h2>\n" +
-            "            <div class=\"loading\">Loading devices...</div>\n" +
-            "        </div>\n" +
+            "            <div class=\"sidebar\">\n" +
+            "                <div class=\"status-box\">\n" +
+            "                    <h2>Server Status</h2>\n" +
+            "                    <div class=\"status-item\">\n" +
+            "                        <div class=\"status-label\">Status</div>\n" +
+            "                        <div class=\"status-value\" id=\"statusValue\">Loading...</div>\n" +
+            "                    </div>\n" +
+            "                    <div class=\"status-item\">\n" +
+            "                        <div class=\"status-label\">Uptime</div>\n" +
+            "                        <div class=\"status-value\" id=\"uptimeValue\">-</div>\n" +
+            "                    </div>\n" +
+            "                    <div class=\"status-item\">\n" +
+            "                        <div class=\"status-label\">Connected Devices</div>\n" +
+            "                        <div class=\"status-value\" id=\"devicesValue\">-</div>\n" +
+            "                    </div>\n" +
+            "                    <div class=\"status-item\">\n" +
+            "                        <div class=\"status-label\">Location</div>\n" +
+            "                        <div class=\"status-value\" style=\"font-size: 1.1em;\" id=\"serverValue\">-</div>\n" +
+            "                    </div>\n" +
+            "                </div>\n" +
             "\n" +
-            "        <div class=\"search-results\" id=\"searchResults\">\n" +
-            "            <h2>Search Results</h2>\n" +
-            "            <div id=\"resultsContent\"></div>\n" +
+            "                <div class=\"device-list\" id=\"deviceList\">\n" +
+            "                    <h2>Connected Devices</h2>\n" +
+            "                    <div class=\"loading\">Loading devices...</div>\n" +
+            "                </div>\n" +
+            "            </div>\n" +
             "        </div>\n" +
             "    </div>\n" +
             "\n" +
@@ -770,8 +787,10 @@ public class GeogramRelay {
             "            if (!query) return;\n" +
             "            \n" +
             "            const resultsDiv = document.getElementById('searchResults');\n" +
+            "            const resultsCount = document.getElementById('resultsCount');\n" +
             "            const resultsContent = document.getElementById('resultsContent');\n" +
             "            resultsDiv.style.display = 'block';\n" +
+            "            resultsCount.textContent = '';\n" +
             "            resultsContent.innerHTML = '<div class=\"loading\">Searching...</div>';\n" +
             "            \n" +
             "            try {\n" +
@@ -779,19 +798,28 @@ public class GeogramRelay {
             "                const data = await response.json();\n" +
             "                \n" +
             "                if (data.results && data.results.length > 0) {\n" +
+            "                    resultsCount.textContent = `Found ${data.total_results} result${data.total_results > 1 ? 's' : ''} for \"${query}\"`;\n" +
             "                    resultsContent.innerHTML = data.results.map(result => `\n" +
             "                        <div class=\"result-item\">\n" +
-            "                            <div class=\"result-title\">${result.fileName || result.name}</div>\n" +
-            "                            <div class=\"result-path\">${result.collectionName} - ${result.deviceCallsign}</div>\n" +
+            "                            <div class=\"result-title\">${escapeHtml(result.fileName || result.name || 'Unnamed')}</div>\n" +
+            "                            <div class=\"result-path\">${escapeHtml(result.collectionName)} - ${escapeHtml(result.deviceCallsign)}</div>\n" +
             "                        </div>\n" +
             "                    `).join('');\n" +
             "                } else {\n" +
-            "                    resultsContent.innerHTML = '<div class=\"loading\">No results found</div>';\n" +
+            "                    resultsCount.textContent = `No results found for \"${query}\"`;\n" +
+            "                    resultsContent.innerHTML = '';\n" +
             "                }\n" +
             "            } catch (error) {\n" +
             "                console.error('Search error:', error);\n" +
-            "                resultsContent.innerHTML = '<div class=\"error\">Error performing search</div>';\n" +
+            "                resultsCount.textContent = '';\n" +
+            "                resultsContent.innerHTML = '<div class=\"error\">Error performing search. Please try again.</div>';\n" +
             "            }\n" +
+            "        }\n" +
+            "\n" +
+            "        function escapeHtml(text) {\n" +
+            "            const div = document.createElement('div');\n" +
+            "            div.textContent = text;\n" +
+            "            return div.innerHTML;\n" +
             "        }\n" +
             "\n" +
             "        document.getElementById('searchInput').addEventListener('keypress', function(e) {\n" +
