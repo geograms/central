@@ -785,9 +785,18 @@ public class GeogramRelay {
             "            }\n" +
             "        }\n" +
             "\n" +
-            "        async function performSearch() {\n" +
+            "        async function performSearch(pushHistory = false) {\n" +
             "            const query = document.getElementById('searchInput').value.trim();\n" +
             "            if (!query) return;\n" +
+            "            \n" +
+            "            // Update URL with search query for history support\n" +
+            "            const url = new URL(window.location);\n" +
+            "            url.searchParams.set('q', query);\n" +
+            "            if (pushHistory) {\n" +
+            "                window.history.pushState({ query: query }, '', url);\n" +
+            "            } else {\n" +
+            "                window.history.replaceState({ query: query }, '', url);\n" +
+            "            }\n" +
             "            \n" +
             "            const resultsDiv = document.getElementById('searchResults');\n" +
             "            const resultsCount = document.getElementById('resultsCount');\n" +
@@ -826,6 +835,31 @@ public class GeogramRelay {
             "            }\n" +
             "        }\n" +
             "\n" +
+            "        // Restore search from URL parameters\n" +
+            "        function restoreSearchFromURL() {\n" +
+            "            const urlParams = new URLSearchParams(window.location.search);\n" +
+            "            const query = urlParams.get('q');\n" +
+            "            if (query) {\n" +
+            "                document.getElementById('searchInput').value = query;\n" +
+            "                performSearch();\n" +
+            "            }\n" +
+            "        }\n" +
+            "\n" +
+            "        // Handle browser back/forward buttons\n" +
+            "        window.addEventListener('popstate', function(event) {\n" +
+            "            if (event.state && event.state.query) {\n" +
+            "                document.getElementById('searchInput').value = event.state.query;\n" +
+            "                performSearch();\n" +
+            "            } else {\n" +
+            "                // Clear search if no query in state\n" +
+            "                const urlParams = new URLSearchParams(window.location.search);\n" +
+            "                if (!urlParams.has('q')) {\n" +
+            "                    document.getElementById('searchInput').value = '';\n" +
+            "                    document.getElementById('searchResults').style.display = 'none';\n" +
+            "                }\n" +
+            "            }\n" +
+            "        });\n" +
+            "\n" +
             "        function escapeHtml(text) {\n" +
             "            const div = document.createElement('div');\n" +
             "            div.textContent = text;\n" +
@@ -833,7 +867,7 @@ public class GeogramRelay {
             "        }\n" +
             "\n" +
             "        document.getElementById('searchInput').addEventListener('keypress', function(e) {\n" +
-            "            if (e.key === 'Enter') performSearch();\n" +
+            "            if (e.key === 'Enter') performSearch(true);\n" +
             "        });\n" +
             "        \n" +
             "        // Auto-search when 4+ characters are typed\n" +
@@ -862,6 +896,8 @@ public class GeogramRelay {
             "\n" +
             "        // Load status on page load\n" +
             "        loadStatus();\n" +
+            "        // Restore search if URL has query parameter\n" +
+            "        restoreSearchFromURL();\n" +
             "        // Refresh status every 60 seconds\n" +
             "        setInterval(loadStatus, 60000);\n" +
             "    </script>\n" +
