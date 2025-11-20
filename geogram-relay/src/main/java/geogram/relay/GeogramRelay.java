@@ -811,7 +811,7 @@ public class GeogramRelay {
             "        setInterval(loadStatus, 30000);\n" +
             "    </script>\n" +
             "</body>\n" +
-            "</html>";\n" +
-            "    }\n" +
-            "}
+            "</html>";
+    }
+}
 
