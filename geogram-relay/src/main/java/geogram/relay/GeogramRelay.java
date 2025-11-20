@@ -806,7 +806,9 @@ public class GeogramRelay {
             "                        const fileName = result.fileName || result.name || 'Unnamed';\n" +
             "                        const baseName = fileName.split('/').pop();\n" +
             "                        const fileSizeStr = result.fileSize ? formatFileSize(result.fileSize) : '';\n" +
-            "                        const url = `/device/${result.callsign}/collections/${result.collectionName}${result.filePath || ''}`;\n" +
+            "                        const filePath = result.filePath || '';\n" +
+            "                        const pathSeparator = filePath && !filePath.startsWith('/') ? '/' : '';\n" +
+            "                        const url = `/device/${result.callsign}/collections/${result.collectionName}${pathSeparator}${filePath}`;\n" +
             "                        return `\n" +
             "                        <a href=\"${url}\" class=\"result-item\" style=\"text-decoration: none; color: inherit; display: block;\">\n" +
             "                            <div class=\"result-title\">${escapeHtml(baseName)}${fileSizeStr ? ` <span style=\"color: #999; font-size: 0.9em;\">(${fileSizeStr})</span>` : ''}</div>\n" +
