@@ -222,13 +222,73 @@ public class GeogramRelay {
         app.head("/device/{callsign}/*", ctx -> handleDeviceRequest(ctx));
         app.options("/device/{callsign}/*", ctx -> handleDeviceRequest(ctx));
 
+        // API status endpoint
+        app.get("/api/status", ctx -> {
+            long uptimeMs = System.currentTimeMillis() - relayServer.getStartTime();
+            long uptimeHours = uptimeMs / (1000 * 60 * 60);  // Convert to hours
+
+            // Get server start time in ISO format
+            java.time.Instant startInstant = java.time.Instant.ofEpochMilli(relayServer.getStartTime());
+            String startedAt = startInstant.toString();
+
+            Map<String, Object> info = new HashMap<>();
+            info.put("service", "Geogram Relay Server");
+            info.put("version", "1.0.0");
+            info.put("status", "online");
+            info.put("started_at", startedAt);
+            info.put("uptime_hours", uptimeHours);
+            info.put("port", config.port);
+
+            // Server description
+            info.put("description", config.serverDescription != null ?
+                config.serverDescription : "Geogram relay server for amateur radio operations");
+
+            // Connected devices information
+            Collection<DeviceConnection> devices = relayServer.getDevices();
+            info.put("connected_devices", devices.size());
+            info.put("max_devices", config.maxConnectedDevices);
+
+            // Device list with details
+            List<Map<String, Object>> deviceList = new ArrayList<>();
+            for (DeviceConnection device : devices) {
+                Map<String, Object> deviceInfo = new HashMap<>();
+                deviceInfo.put("callsign", device.getCallsign());
+                deviceInfo.put("uptime_seconds", device.getUptimeSeconds());
+                deviceInfo.put("idle_seconds", device.getIdleSeconds());
+                deviceInfo.put("connected_at", device.getConnectedAt());
+                deviceList.add(deviceInfo);
+            }
+            info.put("devices", deviceList);
+
+            // Location/coordinates information
+            Map<String, Object> location = new HashMap<>();
+            location.put("latitude", config.latitude);
+            location.put("longitude", config.longitude);
+            location.put("city", config.city);
+            location.put("region", config.region);
+            location.put("country", config.country);
+            location.put("country_code", config.countryCode);
+            location.put("timezone", config.timezone);
+            location.put("ip", config.serverIp);
+            location.put("isp", config.isp);
+            info.put("location", location);
+
+            ctx.json(info);
+        });
+
         // Serve www collection from device - direct callsign access
         app.get("/{callsign}", ctx -> handleWwwCollectionRequest(ctx, ""));
         app.get("/{callsign}/", ctx -> handleWwwCollectionRequest(ctx, "/"));
         app.get("/{callsign}/*", ctx -> handleWwwCollectionRequest(ctx, null));
 
-        // Root endpoint - Status API
+        // Root endpoint - HTML Interface
         app.get("/", ctx -> {
+            ctx.contentType("text/html");
+            ctx.result(getRelayHomePage());
+        });
+
+        // Legacy root status (for backward compatibility)
+        app.get("/status", ctx -> {
             long uptimeMs = System.currentTimeMillis() - relayServer.getStartTime();
             long uptimeHours = uptimeMs / (1000 * 60 * 60);  // Convert to hours
 
@@ -583,5 +643,175 @@ public class GeogramRelay {
             ctx.status(502).json(error);
         }
     }
-}
+
+    /**
+     * Generate HTML home page for the relay
+     */
+    private static String getRelayHomePage() {
+        return "<!DOCTYPE html>\n" +
+            "<html lang=\"en\">\n" +
+            "<head>\n" +
+            "    <meta charset=\"UTF-8\">\n" +
+            "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+            "    <title>Geogram Relay Server</title>\n" +
+            "    <style>\n" +
+            "        * { margin: 0; padding: 0; box-sizing: border-box; }\n" +
+            "        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; }\n" +
+            "        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }\n" +
+            "        header { background: #2c3e50; color: white; padding: 30px 0; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }\n" +
+            "        h1 { font-size: 2.5em; margin-bottom: 10px; }\n" +
+            "        .subtitle { opacity: 0.9; font-size: 1.1em; }\n" +
+            "        .search-box { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }\n" +
+            "        .search-input { width: 100%; padding: 15px; font-size: 1.1em; border: 2px solid #ddd; border-radius: 5px; transition: border-color 0.3s; }\n" +
+            "        .search-input:focus { outline: none; border-color: #3498db; }\n" +
+            "        .search-btn { background: #3498db; color: white; border: none; padding: 15px 30px; font-size: 1.1em; border-radius: 5px; cursor: pointer; margin-top: 15px; transition: background 0.3s; }\n" +
+            "        .search-btn:hover { background: #2980b9; }\n" +
+            "        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }\n" +
+            "        .status-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }\n" +
+            "        .status-card h3 { color: #2c3e50; margin-bottom: 10px; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px; }\n" +
+            "        .status-card .value { font-size: 2em; font-weight: bold; color: #3498db; }\n" +
+            "        .device-list { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }\n" +
+            "        .device-list h2 { color: #2c3e50; margin-bottom: 20px; }\n" +
+            "        .device-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; }\n" +
+            "        .device-item:hover { background: #f8f9fa; }\n" +
+            "        .device-item:last-child { border-bottom: none; }\n" +
+            "        .device-callsign { font-size: 1.3em; font-weight: bold; color: #2c3e50; margin-bottom: 5px; }\n" +
+            "        .device-info { color: #666; font-size: 0.9em; }\n" +
+            "        .device-link { color: #3498db; text-decoration: none; }\n" +
+            "        .device-link:hover { text-decoration: underline; }\n" +
+            "        .search-results { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none; }\n" +
+            "        .search-results h2 { color: #2c3e50; margin-bottom: 20px; }\n" +
+            "        .result-item { padding: 15px; border-bottom: 1px solid #eee; }\n" +
+            "        .result-item:last-child { border-bottom: none; }\n" +
+            "        .result-title { font-weight: bold; color: #2c3e50; margin-bottom: 5px; }\n" +
+            "        .result-path { color: #666; font-size: 0.9em; }\n" +
+            "        .loading { text-align: center; padding: 20px; color: #666; }\n" +
+            "        .error { background: #fee; color: #c33; padding: 15px; border-radius: 5px; margin: 20px 0; }\n" +
+            "    </style>\n" +
+            "</head>\n" +
+            "<body>\n" +
+            "    <header>\n" +
+            "        <div class=\"container\">\n" +
+            "            <h1>Geogram Relay Server</h1>\n" +
+            "            <div class=\"subtitle\">Search and browse collections from connected devices</div>\n" +
+            "        </div>\n" +
+            "    </header>\n" +
+            "\n" +
+            "    <div class=\"container\">\n" +
+            "        <div class=\"search-box\">\n" +
+            "            <h2 style=\"margin-bottom: 15px; color: #2c3e50;\">Search Collections</h2>\n" +
+            "            <input type=\"text\" id=\"searchInput\" class=\"search-input\" placeholder=\"Search for files in all connected devices...\" />\n" +
+            "            <button class=\"search-btn\" onclick=\"performSearch()\">Search</button>\n" +
+            "        </div>\n" +
+            "\n" +
+            "        <div class=\"status-grid\" id=\"statusGrid\">\n" +
+            "            <div class=\"status-card\">\n" +
+            "                <h3>Status</h3>\n" +
+            "                <div class=\"value\" id=\"statusValue\">Loading...</div>\n" +
+            "            </div>\n" +
+            "            <div class=\"status-card\">\n" +
+            "                <h3>Connected Devices</h3>\n" +
+            "                <div class=\"value\" id=\"devicesValue\">-</div>\n" +
+            "            </div>\n" +
+            "            <div class=\"status-card\">\n" +
+            "                <h3>Uptime</h3>\n" +
+            "                <div class=\"value\" id=\"uptimeValue\">-</div>\n" +
+            "            </div>\n" +
+            "            <div class=\"status-card\">\n" +
+            "                <h3>Server</h3>\n" +
+            "                <div class=\"value\" style=\"font-size: 1.2em;\" id=\"serverValue\">-</div>\n" +
+            "            </div>\n" +
+            "        </div>\n" +
+            "\n" +
+            "        <div class=\"device-list\" id=\"deviceList\">\n" +
+            "            <h2>Connected Devices</h2>\n" +
+            "            <div class=\"loading\">Loading devices...</div>\n" +
+            "        </div>\n" +
+            "\n" +
+            "        <div class=\"search-results\" id=\"searchResults\">\n" +
+            "            <h2>Search Results</h2>\n" +
+            "            <div id=\"resultsContent\"></div>\n" +
+            "        </div>\n" +
+            "    </div>\n" +
+            "\n" +
+            "    <script>\n" +
+            "        async function loadStatus() {\n" +
+            "            try {\n" +
+            "                const response = await fetch('/api/status');\n" +
+            "                const data = await response.json();\n" +
+            "                \n" +
+            "                document.getElementById('statusValue').textContent = data.status.toUpperCase();\n" +
+            "                document.getElementById('devicesValue').textContent = data.connected_devices;\n" +
+            "                document.getElementById('uptimeValue').textContent = data.uptime_hours + 'h';\n" +
+            "                document.getElementById('serverValue').textContent = data.location.city || 'Unknown';\n" +
+            "                \n" +
+            "                const deviceList = document.getElementById('deviceList');\n" +
+            "                if (data.devices && data.devices.length > 0) {\n" +
+            "                    deviceList.innerHTML = '<h2>Connected Devices</h2>' + \n" +
+            "                        data.devices.map(device => `\n" +
+            "                            <div class=\"device-item\">\n" +
+            "                                <div class=\"device-callsign\">\n" +
+            "                                    <a href=\"/${device.callsign}\" class=\"device-link\" target=\"_blank\">${device.callsign}</a>\n" +
+            "                                </div>\n" +
+            "                                <div class=\"device-info\">Connected ${formatTime(device.uptime_seconds)} ago</div>\n" +
+            "                            </div>\n" +
+            "                        `).join('');\n" +
+            "                } else {\n" +
+            "                    deviceList.innerHTML = '<h2>Connected Devices</h2><div class=\"loading\">No devices connected</div>';\n" +
+            "                }\n" +
+            "            } catch (error) {\n" +
+            "                console.error('Error loading status:', error);\n" +
+            "                document.getElementById('statusValue').textContent = 'ERROR';\n" +
+            "            }\n" +
+            "        }\n" +
+            "\n" +
+            "        async function performSearch() {\n" +
+            "            const query = document.getElementById('searchInput').value.trim();\n" +
+            "            if (!query) return;\n" +
+            "            \n" +
+            "            const resultsDiv = document.getElementById('searchResults');\n" +
+            "            const resultsContent = document.getElementById('resultsContent');\n" +
+            "            resultsDiv.style.display = 'block';\n" +
+            "            resultsContent.innerHTML = '<div class=\"loading\">Searching...</div>';\n" +
+            "            \n" +
+            "            try {\n" +
+            "                const response = await fetch(`/search?q=${encodeURIComponent(query)}`);\n" +
+            "                const data = await response.json();\n" +
+            "                \n" +
+            "                if (data.results && data.results.length > 0) {\n" +
+            "                    resultsContent.innerHTML = data.results.map(result => `\n" +
+            "                        <div class=\"result-item\">\n" +
+            "                            <div class=\"result-title\">${result.fileName || result.name}</div>\n" +
+            "                            <div class=\"result-path\">${result.collectionName} - ${result.deviceCallsign}</div>\n" +
+            "                        </div>\n" +
+            "                    `).join('');\n" +
+            "                } else {\n" +
+            "                    resultsContent.innerHTML = '<div class=\"loading\">No results found</div>';\n" +
+            "                }\n" +
+            "            } catch (error) {\n" +
+            "                console.error('Search error:', error);\n" +
+            "                resultsContent.innerHTML = '<div class=\"error\">Error performing search</div>';\n" +
+            "            }\n" +
+            "        }\n" +
+            "\n" +
+            "        document.getElementById('searchInput').addEventListener('keypress', function(e) {\n" +
+            "            if (e.key === 'Enter') performSearch();\n" +
+            "        });\n" +
+            "\n" +
+            "        function formatTime(seconds) {\n" +
+            "            if (seconds < 60) return seconds + ' seconds';\n" +
+            "            if (seconds < 3600) return Math.floor(seconds / 60) + ' minutes';\n" +
+            "            if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours';\n" +
+            "            return Math.floor(seconds / 86400) + ' days';\n" +
+            "        }\n" +
+            "\n" +
+            "        // Load status on page load\n" +
+            "        loadStatus();\n" +
+            "        // Refresh status every 30 seconds\n" +
+            "        setInterval(loadStatus, 30000);\n" +
+            "    </script>\n" +
+            "</body>\n" +
+            "</html>";\n" +
+            "    }\n" +
+            "}
 
