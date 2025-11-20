@@ -43,6 +43,7 @@ public class RelayMessage {
     public Integer statusCode;
     public String responseHeaders;
     public String responseBody;
+    public Boolean isBase64;
 
     // ERROR fields
     public String error;

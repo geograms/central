@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.Base64;
 
 /**
  * Geogram Relay Server - WebSocket/HTTP proxy for device access
@@ -450,7 +451,13 @@ public class GeogramRelay {
 
             // Send response body
             if (response.responseBody != null && !response.responseBody.isEmpty()) {
-                ctx.result(response.responseBody);
+                if (response.isBase64 != null && response.isBase64) {
+                    // Decode base64 before sending
+                    byte[] decodedBytes = Base64.getDecoder().decode(response.responseBody);
+                    ctx.result(decodedBytes);
+                } else {
+                    ctx.result(response.responseBody);
+                }
             }
 
         } catch (TimeoutException e) {
@@ -554,7 +561,13 @@ public class GeogramRelay {
 
             // Send response body
             if (response.responseBody != null && !response.responseBody.isEmpty()) {
-                ctx.result(response.responseBody);
+                if (response.isBase64 != null && response.isBase64) {
+                    // Decode base64 before sending
+                    byte[] decodedBytes = Base64.getDecoder().decode(response.responseBody);
+                    ctx.result(decodedBytes);
+                } else {
+                    ctx.result(response.responseBody);
+                }
             }
 
         } catch (TimeoutException e) {
