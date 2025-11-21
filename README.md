@@ -17,6 +17,7 @@ Geogram enables communication through multiple complementary channels:
 - **📲 Bluetooth Low Energy**: Short-range mesh networking between nearby devices
 - **🌐 NOSTR Protocol**: Decentralized, censorship-resistant messaging when internet is available
 - **💼 Relay System**: Store-and-forward message delivery carried by mobile users
+- **📦 Collections System**: Text-based content management for forums, blogs, events, places, and more
 
 ### Key Features
 
@@ -36,6 +37,29 @@ Geogram enables communication through multiple complementary channels:
 - **[Documentation Index](docs/README.md)** - Complete documentation overview
 - **[Development Guide](docs/development/claude-code-guide.md)** - Setup and build instructions for all platforms
 
+### Collections System
+
+Geogram Collections provide a text-based, P2P-ready content management system for offline-first scenarios:
+
+- **[Collections Overview](docs/collections/others/README.md)** - Introduction to the collections system
+- **[User Guide](docs/collections/others/user-guide.md)** - How to create and use collections
+- **[Architecture](docs/collections/others/architecture.md)** - System design and technical overview
+- **[API Reference](docs/collections/others/api-reference.md)** - Complete API documentation
+- **[Security Model](docs/collections/others/security-model.md)** - Cryptographic verification and permissions
+
+#### Collection Types
+
+Geogram supports various collection types for different content needs:
+
+| Type | Description | Specification |
+|------|-------------|---------------|
+| **Places** | Geographic locations with photos, coordinates, and radius | [places-format-specification.md](docs/collections/types/places-format-specification.md) |
+| **Events** | Time-based gatherings with photos, location, and reactions | [events-format-specification.md](docs/collections/types/events-format-specification.md) |
+| **Forum** | Discussion threads with posts and replies | [forum-format-specification.md](docs/collections/types/forum-format-specification.md) |
+| **Blog** | Articles and blog posts with comments | [blog-format-specification.md](docs/collections/types/blog-format-specification.md) |
+| **Chat** | Real-time messaging with channels | [chat-format-specification.md](docs/collections/types/chat-format-specification.md) |
+| **News** | News articles with categories and reactions | [news-format-specification.md](docs/collections/types/news-format-specification.md) |
+
 ### Privacy & Security
 
 - **[Permissions Explained](docs/privacy/permissions-explained.md)** - Comprehensive transparency about Android app permissions, exactly how they're used, and links to source code for verification
@@ -52,6 +76,11 @@ Geogram enables communication through multiple complementary channels:
 - **[Relay Protocol](docs/relay/relay-protocol.md)** - Message format, storage, and routing specification
 - **[Message Integrity](docs/relay/message-integrity.md)** - Cryptographic verification and lifecycle
 - **[BLE Protocol](docs/relay/message-ble.md)** - Low-level Bluetooth message protocol
+
+#### Connection Protocols
+- **[BLE GATT Findings](docs/connections/BLE_GATT_FINDINGS.md)** - Bluetooth Low Energy protocol details
+- **[Bluetooth Flow Control](docs/connections/BLUETOOTH_FLOW_CONTROL_FIX.md)** - Flow control implementation
+- **[Chunked Downloads](docs/connections/CHUNKED_DOWNLOADS_IMPLEMENTATION.md)** - Large file transfer over BLE
 
 #### Implementation Details
 - **[Android NACK Implementation](docs/implementation/android-nack-implementation.md)** - BLE packet loss recovery system
