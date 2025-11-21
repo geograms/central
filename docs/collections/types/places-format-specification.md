@@ -1,7 +1,7 @@
 # Places Format Specification
 
-**Version**: 1.0
-**Last Updated**: 2025-11-21
+**Version**: 1.2
+**Last Updated**: 2025-11-22
 **Status**: Active
 
 ## Table of Contents
@@ -10,6 +10,7 @@
 - [File Organization](#file-organization)
 - [Coordinate-Based Organization](#coordinate-based-organization)
 - [Place Format](#place-format)
+- [Place Types Reference](#place-types-reference)
 - [Location Radius](#location-radius)
 - [Photos and Media](#photos-and-media)
 - [Contributor Organization](#contributor-organization)
@@ -312,7 +313,7 @@ Given coordinates: 38.7223, -9.1393
 
 Every place must have a `place.txt` file in the place folder root.
 
-**Complete Structure**:
+**Complete Structure (Single Language)**:
 ```
 # PLACE: Place Name
 
@@ -322,6 +323,8 @@ COORDINATES: lat,lon
 RADIUS: meters
 ADDRESS: Full Address (optional)
 TYPE: category (optional)
+FOUNDED: year or century (optional)
+HOURS: Opening hours (optional)
 ADMINS: npub1abc123..., npub1xyz789... (optional)
 MODERATORS: npub1delta..., npub1echo... (optional)
 
@@ -332,6 +335,52 @@ No markdown formatting.
 Can include multiple paragraphs.
 Each paragraph separated by blank line.
 
+HISTORY (optional):
+Historical information about the place.
+Can include multiple paragraphs.
+
+--> npub: npub1...
+--> signature: hex_signature
+```
+
+**Complete Structure (Multilanguage)**:
+```
+# PLACE_EN: Place Name in English
+# PLACE_PT: Nome do Local em Português
+# PLACE_ES: Nombre del Lugar en Español
+
+CREATED: YYYY-MM-DD HH:MM_ss
+AUTHOR: CALLSIGN
+COORDINATES: lat,lon
+RADIUS: meters
+ADDRESS: Full Address (optional)
+TYPE: category (optional)
+FOUNDED: year or century (optional)
+HOURS: Opening hours (optional)
+ADMINS: npub1abc123..., npub1xyz789... (optional)
+MODERATORS: npub1delta..., npub1echo... (optional)
+
+[EN]
+Place description in English.
+Multiple paragraphs allowed.
+
+[PT]
+Descrição do local em Português.
+Vários parágrafos permitidos.
+
+[ES]
+Descripción del lugar en Español.
+Se permiten múltiples párrafos.
+
+HISTORY_EN:
+Historical information in English.
+
+HISTORY_PT:
+Informação histórica em Português.
+
+HISTORY_ES:
+Información histórica en Español.
+
 --> npub: npub1...
 --> signature: hex_signature
 ```
@@ -339,9 +388,16 @@ Each paragraph separated by blank line.
 ### Header Section
 
 1. **Title Line** (required)
-   - **Format**: `# PLACE: <name>`
-   - **Example**: `# PLACE: Historic Café Landmark`
+   - **Single Language Format**: `# PLACE: <name>`
+   - **Multilanguage Format**: `# PLACE_XX: <name>`
+     - XX = two-letter language code in uppercase (EN, PT, ES, FR, DE, IT, NL, RU, ZH, JA, AR)
+   - **Examples**:
+     - Single: `# PLACE: Historic Café Landmark`
+     - Multi: `# PLACE_EN: Historic Café Landmark`
+     - Multi: `# PLACE_PT: Café Histórico Emblemático`
    - **Constraints**: Any length, but truncated in folder name
+   - **Fallback**: Requested language → English (EN) → First available
+   - **Note**: At least one language title required
 
 2. **Blank Line** (required)
    - Separates title from metadata
@@ -379,50 +435,156 @@ Each paragraph separated by blank line.
    - **Examples**: `TYPE: restaurant`, `TYPE: monument`, `TYPE: park`
    - **Purpose**: Categorize place for filtering/searching
 
-9. **Admins** (optional)
+9. **Founded** (optional)
+   - **Format**: `FOUNDED: <year or century>`
+   - **Examples**:
+     - Specific year: `FOUNDED: 1782`
+     - Century: `FOUNDED: 12th century`
+     - Approximate: `FOUNDED: circa 1500`
+     - Era: `FOUNDED: Roman era`
+   - **Purpose**: Indicate when place was established/built
+   - **Note**: Especially useful for historic monuments and buildings
+
+10. **Hours** (optional)
+   - **Format**: `HOURS: <operating hours>`
+   - **Examples**:
+     - `HOURS: Mon-Fri 9:00-17:00, Sat-Sun 10:00-16:00`
+     - `HOURS: Daily 8:00-20:00`
+     - `HOURS: 24/7`
+     - `HOURS: Seasonal (Apr-Oct)`
+   - **Purpose**: Indicate when place is open/accessible
+   - **Note**: Format is flexible, use human-readable text
+
+11. **Admins** (optional)
    - **Format**: `ADMINS: <npub1>, <npub2>, ...`
    - **Example**: `ADMINS: npub1abc123..., npub1xyz789...`
    - **Purpose**: Additional administrators for place
    - **Note**: Author is always admin, even if not listed
 
-10. **Moderators** (optional)
+12. **Moderators** (optional)
     - **Format**: `MODERATORS: <npub1>, <npub2>, ...`
     - **Example**: `MODERATORS: npub1delta..., npub1echo...`
     - **Purpose**: Users who can moderate content
 
-11. **Blank Line** (required)
+13. **Blank Line** (required)
     - Separates header from content
 
 ### Content Section
 
 The content section contains the place description.
 
+**Single Language Format**:
+```
+Description text here.
+Multiple paragraphs allowed.
+
+Each paragraph separated by blank line.
+```
+
+**Multilanguage Format**:
+```
+[EN]
+Description in English.
+Multiple paragraphs allowed.
+
+[PT]
+Descrição em Português.
+Vários parágrafos permitidos.
+
+[ES]
+Descripción en Español.
+Se permiten múltiples párrafos.
+```
+
+**Language Codes**:
+- **EN**: English
+- **PT**: Português (Portuguese)
+- **ES**: Español (Spanish)
+- **FR**: Français (French)
+- **DE**: Deutsch (German)
+- **IT**: Italiano (Italian)
+- **NL**: Nederlands (Dutch)
+- **RU**: Русский (Russian)
+- **ZH**: 中文 (Chinese)
+- **JA**: 日本語 (Japanese)
+- **AR**: العربية (Arabic)
+
 **Characteristics**:
 - **Plain text only** (no markdown)
-- Multiple paragraphs allowed
+- Multiple paragraphs allowed per language
 - Blank lines separate paragraphs
 - Whitespace preserved
 - No length limit (reasonable sizes recommended)
+- At least one language required
+- Language blocks marked with `[XX]` where XX is the language code
+
+**Fallback Behavior**:
+1. Display content in requested language
+2. If not available, fall back to English (EN)
+3. If English not available, use first available language
+
+### History Section
+
+The optional HISTORY section provides historical context about the place.
+
+**Single Language Format**:
+```
+HISTORY:
+Historical information about the place.
+
+Can include multiple paragraphs describing the history,
+important events, architectural changes, and cultural
+significance of the location.
+```
+
+**Multilanguage Format**:
+```
+HISTORY_EN:
+Historical information in English.
+
+HISTORY_PT:
+Informação histórica em Português.
+
+HISTORY_ES:
+Información histórica en Español.
+```
+
+**Characteristics**:
+- **Completely optional**: Not all places need historical context
+- **Format**: `HISTORY:` for single language, `HISTORY_XX:` for multilanguage
+- **Position**: After content section, before metadata
+- **Plain text only** (no markdown)
+- **Multiple paragraphs allowed**
+- **Especially useful for**:
+  - Historic monuments and buildings
+  - Archaeological sites
+  - Cultural landmarks
+  - Places with significant events
+  - Heritage sites
+
+**When to Use**:
+- Use FOUNDED field for establishment date
+- Use HISTORY section for detailed historical context
+- Separate from main description to allow focused historical information
 
 **Example**:
 ```
-Historic café located in the heart of Lisbon.
+HISTORY:
+Originally built as a monastery in the 12th century, this
+building served religious purposes until the dissolution in 1834.
 
-Established in 1782, this café has served famous writers,
-artists, and politicians throughout Portuguese history.
+It was later converted into a café in 1856 by José Silva,
+who preserved much of the original architecture while
+adapting the interior for commercial use.
 
-Notable features:
-- Original Art Nouveau interior
-- Hand-painted azulejo tiles
-- Historic pastry recipes
-- Outdoor terrace with city views
-
-Open daily from 8 AM to midnight.
+The café became famous in the early 20th century as a meeting
+place for Portuguese writers and intellectuals, including
+Fernando Pessoa and Almada Negreiros.
 ```
 
 ### Place Metadata
 
-Metadata appears after content:
+Metadata appears after content and history sections:
 
 ```
 --> npub: npub1abc123...
@@ -431,6 +593,323 @@ Metadata appears after content:
 
 - **npub**: NOSTR public key (optional)
 - **signature**: NOSTR signature, must be last if present
+
+## Place Types Reference
+
+### Overview
+
+The TYPE field in a place allows categorization for filtering and searching. This reference provides a comprehensive list of recommended place types organized by category. Types are lowercase with hyphens separating words.
+
+### Emergency & Off-Grid Survival
+
+Critical resources for emergency and off-grid situations:
+- **water-spring**: Natural spring or water source
+- **well**: Water well (active or historic)
+- **shelter**: Emergency shelter or refuge
+- **cave**: Natural cave suitable for shelter
+- **fire-tower**: Fire lookout tower
+- **emergency-station**: Emergency services station
+- **first-aid-station**: First aid post
+- **rescue-point**: Designated rescue location
+- **safety-point**: Safe gathering point
+- **evacuation-point**: Emergency evacuation location
+- **radio-tower**: Communication tower
+- **ham-radio-repeater**: Amateur radio repeater station
+- **weather-station**: Meteorological station
+- **off-grid-settlement**: Off-grid community
+- **survival-cache**: Emergency supply cache
+- **bunker**: Underground shelter
+
+### Nature & Wilderness
+
+Natural features and wilderness areas:
+- **mountain-peak**: Mountain summit
+- **viewpoint**: Scenic overlook
+- **waterfall**: Natural waterfall
+- **lake**: Natural or man-made lake
+- **river**: River or stream
+- **beach**: Beach area
+- **cliff**: Cliff face or escarpment
+- **canyon**: Canyon or gorge
+- **forest**: Forest or woodland area
+- **wetland**: Wetland or marsh
+- **hot-spring**: Natural hot spring
+- **geyser**: Active geyser
+- **volcano**: Volcanic feature
+- **glacier**: Glacier or ice field
+- **desert**: Desert area
+
+### Fruit Trees
+
+Specific fruit-bearing trees for foraging and survival:
+- **apple-tree**: Apple tree
+- **pear-tree**: Pear tree
+- **cherry-tree**: Cherry tree
+- **plum-tree**: Plum tree
+- **peach-tree**: Peach tree
+- **apricot-tree**: Apricot tree
+- **fig-tree**: Fig tree
+- **olive-tree**: Olive tree
+- **orange-tree**: Orange tree
+- **lemon-tree**: Lemon tree
+- **lime-tree**: Lime tree
+- **grapefruit-tree**: Grapefruit tree
+- **pomegranate-tree**: Pomegranate tree
+- **persimmon-tree**: Persimmon tree
+- **mulberry-tree**: Mulberry tree
+- **quince-tree**: Quince tree
+- **medlar-tree**: Medlar tree
+- **loquat-tree**: Loquat tree
+- **avocado-tree**: Avocado tree
+- **mango-tree**: Mango tree
+- **papaya-tree**: Papaya tree
+- **guava-tree**: Guava tree
+- **passion-fruit-vine**: Passion fruit vine
+- **grape-vine**: Grape vine
+- **kiwi-vine**: Kiwi fruit vine
+- **date-palm**: Date palm tree
+- **coconut-palm**: Coconut palm tree
+
+### Edible Plants & Vegetables
+
+Wild and cultivated edible plants for foraging:
+- **berry-bush**: General berry bush
+- **blackberry-bush**: Blackberry bush
+- **raspberry-bush**: Raspberry bush
+- **blueberry-bush**: Blueberry bush
+- **strawberry-patch**: Wild strawberry patch
+- **elderberry-bush**: Elderberry bush
+- **rosehip-bush**: Rose hip bush
+- **wild-garlic-patch**: Wild garlic area
+- **nettle-patch**: Stinging nettle patch (edible when cooked)
+- **dandelion-patch**: Dandelion patch (edible greens)
+- **wild-asparagus**: Wild asparagus
+- **mushroom-spot**: Mushroom foraging location
+- **herb-garden**: Herb garden
+- **vegetable-garden**: Vegetable garden
+- **community-garden**: Community garden plot
+- **wild-onion-patch**: Wild onion area
+- **wild-carrot-patch**: Wild carrot (Queen Anne's lace)
+- **watercress-stream**: Watercress growing area
+- **wild-mint-patch**: Wild mint area
+- **wild-thyme-patch**: Wild thyme area
+- **wild-oregano-patch**: Wild oregano area
+- **chicory-patch**: Wild chicory
+- **wild-fennel-patch**: Wild fennel
+- **purslane-patch**: Purslane (edible succulent)
+- **lamb's-quarters-patch**: Lamb's quarters (wild spinach)
+
+### Nut Trees & Bushes
+
+Nut-bearing trees and bushes:
+- **walnut-tree**: Walnut tree
+- **chestnut-tree**: Chestnut tree
+- **hazelnut-bush**: Hazelnut bush
+- **almond-tree**: Almond tree
+- **pistachio-tree**: Pistachio tree
+- **pecan-tree**: Pecan tree
+- **pine-nut-tree**: Pine tree with edible pine nuts
+- **acorn-oak**: Oak tree with edible acorns
+
+### Agriculture & Farming
+
+Agricultural facilities and farmland:
+- **farm**: General farm
+- **orchard**: Fruit orchard
+- **vineyard**: Grape vineyard
+- **greenhouse**: Greenhouse facility
+- **barn**: Farm barn
+- **silo**: Grain silo
+- **windmill**: Historic or functioning windmill
+- **irrigation-system**: Irrigation infrastructure
+- **crop-field**: Crop field
+- **pasture**: Grazing pasture
+- **dairy-farm**: Dairy farm
+- **ranch**: Livestock ranch
+- **farmstand**: Farm produce stand
+- **agricultural-cooperative**: Farming cooperative
+- **seed-bank**: Seed storage facility
+
+### Food & Drink
+
+Food and beverage establishments:
+- **restaurant**: Full-service restaurant
+- **cafe**: Café or coffee shop
+- **bar**: Bar or pub
+- **fast-food**: Fast food restaurant
+- **bakery**: Bakery
+- **ice-cream-shop**: Ice cream parlor
+- **brewery**: Brewery
+- **winery**: Wine producer
+- **food-truck**: Mobile food vendor location
+- **tea-house**: Tea house
+
+### Retail & Commerce
+
+Shopping and commercial establishments:
+- **shop**: General shop or store
+- **shopping**: Shopping center or area
+- **supermarket**: Large grocery store
+- **market**: Market or bazaar
+- **grocery-store**: Grocery store
+- **convenience-store**: Convenience store
+- **department-store**: Department store
+- **bookstore**: Bookstore
+- **pharmacy**: Pharmacy or drugstore
+- **gas-station**: Gas/petrol station
+
+### Accommodation
+
+Lodging and accommodation:
+- **hotel**: Hotel
+- **hostel**: Hostel or budget accommodation
+- **motel**: Motel
+- **guesthouse**: Guest house or bed & breakfast
+- **campground**: Camping area
+- **caravan-park**: RV/caravan park
+- **resort**: Resort facility
+- **vacation-rental**: Vacation rental property
+
+### Cultural & Historic
+
+Cultural sites and historic landmarks:
+- **monument**: Monument or memorial
+- **statue**: Statue or sculpture
+- **museum**: Museum
+- **art-gallery**: Art gallery
+- **historic-site**: Historic landmark
+- **archaeological-site**: Archaeological excavation
+- **castle**: Castle or fortress
+- **palace**: Palace
+- **temple**: Temple or shrine
+- **church**: Christian church
+- **mosque**: Islamic mosque
+- **synagogue**: Jewish synagogue
+- **cathedral**: Cathedral
+- **monastery**: Monastery or abbey
+- **ruins**: Historic ruins
+- **ancient-tree**: Historic or ancient tree
+- **commemorative-plaque**: Memorial plaque
+- **cultural-center**: Cultural center
+
+### Tourism & Attractions
+
+Tourist destinations and attractions:
+- **tourist-attraction**: General tourist site
+- **theme-park**: Amusement or theme park
+- **zoo**: Zoological park
+- **aquarium**: Aquarium
+- **botanical-garden**: Botanical garden
+- **observatory**: Observatory (astronomical)
+- **lighthouse**: Lighthouse
+- **scenic-route**: Scenic driving/hiking route
+- **visitor-center**: Tourist information center
+- **landmark**: Notable landmark
+- **geocache**: Geocaching location
+
+### Urban Infrastructure
+
+Urban facilities and infrastructure:
+- **building**: General building
+- **skyscraper**: High-rise building
+- **tower**: Tower structure
+- **bridge**: Bridge
+- **tunnel**: Tunnel
+- **dam**: Dam or reservoir
+- **power-plant**: Power generation facility
+- **water-treatment**: Water treatment facility
+- **waste-facility**: Waste management facility
+- **telecommunications-tower**: Cell/telecom tower
+- **parking**: Parking facility
+- **parking-lot**: Parking lot
+- **street-art**: Street art or mural
+- **fountain**: Fountain or water feature
+- **clock-tower**: Clock tower
+- **school**: Educational institution
+
+### Recreation & Sports
+
+Recreational facilities and sports venues:
+- **park**: Public park
+- **playground**: Playground
+- **sports-field**: Sports field or pitch
+- **stadium**: Stadium or arena
+- **gym**: Fitness center
+- **swimming-pool**: Public swimming pool
+- **skate-park**: Skateboard park
+- **golf-course**: Golf course
+- **tennis-court**: Tennis court
+- **climbing-area**: Rock climbing area
+- **geocache**: Geocaching location
+
+### Public Spaces
+
+Public gathering areas:
+- **plaza**: Public plaza or square
+- **town-square**: Town square
+- **amphitheater**: Outdoor amphitheater
+- **garden**: Public garden
+- **courtyard**: Public courtyard
+- **promenade**: Waterfront promenade
+- **boardwalk**: Wooden boardwalk
+
+### Transportation
+
+Transportation facilities and stops:
+- **airport**: Airport
+- **train-station**: Railway station
+- **bus-station**: Bus terminal
+- **bus-stop**: Local bus stop
+- **bus-stop-long-distance**: Long-distance bus stop
+- **metro-station**: Subway/metro station
+- **ferry-terminal**: Ferry terminal
+- **port**: Seaport or harbor
+- **helipad**: Helicopter landing pad
+
+### Services
+
+Service facilities:
+- **hospital**: Hospital or medical center
+- **clinic**: Medical clinic
+- **police-station**: Police station
+- **fire-station**: Fire station
+- **post-office**: Post office
+- **library**: Public library
+- **bank**: Bank
+
+### Miscellaneous
+
+Other place types:
+- **office**: Office building or complex
+- **factory**: Manufacturing facility
+- **warehouse**: Warehouse or storage
+- **cemetery**: Cemetery or graveyard
+- **pet-cemetery**: Pet cemetery
+- **rest-area**: Highway rest area
+- **charging-station**: Electric vehicle charging station
+
+### Usage Guidelines
+
+**Choosing a Type**:
+- Select the most specific applicable type
+- Use lowercase with hyphens
+- Keep types consistent across similar places
+- Create new types when needed (follow naming convention)
+
+**Examples**:
+```
+TYPE: water-spring
+TYPE: apple-tree
+TYPE: museum
+TYPE: bus-stop-long-distance
+TYPE: geocache
+```
+
+**Custom Types**:
+- You can create custom types not in this list
+- Follow naming convention: lowercase-with-hyphens
+- Be descriptive and specific
+- Document custom types for your collection
 
 ## Location Radius
 
@@ -804,6 +1283,7 @@ Comment content.
 > YYYY-MM-DD HH:MM_ss -- CALLSIGN
 Comment content here.
 Can span multiple lines.
+--> rating: 5
 --> npub: npub1...
 --> signature: hex_signature
 ```
@@ -820,8 +1300,12 @@ Can span multiple lines.
    - No formatting
 
 3. **Metadata** (optional)
-   - npub and signature only
-   - Signature must be last if present
+   - **rating**: Optional numeric rating (1-5)
+     - Format: `--> rating: <1-5>`
+     - Example: `--> rating: 5`
+     - Use for reviews/recommendations
+   - **npub**: NOSTR public key
+   - **signature**: NOSTR signature (must be last if present)
 
 ### Comment Locations
 
@@ -838,6 +1322,66 @@ Comments are stored in reaction files:
 - **Multiple targets**: Can comment on different items
 - **Persistent**: Comments remain with item
 
+### Reviews and Ratings
+
+Places support user reviews through the comment system with optional ratings:
+
+**Review Format**:
+```
+> 2025-11-21 14:30_00 -- CR7BBQ
+Amazing historic café! The pastries are incredible and the
+Art Nouveau interior is stunning. Highly recommended for
+coffee and traditional Portuguese sweets.
+--> rating: 5
+--> npub: npub1abc123...
+--> signature: hex_sig...
+```
+
+**Rating Scale**:
+- **5**: Excellent, highly recommended
+- **4**: Very good, recommended
+- **3**: Good, average experience
+- **2**: Below average, some issues
+- **1**: Poor, not recommended
+
+**Calculating Average Rating**:
+- Count all comments with rating metadata
+- Calculate average of all ratings
+- Display as stars (e.g., ⭐⭐⭐⭐⭐ 4.5/5.0)
+- Show count (e.g., "Based on 12 reviews")
+
+**Review Best Practices**:
+- Ratings are optional; comments without ratings are still valuable
+- Be honest and constructive in reviews
+- Include specific details (food quality, service, atmosphere, etc.)
+- Update review if experience changes over time
+- Admins/moderators can hide inappropriate reviews
+
+**Example with Multiple Reviews**:
+```
+.reactions/place.txt:
+LIKES: CR7BBQ, X135AS, BRAVO2, ALPHA1, DELTA4
+
+> 2025-11-21 14:30_00 -- CR7BBQ
+Amazing historic café! The pastries are incredible.
+--> rating: 5
+--> npub: npub1abc123...
+--> signature: hex_sig1...
+
+> 2025-11-22 10:15_00 -- X135AS
+Good coffee and atmosphere, but service was a bit slow.
+--> rating: 4
+--> npub: npub1xyz789...
+--> signature: hex_sig2...
+
+> 2025-11-23 16:00_00 -- BRAVO2
+Beautiful interior! Worth visiting for the architecture alone.
+--> rating: 5
+--> npub: npub1bravo...
+--> signature: hex_sig3...
+```
+Average rating: 4.67/5.0 (3 reviews)
+
 ## Subfolder Organization
 
 ### Subfolder Purpose
@@ -847,6 +1391,102 @@ Subfolders organize related content within a place:
 - Separate different aspects (e.g., "day-photos", "night-photos")
 - Organize by season (e.g., "spring", "summer", "autumn", "winter")
 - Separate media types (e.g., "videos", "documents", "maps")
+
+### Category-Specific Folder Recommendations
+
+Different place types benefit from different subfolder organization. The system should suggest appropriate folders based on the TYPE field, but all folders remain optional.
+
+**Places with Exterior/Interior Folders** (typically buildings and structures):
+
+*Food & Drink*: restaurant, cafe, bar, fast-food, bakery, ice-cream-shop, tea-house, brewery, winery
+- **exterior/**: Building facade, outdoor seating, signage
+- **interior/**: Dining area, bar, kitchen views, decor
+
+*Retail & Commerce*: shop, shopping, supermarket, market, grocery-store, convenience-store, department-store, bookstore, pharmacy
+- **exterior/**: Storefront, entrance, parking
+- **interior/**: Aisles, displays, product selection
+
+*Accommodation*: hotel, hostel, motel, guesthouse, resort
+- **exterior/**: Building facade, grounds, pool area
+- **interior/**: Rooms, lobby, common areas, amenities
+
+*Cultural & Historic*: monument, museum, art-gallery, castle, palace, temple, church, mosque, synagogue, cathedral, monastery, historic-site
+- **exterior/**: Architecture, facade, grounds
+- **interior/**: Exhibits, artwork, architectural details
+
+*Urban Infrastructure*: building, skyscraper, tower, bridge, school, office
+- **exterior/**: Architecture, surrounding area
+- **interior/**: Lobby, significant rooms (if accessible)
+
+*Services*: hospital, clinic, police-station, fire-station, post-office, library, bank
+- **exterior/**: Building, parking, accessibility
+- **interior/**: Waiting areas, service counters (where appropriate)
+
+*Tourism & Attractions*: theme-park, zoo, aquarium, botanical-garden, observatory, lighthouse, visitor-center
+- **exterior/**: Entrance, grounds, outdoor exhibits
+- **interior/**: Indoor exhibits, facilities
+
+**Places WITHOUT Exterior/Interior Folders** (natural features, outdoor locations):
+
+*Emergency & Off-Grid*: water-spring, well, shelter, cave, fire-tower, safety-point, bunker
+- Use descriptive folders: **approach/**, **source/**, **surroundings/**
+
+*Nature & Wilderness*: mountain-peak, viewpoint, waterfall, lake, river, beach, cliff, canyon, forest, wetland, hot-spring
+- Use descriptive folders: **views/**, **trail/**, **seasonal/**, **wildlife/**
+
+*Fruit Trees*: apple-tree, pear-tree, cherry-tree, and all fruit tree types
+- Use descriptive folders: **spring-blossoms/**, **summer-fruit/**, **harvest/**, **location/**
+
+*Edible Plants*: berry-bush, blackberry-bush, wild-garlic-patch, mushroom-spot, etc.
+- Use descriptive folders: **growing-season/**, **harvest/**, **identification/**, **location/**
+
+*Nut Trees*: walnut-tree, chestnut-tree, hazelnut-bush, etc.
+- Use descriptive folders: **spring/**, **autumn-harvest/**, **identification/**, **location/**
+
+*Agriculture & Farming*: farm, orchard, vineyard, crop-field, pasture
+- Use descriptive folders: **fields/**, **equipment/**, **harvest/**, **seasonal/**
+
+*Recreation & Sports*: park, playground, sports-field, stadium, golf-course, tennis-court, climbing-area, geocache
+- Use activity-based folders: **facilities/**, **trails/**, **equipment/**, **events/**
+
+*Public Spaces*: plaza, town-square, garden, promenade
+- Use area-based folders: **central-area/**, **features/**, **events/**, **seasonal/**
+
+*Transportation*: bus-stop, bus-stop-long-distance, train-station, metro-station, airport
+- Use functional folders: **platforms/**, **waiting-area/**, **signage/**, **access/**
+
+**UI Implementation Suggestions**:
+- When creating a place, suggest relevant folders based on TYPE field
+- Pre-create suggested folders for user convenience (empty until photos added)
+- Allow users to disable/remove suggested folders
+- Always allow custom folder creation regardless of type
+- Show folder suggestions as optional, not mandatory
+
+**Example - Restaurant**:
+```
+38.7223_-9.1393_historic-cafe/
+├── place.txt
+├── exterior/           # Auto-suggested
+│   ├── facade.jpg
+│   └── terrace.jpg
+├── interior/           # Auto-suggested
+│   ├── dining-room.jpg
+│   └── bar-area.jpg
+└── menu/               # User-created custom folder
+    └── menu-2025.pdf
+```
+
+**Example - Apple Tree**:
+```
+38.7145_-9.1501_apple-tree/
+├── place.txt
+├── spring-blossoms/    # Suggested for fruit trees
+│   └── flowers.jpg
+├── summer-fruit/       # Suggested for fruit trees
+│   └── ripening-apples.jpg
+└── location/           # Suggested for outdoor places
+    └── access-path.jpg
+```
 
 ### Subfolder Structure
 
@@ -1128,7 +1768,7 @@ Great place!
 
 ## Complete Examples
 
-### Example 1: Simple Place
+### Example 1: Simple Place (Single Language)
 
 ```
 # PLACE: Historic Tower
@@ -1139,14 +1779,22 @@ COORDINATES: 38.7169,-9.1399
 RADIUS: 100
 ADDRESS: Praça do Comércio, Lisbon, Portugal
 TYPE: monument
+FOUNDED: 16th century
+HOURS: Daily 9:00-19:00
 
 Historic tower built in the 16th century.
 
 Famous landmark in Lisbon, offering panoramic views
 of the city and the Tagus River.
 
-Open to visitors daily from 9 AM to 7 PM.
 Admission fee required.
+
+HISTORY:
+Constructed in 1515 during the reign of King Manuel I, this
+tower served as both a fortress and ceremonial gateway to Lisbon.
+
+It survived the devastating earthquake of 1755 and became
+a UNESCO World Heritage site in 1983.
 
 --> npub: npub1abc123...
 --> signature: 0123456789abcdef...
@@ -1176,6 +1824,8 @@ COORDINATES: 38.7223,-9.1393
 RADIUS: 50
 ADDRESS: Rua Garrett 120, Chiado, Lisbon
 TYPE: restaurant
+FOUNDED: 1782
+HOURS: Daily 8:00-24:00
 
 Historic café established in 1782.
 
@@ -1194,12 +1844,22 @@ and the famous "bica" espresso.
 LIKES: CR7BBQ, BRAVO2, ALPHA1, DELTA4
 
 > 2025-11-21 12:30_00 -- CR7BBQ
-Amazing historic place! The interior is stunning.
+Amazing historic place! The interior is stunning. The Art Nouveau
+details are exquisite and the traditional pastries are authentic.
+--> rating: 5
 --> npub: npub1abc123...
 --> signature: 111222333...
 
 > 2025-11-21 14:00_00 -- BRAVO2
 The pastries here are incredible. Must visit!
+--> rating: 5
+
+> 2025-11-22 09:30_00 -- ALPHA1
+Good atmosphere but service was a bit slow during busy hours.
+Coffee is excellent though.
+--> rating: 4
+--> npub: npub1alpha...
+--> signature: aaa222bbb...
 
 === .reactions/main-entrance.jpg.txt ===
 LIKES: CR7BBQ, X135AS, ALPHA1
@@ -1381,14 +2041,236 @@ LIKES: CR7BBQ, ALPHA1
 Great collection of exterior shots!
 ```
 
+### Example 5: Natural Place (Fruit Tree)
+
+```
+Place folder: places/38.7_-9.1/38.7145_-9.1501_apple-tree-roadside/
+
+Structure:
+- place.txt
+- overview.jpg
+- spring-blossoms/
+  - subfolder.txt
+  - white-flowers.jpg
+  - bee-pollination.jpg
+- summer-fruit/
+  - green-apples.jpg
+  - ripening-fruit.jpg
+- harvest/
+  - ripe-apples.jpg
+  - harvest-basket.jpg
+- location/
+  - access-path.jpg
+  - landmark-nearby.jpg
+- .reactions/
+  - place.txt
+  - spring-blossoms.txt
+
+=== place.txt ===
+# PLACE: Roadside Apple Tree
+
+CREATED: 2025-11-21 08:00_00
+AUTHOR: CR7BBQ
+COORDINATES: 38.7145,-9.1501
+RADIUS: 15
+ADDRESS: Near km 23 marker, N247 road, Sintra
+TYPE: apple-tree
+HOURS: Accessible year-round
+
+Wild apple tree growing beside the N247 road.
+
+Produces medium-sized red apples, typically ready for
+harvest in late September to early October. Tree is
+healthy and productive, estimated to be 15-20 years old.
+
+Access is easy from the road with a small pull-off area.
+Please be respectful and only take what you need.
+
+--> npub: npub1abc123...
+--> signature: xyz789def456...
+
+=== spring-blossoms/subfolder.txt ===
+# SUBFOLDER: Spring Blossoms
+
+CREATED: 2025-04-15 10:30_00
+AUTHOR: CR7BBQ
+
+Photos of the apple blossoms in spring (April).
+
+White flowers with pink edges. Heavy flowering this year
+indicates good fruit production for autumn harvest.
+
+--> npub: npub1abc123...
+--> signature: aaa111bbb222...
+
+=== summer-fruit/subfolder.txt ===
+# SUBFOLDER: Summer Fruit Development
+
+CREATED: 2025-07-20 16:00_00
+AUTHOR: X135AS
+
+Fruit development through summer months.
+
+Green apples growing well with good size. No significant
+pest damage observed. Fruit should be ready by late September.
+
+--> npub: npub1xyz789...
+--> signature: ccc333ddd444...
+
+=== .reactions/place.txt ===
+LIKES: X135AS, BRAVO2, ALPHA1
+
+> 2025-09-28 14:00_00 -- X135AS
+Great find! The apples were perfect this year. Picked about
+2kg for apple pie. Tree looks healthy and well-maintained.
+--> rating: 5
+--> npub: npub1xyz789...
+--> signature: eee555fff666...
+
+> 2025-10-05 11:30_00 -- BRAVO2
+Stopped by today but most apples are gone. Good to know
+for next year though. Thanks for documenting this!
+--> npub: npub1bravo...
+--> signature: ggg777hhh888...
+
+> 2025-10-12 09:00_00 -- ALPHA1
+This is exactly the kind of foraging info we need. Please
+add more fruit trees to the collection!
+--> rating: 5
+
+=== .reactions/spring-blossoms.txt ===
+LIKES: CR7BBQ, X135AS
+
+> 2025-04-20 12:00_00 -- X135AS
+Beautiful blossoms! Can't wait for harvest season.
+--> npub: npub1xyz...
+--> signature: iii999jjj000...
+```
+
+### Example 6: Multilanguage Place (Monument)
+
+```
+Place folder: places/38.7_-9.1/38.7169_-9.1399_monastery/
+
+=== place.txt ===
+# PLACE_EN: Jerónimos Monastery
+# PLACE_PT: Mosteiro dos Jerónimos
+# PLACE_ES: Monasterio de los Jerónimos
+# PLACE_FR: Monastère des Hiéronymites
+
+CREATED: 2025-11-21 15:00_00
+AUTHOR: CR7BBQ
+COORDINATES: 38.6979,-9.2063
+RADIUS: 200
+ADDRESS: Praça do Império, 1400-206 Lisbon, Portugal
+TYPE: monastery
+FOUNDED: 1501
+HOURS: Tue-Sun 10:00-17:30
+
+[EN]
+The Jerónimos Monastery is a former monastery of the Order of Saint Jerome
+near the Tagus river in the parish of Belém, Lisbon, Portugal.
+
+This masterpiece of Portuguese Late Gothic Manueline architecture stands
+as a monument to Portugal's Age of Discovery and is one of the most
+prominent examples of the Portuguese Late Gothic style.
+
+The monastery was classified as a UNESCO World Heritage Site in 1983.
+
+[PT]
+O Mosteiro dos Jerónimos é um antigo mosteiro da Ordem de São Jerónimo
+localizado na freguesia de Belém, em Lisboa, Portugal.
+
+Esta obra-prima da arquitetura manuelina portuguesa tardia representa
+a Era dos Descobrimentos de Portugal e é um dos exemplos mais proeminentes
+do estilo gótico tardio português.
+
+O mosteiro foi classificado como Património Mundial da UNESCO em 1983.
+
+[ES]
+El Monasterio de los Jerónimos es un antiguo monasterio de la Orden de
+San Jerónimo cerca del río Tajo en la parroquia de Belém, Lisboa, Portugal.
+
+Esta obra maestra de la arquitectura manuelina portuguesa tardía se
+erige como un monumento a la Era de los Descubrimientos de Portugal
+y es uno de los ejemplos más destacados del estilo gótico tardío portugués.
+
+El monasterio fue declarado Patrimonio de la Humanidad por la UNESCO en 1983.
+
+[FR]
+Le Monastère des Hiéronymites est un ancien monastère de l'Ordre de
+Saint-Jérôme près du fleuve Tage dans la paroisse de Belém, Lisbonne, Portugal.
+
+Ce chef-d'œuvre de l'architecture manuéline portugaise tardive est un
+monument de l'Âge des Découvertes du Portugal et est l'un des exemples
+les plus remarquables du style gothique tardif portugais.
+
+Le monastère a été classé au patrimoine mondial de l'UNESCO en 1983.
+
+HISTORY_EN:
+King Manuel I commissioned the monastery in 1501 to commemorate Vasco da Gama's
+successful voyage to India. Construction began in 1501 and was completed around
+1601, spanning 100 years.
+
+The monastery was originally inhabited by monks of the Order of Saint Jerome,
+whose role was to provide spiritual guidance to mariners and pray for the
+king's soul.
+
+The building was largely spared by the 1755 earthquake, although the bell
+tower collapsed. It was later declared a national monument in 1907.
+
+HISTORY_PT:
+O Rei Manuel I encomendou o mosteiro em 1501 para comemorar a viagem bem-sucedida
+de Vasco da Gama à Índia. A construção começou em 1501 e foi concluída por volta
+de 1601, abrangendo 100 anos.
+
+O mosteiro foi originalmente habitado por monges da Ordem de São Jerónimo,
+cujo papel era fornecer orientação espiritual aos marinheiros e rezar pela
+alma do rei.
+
+O edifício foi em grande parte poupado pelo terramoto de 1755, embora a torre
+do sino tenha desabado. Foi posteriormente declarado monumento nacional em 1907.
+
+HISTORY_ES:
+El Rey Manuel I encargó el monasterio en 1501 para conmemorar el exitoso viaje
+de Vasco da Gama a la India. La construcción comenzó en 1501 y se completó
+alrededor de 1601, abarcando 100 años.
+
+El monasterio fue originalmente habitado por monjes de la Orden de San Jerónimo,
+cuyo papel era proporcionar orientación espiritual a los marineros y rezar por
+el alma del rey.
+
+El edificio se salvó en gran medida del terremoto de 1755, aunque la torre del
+campanario se derrumbó. Posteriormente fue declarado monumento nacional en 1907.
+
+HISTORY_FR:
+Le Roi Manuel Ier a commandé le monastère en 1501 pour commémorer le voyage
+réussi de Vasco de Gama en Inde. La construction a commencé en 1501 et s'est
+achevée vers 1601, s'étalant sur 100 ans.
+
+Le monastère était à l'origine habité par des moines de l'Ordre de Saint-Jérôme,
+dont le rôle était de fournir des conseils spirituels aux marins et de prier
+pour l'âme du roi.
+
+Le bâtiment a été largement épargné par le tremblement de terre de 1755, bien
+que le clocher se soit effondré. Il a ensuite été déclaré monument national en 1907.
+
+--> npub: npub1abc123...
+--> signature: xyz789abc456def...
+```
+
 ## Parsing Implementation
 
 ### Place File Parsing
 
 ```
 1. Read place.txt as UTF-8 text
-2. Verify first line starts with "# PLACE: "
-3. Extract name from first line
+2. Parse title lines:
+   - Single language: "# PLACE: <name>"
+   - Multilanguage: "# PLACE_XX: <name>" (XX = language code in uppercase)
+   - Extract all language variants into Map<String, String>
+   - Continue reading consecutive title lines until non-title line
+3. Verify at least one title exists
 4. Parse header lines:
    - CREATED: timestamp
    - AUTHOR: callsign
@@ -1396,12 +2278,22 @@ Great collection of exterior shots!
    - RADIUS: meters (10-1000)
    - ADDRESS: (optional)
    - TYPE: (optional)
+   - FOUNDED: (optional)
+   - HOURS: (optional)
    - ADMINS: (optional)
    - MODERATORS: (optional)
 5. Find content start (after header blank line)
-6. Parse content until metadata or EOF
-7. Extract metadata (npub, signature)
-8. Validate signature placement (must be last)
+6. Parse content section:
+   - Single language: Read until HISTORY or metadata
+   - Multilanguage: Look for [XX] markers
+     - Extract content for each language into Map<String, String>
+     - Continue until HISTORY section or metadata
+7. Parse HISTORY section (optional):
+   - Single language: "HISTORY:" followed by content
+   - Multilanguage: "HISTORY_XX:" for each language
+   - Extract history for each language into Map<String, String>
+8. Extract metadata (npub, signature)
+9. Validate signature placement (must be last)
 ```
 
 ### Region Calculation
@@ -1423,8 +2315,10 @@ Great collection of exterior shots!
 3. Parse comments:
    - Extract timestamp and author from header
    - Read content lines
-   - Parse metadata (npub, signature)
+   - Parse metadata (rating, npub, signature)
+   - Extract rating value (1-5) if present
 4. Associate with target item
+5. Calculate average rating from all comments with ratings
 ```
 
 ### File Enumeration
@@ -1582,8 +2476,10 @@ After 10,000th place added:
 
 ### Place Validation
 
-- [x] First line must start with `# PLACE: `
-- [x] Name must not be empty
+- [x] First line must start with `# PLACE: ` or `# PLACE_XX: ` (multilanguage)
+- [x] At least one title required (any language)
+- [x] Language codes must be two letters, uppercase (EN, PT, ES, FR, DE, IT, NL, RU, ZH, JA, AR)
+- [x] Name must not be empty for each language
 - [x] CREATED line must have valid timestamp
 - [x] AUTHOR line must have non-empty callsign
 - [x] COORDINATES must be valid lat,lon
@@ -1594,6 +2490,15 @@ After 10,000th place added:
 - [x] Place folder must be in correct region folder
 - [x] If in numbered subfolder, subfolder must match 001-999 pattern
 - [x] Region folder must match {LAT}_{LON} pattern (1 decimal place)
+
+### Multilanguage Validation
+
+- [x] Language block markers must use format `[XX]` where XX is two-letter code
+- [x] HISTORY fields must use format `HISTORY:` or `HISTORY_XX:`
+- [x] All language codes must be consistent (uppercase in headers, uppercase in brackets)
+- [x] At least one content language required if multilanguage format used
+- [x] Fallback to English (EN) recommended but not required
+- [x] History sections are optional for all languages
 
 ### Coordinate Validation
 
@@ -1614,6 +2519,41 @@ After 10,000th place added:
 - Minimum: 10 meters
 - Maximum: 1000 meters
 - Format: `RADIUS: <number>` (no units in value)
+
+### Founded Validation
+
+- Optional field
+- Freeform text (no strict format enforced)
+- Accepted formats:
+  - Specific year: `1782`, `2001`
+  - Century: `12th century`, `16th century`
+  - Approximate: `circa 1500`, `around 1600`
+  - Era: `Roman era`, `Medieval period`
+  - Range: `1500-1550`
+- Should be human-readable
+- Maximum length: 50 characters recommended
+- Especially useful for TYPE: monument, castle, church, historic-site
+
+### Hours Validation
+
+- Optional field
+- Freeform text (no strict format enforced)
+- Recommended formats:
+  - `Daily HH:MM-HH:MM`
+  - `Mon-Fri HH:MM-HH:MM, Sat-Sun HH:MM-HH:MM`
+  - `24/7`
+  - `Seasonal (Month-Month)`
+- Should be human-readable
+- Maximum length: 100 characters recommended
+
+### Rating Validation
+
+- Optional metadata in comments
+- Format: `--> rating: <1-5>`
+- Must be integer from 1 to 5
+- Only one rating per comment
+- Rating must appear before npub/signature if present
+- Cannot modify rating after comment is posted (delete and repost instead)
 
 ### Reaction File Validation
 
@@ -1750,6 +2690,53 @@ After 10,000th place added:
 - [NOSTR Protocol](https://github.com/nostr-protocol/nostr)
 
 ## Change Log
+
+### Version 1.2 (2025-11-22)
+
+**Major Features**:
+- **Multilanguage Support**: Full multilanguage support for places
+  - Multilanguage titles: `# PLACE_EN:`, `# PLACE_PT:`, `# PLACE_ES:`, etc.
+  - Multilanguage descriptions: `[EN]`, `[PT]`, `[ES]` content blocks
+  - Multilanguage history: `HISTORY_EN:`, `HISTORY_PT:`, `HISTORY_ES:`
+  - 11 supported languages: EN, PT, ES, FR, DE, IT, NL, RU, ZH, JA, AR
+  - Fallback chain: Requested language → English → First available
+- **Foundation Date**: Added optional FOUNDED field
+  - Supports specific years (e.g., `1782`)
+  - Supports centuries (e.g., `16th century`)
+  - Supports approximate dates (e.g., `circa 1500`)
+  - Flexible format for historic monuments and buildings
+- **History Section**: Added optional HISTORY section
+  - Separate from main description
+  - Supports multilanguage (HISTORY_XX:)
+  - Ideal for detailed historical context
+  - Useful for monuments, archaeological sites, heritage locations
+
+**Documentation Updates**:
+- Added Example 6: Comprehensive multilanguage monument (Jerónimos Monastery)
+- Updated Examples 1 and 2 with FOUNDED field
+- Enhanced parsing implementation for multilanguage
+- Added multilanguage validation rules
+- Added FOUNDED validation guidelines
+
+### Version 1.1 (2025-11-21)
+
+**Enhanced Features**:
+- **Opening Hours**: Added optional HOURS field in place header
+  - Flexible format for operating hours
+  - Examples: Daily hours, weekday/weekend split, 24/7, seasonal
+- **Reviews and Ratings**: Added optional rating metadata to comments
+  - 1-5 star rating scale
+  - Integrated with existing comment system
+  - Average rating calculation from all rated comments
+- **Place Types Reference**: Comprehensive list of 204 recommended place types
+  - Organized into 22 categories
+  - Survival/off-grid focus (water sources, edible plants, fruit trees)
+  - Urban and tourism types (restaurants, monuments, parks)
+- **Category-Specific Folder Recommendations**:
+  - Guidance on when to use exterior/interior folders
+  - Alternative folder suggestions for natural places
+  - UI implementation suggestions for auto-suggesting folders
+  - Examples for both building-based and natural places
 
 ### Version 1.0 (2025-11-21)
 
