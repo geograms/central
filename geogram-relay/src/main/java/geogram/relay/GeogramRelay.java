@@ -818,7 +818,7 @@ public class GeogramRelay {
             "                        const filePath = result.filePath || '';\n" +
             "                        // URL-encode the file path components to handle spaces and special characters\n" +
             "                        const encodedPath = filePath.split('/').map(p => encodeURIComponent(p)).join('/');\n" +
-            "                        const url = `/device/${result.callsign}/collections/${result.collectionName}${encodedPath}`;\n" +
+            "                        const url = `/device/${result.callsign}/collections/${result.collectionName}/${encodedPath}`;\n" +
             "                        return `\n" +
             "                        <a href=\"${url}\" class=\"result-item\" style=\"text-decoration: none; color: inherit; display: block;\">\n" +
             "                            <div class=\"result-title\">${escapeHtml(baseName)}${fileSizeStr ? ` <span style=\"color: #999; font-size: 0.9em;\">(${fileSizeStr})</span>` : ''}</div>\n" +
