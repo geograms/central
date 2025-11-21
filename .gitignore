@@ -8,8 +8,14 @@
 # Android app repository
 geogram-android/
 
+# Desktop Flutter app repository
+geogram-desktop/
+
 # HTML/Browser client repository
 geogram-html/
+
+# Java relay server repository
+geogram-relay/
 
 # Java backend server repository
 geogram-server/
