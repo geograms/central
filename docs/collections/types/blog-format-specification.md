@@ -1,0 +1,859 @@
+# Blog Format Specification
+
+**Version**: 1.0
+**Last Updated**: 2025-11-21
+**Status**: Active
+
+## Table of Contents
+
+- [Overview](#overview)
+- [File Organization](#file-organization)
+- [Blog Post Format](#blog-post-format)
+- [Metadata Field Types](#metadata-field-types)
+- [Comments](#comments)
+- [File Attachments](#file-attachments)
+- [NOSTR Integration](#nostr-integration)
+- [Complete Examples](#complete-examples)
+- [Parsing Implementation](#parsing-implementation)
+- [File Operations](#file-operations)
+- [Validation Rules](#validation-rules)
+- [Best Practices](#best-practices)
+- [Security Considerations](#security-considerations)
+- [Related Documentation](#related-documentation)
+- [Change Log](#change-log)
+
+## Overview
+
+This document specifies the text-based markdown format used for storing blog posts in the Geogram system. The blog collection type provides a publishing platform for creating, organizing, and sharing long-form content with support for drafts, tags, comments, and file attachments.
+
+Blog posts use a human-readable plain text format with structured metadata support and can optionally be cryptographically signed using NOSTR-compatible signatures for authenticity verification.
+
+### Key Features
+
+- **Year-based Organization**: Posts organized in year subdirectories for long-term content management
+- **Draft/Published Workflow**: Two-state publishing workflow for content control
+- **Markdown Content**: Rich text formatting using standard markdown syntax
+- **Tagging System**: Flexible categorization using comma-separated tags
+- **Flat Comments**: Reader engagement through chronological comments
+- **File Attachments**: SHA1-based file storage with deduplication
+- **NOSTR Integration**: Cryptographic identity and signature support
+- **Permission System**: Role-based access control (admin, author, reader)
+
+## File Organization
+
+### Directory Structure
+
+```
+collection_name/
+├── blog/
+│   ├── 2024/
+│   │   ├── 2024-03-15_my-first-post.md
+│   │   ├── 2024-12-20_year-end-review.md
+│   │   └── files/
+│   │       ├── {sha1}_{image.jpg}
+│   │       └── {sha1}_{document.pdf}
+│   └── 2025/
+│       ├── 2025-01-10_new-year-goals.md
+│       ├── 2025-01-15_tech-tutorial.md
+│       └── files/
+│           └── {sha1}_{attachment.pdf}
+└── extra/
+    ├── security.json          # Admin/moderator settings
+    └── blog_config.json       # Blog-specific configuration (optional)
+```
+
+### File Naming Convention
+
+**Pattern**: `YYYY-MM-DD_sanitized-title.md`
+
+**Sanitization Rules**:
+1. Convert title to lowercase
+2. Replace spaces and underscores with single hyphens
+3. Remove all non-alphanumeric characters (except hyphens)
+4. Collapse multiple consecutive hyphens into single hyphen
+5. Remove leading/trailing hyphens
+6. Truncate to 50 characters maximum
+7. Prepend date in YYYY-MM-DD format
+
+**Examples**:
+```
+Title: "My First Blog Post!"
+→ 2025-01-15_my-first-blog-post.md
+
+Title: "Tech Tutorial: Getting Started with Geogram"
+→ 2025-01-20_tech-tutorial-getting-started-with-geogram.md
+
+Title: "Year-End Review (2024) - Part 1"
+→ 2024-12-31_year-end-review-2024-part-1.md
+
+Title: "100% FREE!!! AMAZING Tutorial..."
+→ 2025-02-01_100-free-amazing-tutorial.md
+```
+
+### Year Subdirectories
+
+- **Purpose**: Organize posts by publication year
+- **Format**: `YYYY/` (e.g., `2024/`, `2025/`)
+- **Creation**: Automatically created when first post for that year is added
+- **Files Subdirectory**: Each year has its own `files/` subdirectory for attachments
+
+### Admin Configuration
+
+The collection admin is identified in `/extra/security.json`:
+
+```json
+{
+  "admin_npub": "npub1abc123...",
+  "created": "2025-01-15 10:00_00"
+}
+```
+
+## Blog Post Format
+
+### Complete Structure
+
+```
+# BLOG: Post Title
+
+AUTHOR: CALLSIGN
+CREATED: YYYY-MM-DD HH:MM_ss
+DESCRIPTION: Short description (optional)
+STATUS: draft|published
+--> tags: tag1,tag2,tag3
+--> npub: npub1...
+
+Post content goes here.
+Can span multiple paragraphs.
+Supports markdown formatting.
+
+More paragraphs...
+
+--> file: {sha1}_{attachment.pdf}
+--> image: {sha1}_{photo.jpg}
+--> url: https://example.com/resource
+--> signature: hex_signature
+
+> YYYY-MM-DD HH:MM_ss -- COMMENTER
+First comment text
+--> npub: npub1...
+--> signature: hex_sig
+
+> YYYY-MM-DD HH:MM_ss -- ANOTHER_USER
+Second comment text
+```
+
+### Header Section
+
+The header consists of **at least 7 lines**:
+
+1. **Title Line** (required)
+   - **Format**: `# BLOG: <title>`
+   - **Example**: `# BLOG: Getting Started with Geogram`
+   - **Constraints**: Title can be any length but will be truncated in filename
+
+2. **Blank Line** (required)
+   - Separates title from metadata
+
+3. **Author Line** (required)
+   - **Format**: `AUTHOR: <callsign>`
+   - **Example**: `AUTHOR: CR7BBQ`
+   - **Constraints**: Alphanumeric callsign, uppercase recommended
+
+4. **Created Timestamp** (required)
+   - **Format**: `CREATED: YYYY-MM-DD HH:MM_ss`
+   - **Example**: `CREATED: 2025-01-15 10:30_00`
+   - **Note**: Underscore before seconds (consistent with chat/forum)
+
+5. **Description Line** (optional)
+   - **Format**: `DESCRIPTION: <text>`
+   - **Example**: `DESCRIPTION: A beginner's guide to using Geogram`
+   - **Constraints**: Recommended 500 characters or less
+   - **Purpose**: Summary shown in post lists
+
+6. **Status Line** (required)
+   - **Format**: `STATUS: <draft|published>`
+   - **Values**:
+     - `draft` - Only visible to author and admin
+     - `published` - Visible to all users, accepts comments
+   - **Example**: `STATUS: published`
+
+7. **Tags Metadata** (optional)
+   - **Format**: `--> tags: <tag1>,<tag2>,<tag3>`
+   - **Example**: `--> tags: tutorial,beginner,guide`
+   - **Constraints**: Comma-separated, no limit on count
+   - **Note**: Must appear before content blank line
+
+8. **NOSTR Public Key** (optional)
+   - **Format**: `--> npub: <npub1...>`
+   - **Example**: `--> npub: npub1abc123def456...`
+   - **Purpose**: Links post to NOSTR identity
+
+9. **Blank Line** (required)
+   - Separates header from content
+
+### Content Section
+
+The content section begins after the header blank line and continues until metadata or comments are encountered.
+
+**Characteristics**:
+- Plain text with markdown formatting
+- Preserves original paragraph structure
+- Whitespace preserved (line breaks, indentation)
+- No length limit (reasonable content sizes recommended)
+- Can reference files via metadata below content
+
+**Markdown Support**:
+- **Headings**: `# H1`, `## H2`, `### H3`
+- **Bold**: `**text**` or `__text__`
+- **Italic**: `*text*` or `_text_`
+- **Links**: `[text](url)`
+- **Lists**: Bulleted (`-` or `*`) and numbered (`1.`)
+- **Code**: Inline `` `code` `` and blocks (` ``` `)
+- **Images**: `![alt](url)` (or via `--> image:` metadata)
+
+### Post Metadata Section
+
+Metadata appears after content, using the `--> key: value` format.
+
+**Ordering Rules**:
+1. Content metadata first (file, image, url)
+2. NOSTR signature MUST be last if present
+3. Blank line recommended before comments
+
+## Metadata Field Types
+
+### Tags
+
+- **Format**: `--> tags: <tag1>,<tag2>,<tag3>`
+- **Location**: Header section (before content)
+- **Purpose**: Categorization, search, filtering
+- **Constraints**:
+  - Comma-separated list
+  - No spaces around commas
+  - Case-sensitive (lowercase recommended)
+  - No limit on tag count
+- **Example**: `--> tags: tutorial,programming,python,beginner`
+
+### File Attachment
+
+- **Format**: `--> file: <sha1>_<filename>`
+- **Location**: After content, before signature
+- **Purpose**: Attach documents, PDFs, archives
+- **Storage**: `blog/YYYY/files/` directory
+- **Example**: `--> file: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855_document.pdf`
+
+**SHA1 Naming**:
+- Files stored as: `{sha1_hash}_{original_filename}`
+- Prevents overwrites when same file uploaded multiple times
+- UI displays only original filename portion
+- Extension always preserved
+
+### Image Attachment
+
+- **Format**: `--> image: <sha1>_<filename>`
+- **Location**: After content, before signature
+- **Purpose**: Attach photos, screenshots, diagrams
+- **Storage**: Same as files (`blog/YYYY/files/`)
+- **Example**: `--> image: a1b2c3d4e5f6789012345678901234567890abcd1234567_screenshot.png`
+
+**Supported Formats**: JPG, PNG, GIF, WebP, SVG
+
+### URL Reference
+
+- **Format**: `--> url: <url>`
+- **Location**: After content, before signature
+- **Purpose**: External resource links
+- **Example**: `--> url: https://example.com/related-article`
+- **Constraints**: Must be valid URL (http:// or https://)
+
+### NOSTR Public Key
+
+- **Format**: `--> npub: <npub1...>`
+- **Location**: Header or post metadata
+- **Purpose**: Identity verification
+- **Example**: `--> npub: npub1qqqqqqqq...`
+- **Encoding**: Bech32-encoded NOSTR public key
+
+### NOSTR Signature
+
+- **Format**: `--> signature: <hex_signature>`
+- **Location**: MUST be last metadata line
+- **Purpose**: Cryptographic proof of authorship
+- **Example**: `--> signature: 0123456789abcdef...`
+- **Encoding**: Hex-encoded Schnorr signature
+- **Requirement**: If present, must be final metadata entry
+
+## Comments
+
+### Comment Format
+
+Comments follow the blog post content and use the same format as forum replies:
+
+```
+> YYYY-MM-DD HH:MM_ss -- CALLSIGN
+Comment content here.
+Can span multiple lines.
+--> npub: npub1...
+--> signature: hex_signature
+```
+
+### Comment Structure
+
+1. **Header Line** (required)
+   - **Format**: `> YYYY-MM-DD HH:MM_ss -- CALLSIGN`
+   - **Example**: `> 2025-01-15 14:30_45 -- X135AS`
+   - **Note**: Starts with `>` followed by space
+
+2. **Content** (required)
+   - Plain text, multiple lines allowed
+   - No markdown rendering in comments
+   - No file attachments in comments
+
+3. **Metadata** (optional)
+   - NOSTR npub and signature
+   - Signature must be last if present
+
+### Comment Characteristics
+
+- **Threading**: Flat (not threaded/nested)
+- **Ordering**: Chronological by timestamp
+- **Visibility**: Only on published posts
+- **Permissions**: Anyone can comment on published posts
+- **Deletion**: Author or admin can delete their own comments
+
+### Comment Restrictions
+
+- Cannot add comments to draft posts
+- No file attachments in comments
+- No metadata except npub/signature
+- No nested replies (flat structure only)
+
+## File Attachments
+
+### SHA1-Based File Naming
+
+All uploaded files are renamed using their SHA1 hash to prevent overwrites and enable deduplication.
+
+**Storage Format**: `{sha1_hash}_{original_filename}`
+
+**Process**:
+1. Calculate SHA1 hash of file contents
+2. Preserve original filename and extension
+3. Combine: `{hash}_{filename}`
+4. Store in year-specific `files/` directory
+
+**Example**:
+```
+Original: tutorial-diagram.png
+SHA1: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+Stored: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855_tutorial-diagram.png
+Displayed: tutorial-diagram.png (UI extracts filename)
+```
+
+### File Location
+
+Files are organized by year:
+
+```
+blog/
+├── 2024/
+│   └── files/
+│       ├── {sha1}_document.pdf
+│       └── {sha1}_image.jpg
+└── 2025/
+    └── files/
+        └── {sha1}_attachment.pdf
+```
+
+### File References in Posts
+
+In post metadata:
+```
+--> file: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855_document.pdf
+--> image: a1b2c3d4e5f6_photo.jpg
+```
+
+**UI Handling**:
+- Display only original filename
+- Extract from: `{hash}_{filename}` → `filename`
+- Open file using full path: `blog/YYYY/files/{hash}_{filename}`
+
+### Supported File Types
+
+**Images**: JPG, JPEG, PNG, GIF, WebP, SVG
+**Documents**: PDF, TXT, MD, DOC, DOCX
+**Archives**: ZIP, TAR, GZ
+**Other**: Any file type can be attached
+
+### File Size Limits
+
+Recommended limits (configurable):
+- Individual file: 10 MB
+- Total attachments per post: 50 MB
+- Implementation may impose stricter limits
+
+## NOSTR Integration
+
+### NOSTR Keys
+
+**npub (Public Key)**:
+- Bech32-encoded public key
+- Format: `npub1` followed by encoded data
+- Purpose: Identifies author, enables verification
+- Example: `npub1qqqqqqqqqqqqqqqqqqqqqqqqqq...`
+
+**nsec (Private Key)**:
+- Bech32-encoded private key
+- Never stored in files
+- Used for signing messages
+- Kept secure in user's keystore
+
+### Signature Generation
+
+1. Construct signable message from post/comment content
+2. Hash message using SHA-256
+3. Sign hash using nsec (Schnorr signature on secp256k1)
+4. Encode signature as hex string
+5. Add as last metadata line: `--> signature: <hex>`
+
+### Signature Verification
+
+1. Extract npub and signature from metadata
+2. Reconstruct original message content
+3. Decode npub to public key
+4. Verify Schnorr signature against content hash
+5. Display verification badge in UI if valid
+
+### Signed vs Unsigned Posts
+
+**Signed Posts**:
+- Include npub and signature metadata
+- Display verification badge
+- Cryptographically provable authorship
+- Cannot be modified without detection
+
+**Unsigned Posts**:
+- No npub or signature
+- Author identified only by callsign
+- Still functional, less secure
+- Can be modified by anyone with access
+
+## Complete Examples
+
+### Example 1: Simple Published Post
+
+```
+# BLOG: Welcome to My Blog
+
+AUTHOR: CR7BBQ
+CREATED: 2025-01-15 10:00_00
+STATUS: published
+
+This is my first blog post on Geogram!
+
+I'm excited to share my thoughts here.
+
+--> npub: npub1abc123def456...
+--> signature: 0123456789abcdef...
+```
+
+### Example 2: Post with Description and Tags
+
+```
+# BLOG: Getting Started with Geogram
+
+AUTHOR: CR7BBQ
+CREATED: 2025-01-15 10:30_00
+DESCRIPTION: A beginner's guide to using Geogram for offline communication
+STATUS: published
+--> tags: tutorial,beginner,guide
+--> npub: npub1abc123...
+
+Welcome to Geogram! This post will guide you through the basics.
+
+Geogram is an offline-first communication platform designed for
+resilience and privacy. Here's what you need to know:
+
+1. Collections organize your content
+2. NOSTR keys prove your identity
+3. Everything is stored locally
+
+--> signature: fedcba9876543210...
+```
+
+### Example 3: Post with Attachments
+
+```
+# BLOG: Tech Tutorial
+
+AUTHOR: X135AS
+CREATED: 2025-01-20 14:00_00
+DESCRIPTION: Step-by-step tutorial with examples
+STATUS: published
+--> tags: tutorial,technical
+
+Here's a comprehensive tutorial on the topic.
+
+Check out the attached diagram for visual explanation,
+and download the PDF for complete documentation.
+
+See also this external resource for more details.
+
+--> file: e3b0c4429_tutorial-guide.pdf
+--> image: a1b2c3d4e_diagram.png
+--> url: https://example.com/docs
+--> npub: npub1xyz789...
+--> signature: abcd1234efgh5678...
+```
+
+### Example 4: Post with Comments
+
+```
+# BLOG: Monthly Update
+
+AUTHOR: CR7BBQ
+CREATED: 2025-01-25 09:00_00
+STATUS: published
+--> tags: update,news
+
+Here's what happened this month...
+
+Lots of progress on various fronts!
+
+--> npub: npub1abc123...
+--> signature: 0000aaaa1111bbbb...
+
+> 2025-01-25 10:15_30 -- X135AS
+Great update! Looking forward to next month.
+--> npub: npub1xyz789...
+--> signature: 2222cccc3333dddd...
+
+> 2025-01-25 11:20_45 -- CR7BBQ
+Thanks! Stay tuned for more updates.
+--> npub: npub1abc123...
+--> signature: 4444eeee5555ffff...
+
+> 2025-01-26 08:00_00 -- BRAVO2
+Excellent work on the project!
+```
+
+### Example 5: Draft Post
+
+```
+# BLOG: Work in Progress
+
+AUTHOR: CR7BBQ
+CREATED: 2025-01-28 16:00_00
+DESCRIPTION: Still working on this article
+STATUS: draft
+--> tags: draft,wip
+
+This is an unfinished post.
+
+Need to add more content here...
+
+TODO:
+- Add examples
+- Include references
+- Proofread
+
+--> npub: npub1abc123...
+```
+
+## Parsing Implementation
+
+### File Reading
+
+```
+1. Read entire file as UTF-8 text
+2. Split into lines by \n
+3. Verify first line starts with "# BLOG: "
+4. Extract title from first line
+5. Parse header lines (AUTHOR, CREATED, DESCRIPTION, STATUS)
+6. Extract tags from "--> tags:" before content
+7. Find content start (after header blank line)
+8. Parse content until metadata or comments
+9. Extract metadata lines (file, image, url)
+10. Parse comments (lines starting with "> ")
+11. Associate metadata with comments
+12. Validate signatures if present
+```
+
+### Header Parsing
+
+```
+Line 1: # BLOG: <title>
+Line 2: (blank)
+Line 3: AUTHOR: <callsign>
+Line 4: CREATED: <timestamp>
+Line 5: DESCRIPTION: <text> (optional)
+Line 6: STATUS: <draft|published>
+Line 7+: --> tags: <tags> (optional)
+Line 7+: --> npub: <npub> (optional)
+Line N: (blank) - marks end of header
+```
+
+### Content Extraction
+
+- Content starts after header's trailing blank line
+- Continues until first metadata line (`--> `) or comment line (`> `)
+- Preserve all whitespace and formatting
+- Empty lines within content are preserved
+
+### Comment Parsing
+
+```
+1. Comments start with "> "
+2. Extract timestamp and author from first line
+3. Read content lines until next comment or EOF
+4. Parse metadata for each comment (npub, signature)
+5. Validate signature placement (must be last)
+6. Associate metadata with parent comment
+```
+
+## File Operations
+
+### Creating a New Post
+
+```
+1. Generate sanitized filename from title and date
+2. Determine year from timestamp
+3. Create year directory if doesn't exist: blog/YYYY/
+4. Format header with all required fields
+5. Add content and metadata
+6. Write file with UTF-8 encoding
+7. Set file permissions (644 or equivalent)
+8. Flush to disk immediately
+```
+
+### Updating a Post
+
+```
+1. Verify user has permission (author or admin)
+2. Read existing post file
+3. Preserve comments (do not modify)
+4. Update header fields as needed
+5. Update content if changed
+6. Update/add metadata
+7. Write file atomically (temp file + rename)
+8. Preserve original created timestamp
+```
+
+### Publishing a Draft
+
+```
+1. Read draft post file
+2. Change STATUS: draft → STATUS: published
+3. Write updated file
+4. No other changes to content
+```
+
+### Deleting a Post
+
+```
+1. Verify user has permission (author or admin)
+2. Delete post file: blog/YYYY/YYYY-MM-DD_title.md
+3. Optionally clean up orphaned files in files/ directory
+4. Update indexes/caches if applicable
+```
+
+### Adding a Comment
+
+```
+1. Verify post is published (not draft)
+2. Read existing post file
+3. Append comment to end of file:
+   - Comment header line
+   - Comment content
+   - Comment metadata (npub, signature)
+   - Blank line separator
+4. Write updated file
+5. Preserve all existing content
+```
+
+### Deleting a Comment
+
+```
+1. Verify user has permission (comment author or admin)
+2. Read post file
+3. Locate comment by timestamp and author
+4. Remove comment block (header + content + metadata)
+5. Write updated file without that comment
+6. Preserve post content and other comments
+```
+
+## Validation Rules
+
+### Post Validation
+
+- [x] First line must start with `# BLOG: `
+- [x] Title must not be empty after `# BLOG: `
+- [x] AUTHOR line must exist and have non-empty callsign
+- [x] CREATED line must exist with valid timestamp
+- [x] STATUS must be either `draft` or `published`
+- [x] Header must end with blank line before content
+- [x] If signature present, must be last metadata line
+- [x] Filename must match pattern YYYY-MM-DD_*.md
+
+### Timestamp Validation
+
+**Format**: `YYYY-MM-DD HH:MM_ss`
+
+- Year: 1900-2100 (reasonable range)
+- Month: 01-12
+- Day: 01-31 (validate against month)
+- Hour: 00-23
+- Minute: 00-59
+- Second: 00-59
+- Separator before seconds: underscore `_`
+
+**Example Valid**: `2025-01-15 14:30_45`
+**Example Invalid**: `2025-1-15 14:30:45` (missing zero-padding, wrong separator)
+
+### Metadata Validation
+
+- Tags: Comma-separated, no spaces around commas
+- Files: Must exist in `blog/YYYY/files/` directory
+- URLs: Must be valid http:// or https:// URLs
+- npub: Must start with `npub1` and be valid bech32
+- Signature: Must be hex string if present
+
+### Comment Validation
+
+- Must start with `> ` followed by timestamp and author
+- Timestamp must be valid format
+- Author callsign must not be empty
+- Can only be added to published posts
+- Metadata limited to npub and signature
+
+### Security Validation
+
+- Verify post author matches npub if signature present
+- Verify comment author matches npub if signature present
+- Check admin permissions for edit/delete operations
+- Validate file paths to prevent directory traversal
+
+## Best Practices
+
+### For Authors
+
+1. **Use descriptive titles**: Clear, concise titles improve discoverability
+2. **Add descriptions**: Help readers decide if post is relevant
+3. **Tag appropriately**: Use 3-5 relevant tags for categorization
+4. **Save drafts early**: Use draft status while working on content
+5. **Sign your posts**: Add npub and signature for verification
+6. **Reference files**: Use file/image metadata rather than embedding
+
+### For Developers
+
+1. **Validate input**: Check all user input before writing files
+2. **Handle encoding**: Always use UTF-8, never assume ASCII
+3. **Atomic writes**: Use temp file + rename for updates
+4. **Preserve data**: Never modify timestamps or existing comments
+5. **Permission checks**: Verify user permissions before operations
+6. **SHA1 files**: Always calculate SHA1 before storing files
+7. **Sanitize filenames**: Apply sanitization rules strictly
+
+### For System Administrators
+
+1. **Backup regularly**: Blog posts are valuable content
+2. **Monitor disk usage**: Files can accumulate over time
+3. **Set size limits**: Prevent abuse with reasonable limits
+4. **Archive old years**: Move old years to separate storage if needed
+5. **Verify signatures**: Implement signature verification in UI
+
+## Security Considerations
+
+### Access Control
+
+**Admin Permissions**:
+- Edit any post (draft or published)
+- Delete any post
+- Delete any comment
+- Publish any draft
+- Full moderation rights
+
+**Author Permissions**:
+- Edit own posts (draft or published)
+- Delete own posts
+- Publish own drafts
+- Delete own comments
+
+**Reader Permissions**:
+- View published posts
+- Add comments to published posts
+- Delete own comments
+- Cannot view others' drafts
+
+### File Security
+
+**SHA1 Hashing**:
+- Prevents file overwrites
+- Enables deduplication
+- Content-based naming
+
+**File Permissions**:
+- Read-only for readers
+- Write for author/admin only
+- No execute permissions
+
+**Path Validation**:
+- Prevent directory traversal (../)
+- Validate file extensions
+- Check file sizes before storage
+
+### NOSTR Signatures
+
+**Benefits**:
+- Cryptographic proof of authorship
+- Tamper detection
+- Non-repudiation
+- Identity verification
+
+**Limitations**:
+- Optional (not required)
+- Requires NOSTR key management
+- Signature verification needs implementation
+- Clock skew can affect timestamps
+
+### Privacy Considerations
+
+**npub Exposure**:
+- npub is public identifier
+- Links posts to NOSTR identity
+- Consider privacy before signing
+
+**Metadata Leakage**:
+- Timestamps reveal posting patterns
+- File metadata may contain personal info
+- Tags may reveal interests
+
+### Threat Mitigation
+
+**Content Validation**: Prevent injection attacks through strict parsing
+**Size Limits**: Prevent DoS via large file uploads
+**Permission Checks**: Enforce access control consistently
+**Signature Verification**: Detect tampering and impersonation
+**Backup Strategy**: Protect against data loss
+
+## Related Documentation
+
+- [Chat Format Specification](../chat/chat-format-specification.md)
+- [Forum Format Specification](../forum/forum-format-specification.md)
+- [Events Format Specification](../events/events-format-specification.md)
+- [Collection File Formats](../others/file-formats.md)
+- [NOSTR Protocol](https://github.com/nostr-protocol/nostr)
+
+## Change Log
+
+### Version 1.0 (2025-11-21)
+
+- Initial specification
+- Year-based organization
+- Draft/published workflow
+- Markdown content support
+- Tags and categorization
+- Flat comments
+- File attachments with SHA1 naming
+- NOSTR signature integration
+- Permission system (admin, author, reader)
