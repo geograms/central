@@ -181,6 +181,7 @@ TIMESTAMP: 2025-11-21 14:30_00
 COORDINATES: 38.7223,-9.1393
 LOCATION_NAME: Lisbon Central Cafe
 RECEIVED_FROM: sender
+RECEIVED_VIA: BLE
 HOP_NUMBER: 1
 --> signature: hex_sig_of_entire_postcard_so_far
 
@@ -191,6 +192,7 @@ TIMESTAMP: 2025-11-22 10:15_00
 COORDINATES: 40.7128,-74.0060
 LOCATION_NAME: NYC Penn Station
 RECEIVED_FROM: npub1bravo...
+RECEIVED_VIA: Radio
 HOP_NUMBER: 2
 --> signature: hex_sig_including_previous_stamps
 
@@ -427,6 +429,7 @@ TIMESTAMP: YYYY-MM-DD HH:MM_ss
 COORDINATES: <lat>,<lon>
 LOCATION_NAME: <name> (optional)
 RECEIVED_FROM: sender|<npub>
+RECEIVED_VIA: <transmission-method>
 HOP_NUMBER: <number>
 --> signature: hex_signature
 ```
@@ -471,28 +474,54 @@ HOP_NUMBER: <number>
      - `<npub>`: Received from another carrier (their npub)
    - Example: `RECEIVED_FROM: npub1bravo...`
 
-8. **Hop Number** (required)
+8. **Received Via** (required)
+   - How the postcard was transmitted to this carrier
+   - Open text field, common values:
+     - `BLE`: Bluetooth Low Energy
+     - `LoRa`: Long Range radio
+     - `Meshtastic`: Meshtastic mesh network
+     - `Radio`: Amateur radio (APRS, FM, etc.)
+     - `Satellite`: Satellite communication
+     - `WiFi-LAN`: Local WiFi network
+     - `WiFi-HaLow`: 802.11ah long-range WiFi
+     - `Internet`: Generic internet connection
+     - `Cellular`: Mobile network (4G, 5G)
+     - `In-Person`: Physical handoff (USB, SD card, face-to-face)
+     - `USB`: USB drive transfer
+     - `SD-Card`: SD card physical transfer
+     - `NFC`: Near Field Communication
+     - `I2P`: I2P anonymity network
+     - `Tor`: Tor anonymity network
+     - `Ethernet`: Wired network
+     - `Zigbee`: Zigbee protocol
+     - `Thread`: Thread protocol
+     - `MQTT`: MQTT protocol
+   - Example: `RECEIVED_VIA: BLE`
+   - Purpose: Documents technology used for each hop
+
+9. **Hop Number** (required)
    - Number of hops from sender
    - Example: `HOP_NUMBER: 1` (first carrier), `HOP_NUMBER: 2` (second carrier)
    - Helps track delivery efficiency
 
-9. **Signature** (required)
-   - Schnorr signature of entire postcard up to this stamp
-   - Format: `--> signature: hex_signature`
-   - Signs: header + content + all previous stamps + this stamp
-   - Creates tamper-proof chain
+10. **Signature** (required)
+    - Schnorr signature of entire postcard up to this stamp
+    - Format: `--> signature: hex_signature`
+    - Signs: header + content + all previous stamps + this stamp
+    - Creates tamper-proof chain
 
 ### Adding a Stamp
 
 **Process**:
 ```
-1. Carrier receives postcard (via BLE or physical handoff)
+1. Carrier receives postcard (via BLE, LoRa, Radio, or physical handoff)
 2. Carrier verifies all previous signatures
 3. Carrier adds new STAMP section:
    - Fills in their callsign, npub
    - Records current timestamp
    - Records current GPS coordinates
    - Notes who they received it from
+   - Notes transmission method used (RECEIVED_VIA)
    - Increments hop number
 4. Carrier signs entire postcard (up to and including new stamp)
 5. Carrier appends signature to stamp
@@ -509,6 +538,7 @@ TIMESTAMP: 2025-11-21 14:30_00
 COORDINATES: 38.7223,-9.1393
 LOCATION_NAME: Lisbon Central Cafe
 RECEIVED_FROM: sender
+RECEIVED_VIA: BLE
 HOP_NUMBER: 1
 --> signature: a1b2c3d4e5f6...
 
@@ -519,6 +549,7 @@ TIMESTAMP: 2025-11-22 10:15_00
 COORDINATES: 40.7128,-74.0060
 LOCATION_NAME: NYC Penn Station
 RECEIVED_FROM: npub1bravo2abc123...
+RECEIVED_VIA: Radio
 HOP_NUMBER: 2
 --> signature: 7g8h9i0j1k2l...
 ```
@@ -630,6 +661,7 @@ TIMESTAMP: YYYY-MM-DD HH:MM_ss
 COORDINATES: <lat>,<lon>
 LOCATION_NAME: <name> (optional)
 RECEIVED_FROM: recipient|<npub>
+RECEIVED_VIA: <transmission-method>
 HOP_NUMBER: <number>
 --> signature: hex_signature
 ```
@@ -640,6 +672,7 @@ HOP_NUMBER: <number>
 - Sequential numbering starting from 1
 - HOP_NUMBER counts hops from recipient back to sender
 - RECEIVED_FROM starts with "recipient" for first return carrier
+- RECEIVED_VIA documents transmission method (same options as outbound stamps)
 
 ### Return Journey Example
 
@@ -658,6 +691,7 @@ TIMESTAMP: 2025-11-23 09:00_00
 COORDINATES: 40.7128,-74.0060
 LOCATION_NAME: NYC Central Station
 RECEIVED_FROM: recipient
+RECEIVED_VIA: Meshtastic
 HOP_NUMBER: 1
 --> signature: s1t2u3v4w5x6...
 
@@ -668,6 +702,7 @@ TIMESTAMP: 2025-11-24 12:30_00
 COORDINATES: 38.7223,-9.1393
 LOCATION_NAME: Lisbon Airport
 RECEIVED_FROM: npub1delta...
+RECEIVED_VIA: LoRa
 HOP_NUMBER: 2
 --> signature: y7z8a9b0c1d2...
 ```
@@ -1281,6 +1316,7 @@ TIMESTAMP: 2025-11-21 14:30_00
 COORDINATES: 38.7223,-9.1393
 LOCATION_NAME: Lisbon Airport
 RECEIVED_FROM: sender
+RECEIVED_VIA: BLE
 HOP_NUMBER: 1
 --> signature: stamp1_sig_hex...
 ```
@@ -1316,6 +1352,7 @@ TIMESTAMP: 2025-11-21 14:30_00
 COORDINATES: 38.7223,-9.1393
 LOCATION_NAME: Lisbon Central Station
 RECEIVED_FROM: sender
+RECEIVED_VIA: WiFi-LAN
 HOP_NUMBER: 1
 --> signature: stamp1_sig...
 
@@ -1326,6 +1363,7 @@ TIMESTAMP: 2025-11-22 10:15_00
 COORDINATES: 40.7128,-74.0060
 LOCATION_NAME: NYC Penn Station
 RECEIVED_FROM: npub1bravo...
+RECEIVED_VIA: Satellite
 HOP_NUMBER: 2
 --> signature: stamp2_sig...
 
@@ -1366,6 +1404,7 @@ STAMPER_NPUB: npub1bravo...
 TIMESTAMP: 2025-11-20 15:00_00
 COORDINATES: 38.7223,-9.1393
 RECEIVED_FROM: sender
+RECEIVED_VIA: In-Person
 HOP_NUMBER: 1
 --> signature: stamp1_sig...
 
@@ -1376,6 +1415,7 @@ TIMESTAMP: 2025-11-21 11:30_00
 COORDINATES: 48.8566,2.3522
 LOCATION_NAME: Paris Gare du Nord
 RECEIVED_FROM: npub1bravo...
+RECEIVED_VIA: LoRa
 HOP_NUMBER: 2
 --> signature: stamp2_sig...
 
@@ -1386,6 +1426,7 @@ TIMESTAMP: 2025-11-21 19:00_00
 COORDINATES: 51.5074,-0.1278
 LOCATION_NAME: London King's Cross
 RECEIVED_FROM: npub1alpha...
+RECEIVED_VIA: BLE
 HOP_NUMBER: 3
 --> signature: stamp3_sig...
 
@@ -1453,7 +1494,7 @@ ACKNOWLEDGED_AT: 2025-11-22 18:00_00
 2. Parse stamper fields:
    - STAMPER_CALLSIGN, STAMPER_NPUB
    - TIMESTAMP, COORDINATES, LOCATION_NAME
-   - RECEIVED_FROM, HOP_NUMBER
+   - RECEIVED_FROM, RECEIVED_VIA, HOP_NUMBER
 3. Extract signature
 4. Verify signature against postcard content up to this stamp
 ```
@@ -1499,7 +1540,7 @@ ACKNOWLEDGED_AT: 2025-11-22 18:00_00
 ### Adding a Stamp
 
 ```
-1. Carrier receives postcard (via BLE)
+1. Carrier receives postcard (via BLE, LoRa, Radio, etc.)
 2. Carrier verifies all existing signatures
 3. If any signature invalid, reject postcard
 4. Carrier adds new STAMP section:
@@ -1507,6 +1548,7 @@ ACKNOWLEDGED_AT: 2025-11-22 18:00_00
    - Fill in carrier's callsign and npub
    - Record current timestamp and coordinates
    - Note received_from (previous stamper's npub or "sender")
+   - Note received_via (transmission method used)
    - Calculate hop_number (previous + 1)
 5. Sign entire postcard up to and including new stamp
 6. Append signature to stamp
@@ -1593,6 +1635,7 @@ ACKNOWLEDGED_AT: 2025-11-22 18:00_00
 - [x] STAMPER_NPUB must be valid npub
 - [x] TIMESTAMP must be valid format
 - [x] COORDINATES must be valid lat,lon
+- [x] RECEIVED_VIA must not be empty (open text field)
 - [x] HOP_NUMBER must increment by 1
 - [x] Signature must verify against postcard up to this stamp
 - [x] RECEIVED_FROM must be "sender" or valid npub
@@ -1820,6 +1863,10 @@ Postcards are built on top of the existing relay message system:
 - Sneakernet-based message delivery system
 - Date-based organization (YYYY/YYYY-MM-DD_msg-{id}/)
 - Cryptographic stamp chain for tamper-proof verification
+- **RECEIVED_VIA field**: Documents transmission method for each hop
+  - Open text field with recommended values (BLE, LoRa, Radio, Satellite, etc.)
+  - Provides visibility into technology used for physical delivery
+  - Helps track successful transmission methods
 - Open and encrypted content types (NIP-04)
 - Delivery receipt mechanism
 - Return journey support
