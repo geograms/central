@@ -51,15 +51,15 @@ Geogram Collections provide a text-based, P2P-ready content management system fo
 
 Geogram supports various collection types for different content needs:
 
-| Type | Description | Specification |
-|------|-------------|---------------|
-| **Places** | Geographic locations with photos, coordinates, and radius | [places-format-specification.md](docs/collections/types/places-format-specification.md) |
-| **Events** | Time-based gatherings with photos, location, and reactions | [events-format-specification.md](docs/collections/types/events-format-specification.md) |
-| **Postcards** | Sneakernet messages with cryptographic stamps and delivery receipts | [postcards-format-specification.md](docs/collections/types/postcards-format-specification.md) |
-| **Forum** | Discussion threads with posts and replies | [forum-format-specification.md](docs/collections/types/forum-format-specification.md) |
-| **Blog** | Articles and blog posts with comments | [blog-format-specification.md](docs/collections/types/blog-format-specification.md) |
-| **Chat** | Real-time messaging with channels | [chat-format-specification.md](docs/collections/types/chat-format-specification.md) |
-| **News** | News articles with categories and reactions | [news-format-specification.md](docs/collections/types/news-format-specification.md) |
+| Type | Description | Key Features | Specification |
+|------|-------------|--------------|---------------|
+| **Places** | Geographic locations with photos, coordinates, and radius | 204 place types, multilanguage support, opening hours, ratings (1-5 stars), foundation dates, historical information | [places-format-specification.md](docs/collections/types/places-format-specification.md) |
+| **Events** | Time-based gatherings with photos, location, and reactions | Event scheduling, location tracking, photo galleries, community reactions | [events-format-specification.md](docs/collections/types/events-format-specification.md) |
+| **Postcards** | Sneakernet messages with cryptographic stamps and delivery receipts | Status tracking (in-transit, delivered, acknowledged, expired), year grouping, search functionality, multilanguage support | [postcards-format-specification.md](docs/collections/types/postcards-format-specification.md) |
+| **Forum** | Discussion threads with posts and replies | Threaded discussions, nested replies, community moderation | [forum-format-specification.md](docs/collections/types/forum-format-specification.md) |
+| **Blog** | Articles and blog posts with comments | Long-form content, comment threads, categories | [blog-format-specification.md](docs/collections/types/blog-format-specification.md) |
+| **Chat** | Real-time messaging with channels | Channel-based messaging, real-time updates, presence indicators | [chat-format-specification.md](docs/collections/types/chat-format-specification.md) |
+| **News** | News articles with categories and reactions | Multilanguage articles, categorization, community reactions, timestamps | [news-format-specification.md](docs/collections/types/news-format-specification.md) |
 
 ### Privacy & Security
 
@@ -97,12 +97,14 @@ Geogram is a monorepo containing multiple interconnected sub-projects, each main
 | Repository | Description | Tech Stack |
 |------------|-------------|------------|
 | **[geogram-android](geogram-android/)** | Android mobile app | Java, Room DB, Google Nearby API |
+| **[geogram-desktop](https://github.com/geograms/geogram-desktop)** | Desktop app (Linux, Windows, macOS) | Flutter/Dart, SQLite |
 | **[geogram-html](geogram-html/)** | Browser-based client | Vanilla JavaScript (ES6+), No build required |
 
 ### Backend & Server
 
 | Repository | Description | Tech Stack |
 |------------|-------------|------------|
+| **[geogram-relay](https://github.com/geograms/geogram-relay)** | WebSocket/HTTP relay server with NAT traversal | Java, WebSockets, Collection search and hosting |
 | **[geogram-server](geogram-server/)** | Java backend server | Java 21, Maven, NOSTR-java |
 
 ### Hardware & Firmware
@@ -123,7 +125,9 @@ Geogram is a monorepo containing multiple interconnected sub-projects, each main
 Choose based on what you want to build:
 
 - **Android App**: Android Studio, Java 17
+- **Desktop App**: Flutter SDK 3.0+
 - **Web App**: Modern web browser (no build needed)
+- **Relay Server**: Java 17+, Maven
 - **Server**: Java 21, Maven
 - **K5 Firmware**: arm-none-eabi-gcc or Docker
 - **ESP32 Firmware**: PlatformIO
@@ -138,6 +142,16 @@ Each subproject has its own build system. See the [Development Guide](docs/devel
 # Android App
 cd geogram-android
 ./gradlew assembleDebug
+
+# Desktop App
+cd geogram-desktop
+flutter pub get
+flutter run -d linux  # or windows/macos
+
+# Relay Server
+cd geogram-relay
+mvn clean package
+java -jar target/geogram-relay-1.0-SNAPSHOT.jar
 
 # Java Server
 cd geogram-server
