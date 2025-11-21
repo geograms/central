@@ -55,6 +55,7 @@ Geogram supports various collection types for different content needs:
 |------|-------------|---------------|
 | **Places** | Geographic locations with photos, coordinates, and radius | [places-format-specification.md](docs/collections/types/places-format-specification.md) |
 | **Events** | Time-based gatherings with photos, location, and reactions | [events-format-specification.md](docs/collections/types/events-format-specification.md) |
+| **Postcards** | Sneakernet messages with cryptographic stamps and delivery receipts | [postcards-format-specification.md](docs/collections/types/postcards-format-specification.md) |
 | **Forum** | Discussion threads with posts and replies | [forum-format-specification.md](docs/collections/types/forum-format-specification.md) |
 | **Blog** | Articles and blog posts with comments | [blog-format-specification.md](docs/collections/types/blog-format-specification.md) |
 | **Chat** | Real-time messaging with channels | [chat-format-specification.md](docs/collections/types/chat-format-specification.md) |
