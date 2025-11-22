@@ -1,6 +1,6 @@
 # Market Format Specification
 
-**Version**: 1.0
+**Version**: 1.1
 **Last Updated**: 2025-11-22
 **Status**: Active
 
@@ -39,14 +39,19 @@ This document specifies the text-based format used for storing marketplace data 
 
 - **Decentralized Shops**: Each user can create and manage their own shops
 - **Offline-First**: Complete marketplace functionality without internet
+- **Shared Items Pool**: Collection-wide items available to all shops
+- **Free Items**: Support for free giveaways and donations (price: 0 or free)
+- **Services & Products**: Sell physical items, digital goods, or services
+- **Geographic Radius**: Specify service/delivery area in kilometers
 - **Inventory Management**: Real-time stock tracking and updates
 - **Order Tracking**: Complete order lifecycle from request to delivery
 - **Verified Reviews**: Only purchasers with completed orders can review
 - **Multilanguage Support**: Items and shops support multiple languages
+- **Folder-Based Categories**: Organize items using directory structure
 - **Rich Media**: Photo and video galleries for items
 - **FAQ System**: Questions and answers for each item
 - **Rating System**: 1-5 star ratings from verified buyers
-- **Payment Flexibility**: Supports multiple payment methods
+- **Payment Flexibility**: Supports multiple payment methods (including free)
 - **Shipping Integration**: Multiple shipping options per shop
 - **Return Policy**: Configurable return windows and policies
 - **NOSTR Signatures**: Cryptographic verification for all transactions
@@ -77,33 +82,64 @@ Unlike centralized marketplaces (eBay, Amazon), the Geogram market:
 ```
 collection_name/
 └── market/
+    ├── items/                          # MASTER CATALOG (base product definitions)
+    │   ├── electronics/
+    │   │   ├── radios/
+    │   │   │   └── item-abc123/       # Catalog item (no pricing/stock)
+    │   │   │       ├── item.txt       # Product description, specs, photos
+    │   │   │       └── gallery/
+    │   │   │           ├── photo1.jpg
+    │   │   │           └── photo2.jpg
+    │   │   └── antennas/
+    │   │       └── item-def456/
+    │   │           ├── item.txt
+    │   │           └── gallery/
+    │   │               └── antenna.jpg
+    │   ├── services/
+    │   │   ├── cleaning/
+    │   │   │   └── item-ghi789/       # Service definition
+    │   │   │       └── item.txt
+    │   │   └── repairs/
+    │   │       └── item-jkl012/
+    │   │           └── item.txt
+    │   └── free/
+    │       └── item-mno345/
+    │           └── item.txt
     ├── shops/
     │   ├── shop-CR7BBQ/
     │   │   ├── shop.txt
     │   │   ├── logo.jpg
     │   │   ├── banner.jpg
     │   │   └── items/
-    │   │       ├── item-abc123/
-    │   │       │   ├── item.txt
-    │   │       │   ├── gallery/
-    │   │       │   │   ├── photo1.jpg
-    │   │       │   │   ├── photo2.jpg
-    │   │       │   │   └── demo-video.mp4
-    │   │       │   ├── reviews/
-    │   │       │   │   ├── review-ALPHA1.txt
-    │   │       │   │   └── review-BRAVO2.txt
-    │   │       │   └── faq/
-    │   │       │       ├── question-001.txt
-    │   │       │       └── question-002.txt
-    │   │       └── item-def456/
-    │   │           ├── item.txt
-    │   │           └── gallery/
-    │   │               └── product.jpg
+    │   │       ├── electronics/
+    │   │       │   └── radios/
+    │   │       │       └── item-abc123/          # Shop listing (references catalog)
+    │   │       │           ├── item-ref.txt      # Price, stock, discount
+    │   │       │           ├── reviews/          # Shop-specific reviews
+    │   │       │           │   ├── review-ALPHA1.txt
+    │   │       │           │   └── review-BRAVO2.txt
+    │   │       │           └── faq/              # Shop-specific FAQs
+    │   │       │               └── question-001.txt
+    │   │       └── custom/
+    │   │           └── item-custom123/           # Shop-unique item
+    │   │               ├── item.txt              # Full definition (not a reference)
+    │   │               └── gallery/
+    │   │                   └── custom-product.jpg
     │   └── shop-ALPHA1/
     │       ├── shop.txt
     │       └── items/
-    │           └── item-xyz789/
-    │               └── item.txt
+    │           ├── electronics/
+    │           │   └── radios/
+    │           │       └── item-abc123/          # Same catalog item, different shop
+    │           │           ├── item-ref.txt      # Different price/stock than CR7BBQ
+    │           │           └── reviews/          # Different reviews
+    │           │               └── review-BRAVO2.txt
+    │           └── services/
+    │               └── cleaning/
+    │                   └── item-ghi789/
+    │                       ├── item-ref.txt
+    │                       └── reviews/
+    │                           └── review-DELTA3.txt
     ├── orders/
     │   ├── 2025/
     │   │   ├── order-2025-11-22_abc123.txt
@@ -165,17 +201,119 @@ order-2024-12-25_xyz789.txt
 - **Creation**: Automatically created when first order for that year is placed
 - **Benefits**: Easy year-based browsing, accounting, and analytics
 
+### Category Organization
+
+Categories are represented by **folder structure**, not metadata fields:
+
+**Category Folders**:
+- Items are organized into folders representing categories
+- Subcategories are nested folders
+- No limit on nesting depth
+- Folder names should be lowercase with hyphens
+
+**Common Category Examples**:
+```
+items/
+├── electronics/
+│   ├── radios/
+│   ├── antennas/
+│   └── accessories/
+├── services/
+│   ├── cleaning/
+│   ├── repairs/
+│   ├── tutoring/
+│   └── landscaping/
+├── tools/
+│   ├── hand-tools/
+│   └── power-tools/
+├── books/
+├── clothing/
+└── free/              # Free items/giveaways
+```
+
+**Benefits**:
+- Visual organization in file system
+- Easy browsing by category
+- Simple to add new categories
+- Natural hierarchical structure
+
+### Shared Items Pool (Inventory Catalog)
+
+The `market/items/` directory contains the **master product catalog** - templates/definitions that shops can reference:
+
+**Purpose**:
+- Collection-wide inventory catalog
+- Base product definitions with descriptions and photos
+- Any shop can list these items
+- Eliminates duplication of product descriptions
+- Community-contributed catalog
+
+**Catalog Items Contain**:
+- Basic product information (title, description)
+- Product photos and videos (gallery)
+- Specifications
+- Brand, model, SKU
+- Multilanguage descriptions
+- **NO pricing, stock, or reviews** (those are shop-specific)
+
+**Shop Item References**:
+
+When a shop lists an item from the catalog, they create a **reference file** in their own items folder:
+
+**File**: `shops/shop-CR7BBQ/items/electronics/radios/item-abc123/item-ref.txt`
+
+```
+ITEM_REF: market/items/electronics/radios/item-abc123
+SHOP_ID: shop-CR7BBQ
+LISTED: 2025-11-22 15:00_00
+
+# Shop-specific data
+PRICE: 35.00           # This shop's price (can differ from other shops)
+CURRENCY: USD
+STOCK: 15              # This shop's inventory
+SOLD: 47               # Sales from this shop
+DISCOUNT: 10%          # Optional shop-specific discount
+CONDITION: new         # new, used, refurbished
+
+--> npub: npub1abc123...
+--> signature: 3045022100abcd...
+```
+
+**Shop-Specific Data Stored Separately**:
+- `reviews/` - Reviews for this shop's listing
+- `faq/` - Shop-specific questions and answers
+- Pricing and discounts (in reference file)
+- Stock levels (in reference file)
+- Sales count (in reference file)
+
+**Benefits**:
+- Multiple shops can sell the same product
+- Each shop sets own price and stock
+- Product description maintained centrally
+- Reviews are shop-specific (trust per seller)
+- Easy to add new products from catalog
+
+**Shop-Unique Items**:
+
+Shops can also create their own unique items (not in catalog):
+
+**File**: `shops/shop-CR7BBQ/items/custom-antenna/item-custom123/item.txt`
+
+These contain full item definition (description, photos, pricing, etc.) since they're not referencing the catalog.
+
 ### Special Directories
 
 **`gallery/` Directory**:
 - Contains product photos and videos
 - Supports: JPG, PNG, WebP, MP4, WebM
 - Recommended: Multiple angles, usage examples, detail shots
+- For services: Before/after photos, workspace, certifications
 
 **`reviews/` Directory**:
 - Contains review files from verified purchasers
 - Filename pattern: `review-{BUYER_CALLSIGN}.txt`
 - Only one review per buyer per item
+- Applies to both products and services
 
 **`faq/` Directory**:
 - Contains question and answer files
@@ -350,9 +488,106 @@ Refund issued within 5 business days of receiving return.
 
 ## Item Format
 
-### Main Item File
+### Two Types of Items
 
-Every item must have an `item.txt` file in the item folder root.
+The market system supports two types of item definitions:
+
+1. **Catalog Items** (`market/items/.../ item.txt`)
+   - Master product definitions
+   - Contain descriptions, specs, photos
+   - **NO pricing, stock, or shop-specific data**
+   - Can be referenced by multiple shops
+
+2. **Shop Reference Items** (`shops/shop-XXX/items/.../item-ref.txt`)
+   - References a catalog item
+   - Contains shop-specific pricing and stock
+   - Shop-specific reviews and FAQs
+   - Discounts and conditions
+
+3. **Shop-Unique Items** (`shops/shop-XXX/items/.../item.txt`)
+   - Complete item definition (not referencing catalog)
+   - Unique to one shop
+   - Contains all data (description, pricing, stock)
+
+### Catalog Item File
+
+Catalog items define the base product available in the collection.
+
+**File**: `market/items/electronics/radios/item-abc123/item.txt`
+
+**Required Fields**:
+```
+ITEM_ID: item-abc123
+CREATED: 2025-11-22 15:00_00
+UPDATED: 2025-11-22 15:00_00
+TYPE: physical
+```
+
+**NO Shop-Specific Fields** (these go in shop reference):
+- ~~SHOP_ID~~ (not in catalog)
+- ~~PRICE~~ (shop-specific)
+- ~~STOCK~~ (shop-specific)
+- ~~SOLD~~ (shop-specific)
+- ~~RATING~~ (shop-specific)
+- ~~REVIEW_COUNT~~ (shop-specific)
+
+**Catalog Item Contains**:
+- Product title and description
+- Specifications
+- Photos/videos
+- Brand, model, SKU
+- Geographic availability (for services)
+- Type (physical/digital/service)
+
+### Shop Reference Item File
+
+When a shop lists a catalog item, they create a reference file.
+
+**File**: `shops/shop-CR7BBQ/items/electronics/radios/item-abc123/item-ref.txt`
+
+**Required Fields**:
+```
+ITEM_REF: market/items/electronics/radios/item-abc123
+SHOP_ID: shop-CR7BBQ
+LISTED: 2025-11-22 15:00_00
+STATUS: available
+```
+
+**Shop-Specific Pricing**:
+```
+PRICE: 35.00
+CURRENCY: USD
+DISCOUNT: 10%         # Optional shop discount
+CONDITION: new        # new, used, refurbished
+```
+
+**Shop-Specific Inventory**:
+```
+STOCK: 15            # This shop's inventory
+SOLD: 47             # Sales from this shop only
+MIN_ORDER: 1
+MAX_ORDER: 5
+```
+
+**Shop-Specific Stats** (calculated from reviews):
+```
+RATING: 4.7          # Average rating for this shop's listing
+REVIEW_COUNT: 23     # Reviews for this shop's listing
+```
+
+**NOSTR Signature**:
+```
+--> npub: npub1shop123...
+--> signature: 3045022100ref...
+```
+
+### Shop-Unique Item File
+
+For items not in the shared catalog, shops create complete item definitions.
+
+**File**: `shops/shop-CR7BBQ/items/custom-antenna/item-custom123/item.txt`
+
+This format combines both catalog and shop reference data in one file (same as legacy format).
 
 **Required Fields**:
 ```
@@ -366,7 +601,6 @@ TYPE: physical
 
 **Basic Information**:
 ```
-CATEGORY: electronics/radios
 SKU: UV-K5-2023
 BRAND: Quansheng
 MODEL: UV-K5
@@ -388,6 +622,21 @@ SOLD: 47
 MIN_ORDER: 1
 MAX_ORDER: 5
 ```
+
+**Geographic Availability** (optional, for services and local items):
+```
+LOCATION: Lisbon, Portugal
+LATITUDE: 38.7223
+LONGITUDE: -9.1393
+RADIUS: 25
+RADIUS_UNIT: km
+```
+
+**Note on CATEGORY Field**:
+- The `CATEGORY:` metadata field is **deprecated**
+- Categories are now represented by **folder structure**
+- Item location in folder tree defines its category
+- Legacy items may still have `CATEGORY:` field for backwards compatibility
 
 **Ratings**:
 ```
@@ -469,12 +718,86 @@ SHIPS_FROM: Lisbon, Portugal
 ### Item Type Values
 
 - `physical`: Physical product requiring shipping
+  - Examples: radios, tools, books, clothing, food
+  - Requires shipping information
+  - Stock tracking applies
+
 - `digital`: Digital download (software, ebooks, etc.)
-- `service`: Service offering (consulting, repair, etc.)
+  - Examples: ebooks, software licenses, music, videos
+  - No shipping required
+  - Can use `STOCK: unlimited`
+
+- `service`: Service offering
+  - Examples: cleaning, repairs, tutoring, consulting, landscaping, maintenance
+  - Requires `LOCATION` and `RADIUS` fields
+  - Delivery happens at buyer's location or service provider's location
+  - Stock represents available appointment slots or capacity
+
+### Price Values
+
+**Paid Items**:
+```
+PRICE: 35.00          # Standard pricing
+CURRENCY: USD
+```
+
+**Free Items**:
+```
+PRICE: free           # Text "free" for giveaways
+CURRENCY: USD         # Still specify currency for consistency
+```
+
+or
+
+```
+PRICE: 0.00           # Numeric zero
+CURRENCY: USD
+```
+
+**Free items use cases**:
+- Community donations
+- Giveaways
+- Free services (volunteer work)
+- Open source software
+- Public domain content
+- Sample items
+
+### Service-Specific Fields
+
+For `TYPE: service` items, these fields are especially important:
+
+**Geographic Availability**:
+```
+LOCATION: Lisbon, Portugal
+LATITUDE: 38.7223
+LONGITUDE: -9.1393
+RADIUS: 25              # Service area radius
+RADIUS_UNIT: km
+```
+
+**Service Schedule** (optional):
+```
+AVAILABILITY_EN:
+Monday-Friday: 9:00-17:00
+Saturday: 10:00-14:00
+Sunday: Closed
+
+By appointment only. Contact for scheduling.
+```
+
+**Qualifications** (optional):
+```
+QUALIFICATIONS_EN:
+- Certified electrician (License #12345)
+- 10 years experience
+- Insured and bonded
+```
 
 ### Category Recommendations
 
-Common category patterns (customizable):
+Common category patterns using folder structure:
+
+**Physical Products**:
 ```
 electronics/radios
 electronics/antennas
@@ -489,6 +812,29 @@ survival/water-filters
 survival/shelters
 food/preserved
 food/seeds
+```
+
+**Services**:
+```
+services/cleaning/house-cleaning
+services/cleaning/window-cleaning
+services/repairs/electronics-repair
+services/repairs/appliance-repair
+services/tutoring/math
+services/tutoring/languages
+services/landscaping/lawn-care
+services/landscaping/tree-trimming
+services/consulting/it
+services/consulting/business
+services/maintenance/hvac
+services/maintenance/plumbing
+```
+
+**Free Items**:
+```
+free/giveaways
+free/donations
+free/samples
 ```
 
 ### Complete Item Example
@@ -1689,6 +2035,169 @@ HELPFUL_NO: 0
 --> answer_signature: 3045022100answer...
 ```
 
+### Example 5: Service Item with Geographic Radius
+
+**File**: `market/items/services/cleaning/item-def789/item.txt`
+```
+ITEM_ID: item-def789
+SHOP_ID: shop-ALPHA1
+CREATED: 2025-11-22 12:00_00
+UPDATED: 2025-11-22 12:00_00
+STATUS: available
+TYPE: service
+
+SKU: CLEAN-HOME-01
+
+# TITLE_EN: Professional House Cleaning Service
+# TITLE_PT: Serviço Profissional de Limpeza Doméstica
+# TITLE_ES: Servicio Profesional de Limpieza de Casas
+
+PRICE: 75.00
+CURRENCY: USD
+STOCK: 20            # Available appointment slots per month
+SOLD: 142
+MIN_ORDER: 1
+MAX_ORDER: 4         # Maximum 4 sessions per order
+
+LOCATION: Lisbon, Portugal
+LATITUDE: 38.7223
+LONGITUDE: -9.1393
+RADIUS: 25
+RADIUS_UNIT: km
+
+RATING: 4.9
+REVIEW_COUNT: 87
+
+[EN]
+Professional residential cleaning service for homes and apartments.
+We provide thorough, eco-friendly cleaning using non-toxic products.
+
+Service includes:
+- Complete dusting and vacuuming
+- Kitchen and bathroom deep cleaning
+- Floor mopping (all surfaces)
+- Window cleaning (interior)
+- Trash removal
+
+Average time: 3-4 hours for standard apartment (100m²)
+
+[PT]
+Serviço profissional de limpeza residencial para casas e apartamentos.
+Fornecemos limpeza completa e ecológica usando produtos não tóxicos.
+
+O serviço inclui:
+- Aspiração e limpeza de pó completa
+- Limpeza profunda de cozinha e casa de banho
+- Lavagem de chãos (todas as superfícies)
+- Limpeza de janelas (interior)
+- Remoção de lixo
+
+Tempo médio: 3-4 horas para apartamento padrão (100m²)
+
+AVAILABILITY_EN:
+Monday-Friday: 8:00-18:00
+Saturday: 9:00-15:00
+Sunday: Closed
+
+Flexible scheduling available. Book at least 48 hours in advance.
+
+QUALIFICATIONS_EN:
+- 8 years professional cleaning experience
+- Bonded and insured
+- Background checked staff
+- Eco-friendly certified products
+- References available upon request
+
+QUALIFICATIONS_PT:
+- 8 anos de experiência em limpeza profissional
+- Garantido e segurado
+- Pessoal com verificação de antecedentes
+- Produtos certificados ecológicos
+- Referências disponíveis mediante solicitação
+
+--> npub: npub1alpha123...
+--> signature: 3045022100service...
+```
+
+### Example 6: Free Item (Community Donation)
+
+**File**: `market/items/free/item-xyz456/item.txt`
+```
+ITEM_ID: item-xyz456
+SHOP_ID: shared
+CREATED: 2025-11-22 09:00_00
+UPDATED: 2025-11-22 09:00_00
+STATUS: available
+TYPE: physical
+
+# TITLE_EN: Free Vegetable Seeds - Tomato & Lettuce Mix
+# TITLE_PT: Sementes de Vegetais Grátis - Mix de Tomate e Alface
+# TITLE_ES: Semillas de Verduras Gratis - Mezcla de Tomate y Lechuga
+
+PRICE: free
+CURRENCY: USD
+STOCK: 50            # 50 seed packets available
+SOLD: 28
+MIN_ORDER: 1
+MAX_ORDER: 3         # Limit to ensure fair distribution
+
+LOCATION: Lisbon, Portugal
+LATITUDE: 38.7223
+LONGITUDE: -9.1393
+RADIUS: 50
+RADIUS_UNIT: km
+
+RATING: 5.0
+REVIEW_COUNT: 18
+
+[EN]
+Free heirloom vegetable seeds from our community garden. We're sharing the harvest!
+
+Includes:
+- 15 heirloom tomato seeds (San Marzano variety)
+- 25 lettuce seeds (mixed varieties)
+- Growing instructions
+- Seed saving guide
+
+These are organic, non-GMO seeds saved from our 2024 harvest. Perfect for beginner
+gardeners or anyone wanting to start a home vegetable garden.
+
+Pickup only or can mail for cost of postage (approximately €2 within Portugal).
+
+[PT]
+Sementes de vegetais tradicionais grátis do nosso jardim comunitário. Partilhamos a colheita!
+
+Inclui:
+- 15 sementes de tomate tradicional (variedade San Marzano)
+- 25 sementes de alface (variedades mistas)
+- Instruções de cultivo
+- Guia de preservação de sementes
+
+Estas são sementes orgânicas, não-OGM, guardadas da nossa colheita de 2024. Perfeitas para
+jardineiros iniciantes ou qualquer pessoa que queira começar uma horta doméstica.
+
+Apenas recolha local ou podemos enviar pelo custo do porte (aproximadamente €2 em Portugal).
+
+SPECIFICATIONS_EN:
+- Seed Type: Open-pollinated heirloom
+- Harvest Year: 2024
+- Germination Rate: 85-90%
+- Planting Season: Spring (March-May)
+- Days to Maturity: 70-80 days (tomato), 45-60 days (lettuce)
+- Organic: Yes
+- GMO-Free: Yes
+
+AVAILABILITY_EN:
+Available for pickup at community garden:
+Tuesday & Thursday: 17:00-19:00
+Saturday: 10:00-14:00
+
+Location: Quinta do Caracol, Lisbon
+
+--> npub: npub1community123...
+--> signature: 3045022100free...
+```
+
 ## Parsing Implementation
 
 ### Recommended Parsing Strategy
@@ -2034,6 +2543,27 @@ Required fields:
 
 ## Change Log
 
+### Version 1.1 (2025-11-22)
+
+**Major Updates**:
+
+- **Folder-Based Categories**: Categories are now represented by folder structure instead of metadata fields
+- **Shared Items Pool**: Added `market/items/` directory for collection-wide shared items
+- **Free Items Support**: Items can now have `PRICE: free` or `PRICE: 0.00` for giveaways and donations
+- **Service Items**: Enhanced support for service offerings with dedicated fields
+- **Geographic Radius**: Added `RADIUS` and `RADIUS_UNIT` fields for service/item availability area
+- **Service-Specific Fields**: Added `AVAILABILITY`, `QUALIFICATIONS` sections for services
+- **Deprecated CATEGORY Field**: Category metadata field deprecated in favor of folder structure
+- **Enhanced Examples**: Added complete examples for service items and free items
+- **Location Fields**: Added `LOCATION`, `LATITUDE`, `LONGITUDE` fields for geographic items
+
+**New Features**:
+- Free items category and workflow
+- Service categories (cleaning, repairs, tutoring, consulting, landscaping, maintenance)
+- Geographic availability with radius in kilometers
+- Service scheduling and qualifications documentation
+- Shared items accessible to all shops in collection
+
 ### Version 1.0 (2025-11-22)
 
 Initial release of Market format specification.
@@ -2056,7 +2586,7 @@ Initial release of Market format specification.
 
 ---
 
-**Document Version**: 1.0
+**Document Version**: 1.1
 **Last Updated**: 2025-11-22
 **Maintained by**: Geogram Contributors
 **License**: Apache 2.0
