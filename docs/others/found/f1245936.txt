@@ -1,0 +1,1096 @@
+on.social",
+      "github": "curator"
+    },
+    "donation_address": "bc1q...",
+    "lightning_address": "curator@getalby.com",
+    "homepage": "https://example.com/collections/awesome",
+    "source_url": "https://github.com/curator/awesome-collection",
+    "attribution": "Original content by Various Authors. Curated by Collection Curator.",
+    "content_rating": "PG",
+    "mature_content": false
+  },
+  "nostr": {
+    "relay_hints": [
+      "wss://relay1.example.com",
+      "wss://relay2.example.com"
+    ],
+    "event_id": "nostr-event-id-for-collection-announcement"
+  }
+}
+```
+
+**Field Descriptions:**
+
+- **version**: Specification version for compatibility (current: "1.0")
+- **collection.id**: Unique identifier (can be derived from creation event or UUID)
+- **collection.title**: Human-readable collection name
+- **collection.description**: Short description of collection contents
+- **collection.created**: ISO8601 timestamp when collection was created
+- **collection.updated**: ISO8601 timestamp of last update
+- **authors**: Array of npubs with roles (owner, admin, contributor)
+  - **npub**: NOSTR public key
+  - **role**: "owner", "admin", or "contributor"
+  - **joined**: When author joined the collection
+- **permissions**: Access control and submission rules
+  - **public_read**: Whether collection is publicly accessible
+  - **allow_submissions**: Whether users can submit content
+  - **submission_requires_approval**: Whether submissions need approval
+  - **allowed_contributors**: Array of npubs with direct contribution rights
+  - **blocked_users**: Array of npubs that are blocked
+- **thumbnails**: Array of thumbnail representations
+  - **path**: Relative path to thumbnail file
+  - **type**: MIME type (image/png, text/plain, etc.)
+  - **width/height**: Dimensions for images
+  - **format**: Additional format info (e.g., "ascii-art")
+- **tags**: Array of searchable tags for categorization
+- **metadata**: Additional context about the collection (all fields optional)
+  - **category**: Primary category (library, games, media, software, etc.)
+  - **language**: ISO 639-1 language code (en, es, fr, de, pt, etc.)
+  - **license**: Content license (CC-BY-SA-4.0, MIT, GPL-3.0, Public Domain, etc.)
+  - **copyright**: Copyright notice and year
+  - **contact**: Contact information object
+    - **email**: Email address
+    - **nostr**: NOSTR npub for contact
+    - **matrix**: Matrix ID
+    - **website**: Contact page URL
+  - **social**: Social media handles object
+    - **twitter**: Twitter/X handle
+    - **mastodon**: Mastodon handle
+    - **github**: GitHub username
+  - **website**: Collection homepage URL
+  - **homepage**: Alternative homepage field
+  - **source_url**: Source code or repository URL
+  - **donation_address**: Bitcoin/crypto address for donations
+  - **lightning_address**: Lightning Network address
+  - **attribution**: Attribution text for content sources
+  - **content_rating**: Age rating (G, PG, PG-13, R, etc.)
+  - **mature_content**: Boolean flag for mature/adult content
+- **nostr**: NOSTR-specific configuration
+  - **relay_hints**: Array of recommended relay URLs
+  - **event_id**: NOSTR event ID for collection announcement
+
+### tree.json
+
+The `tree.json` file contains a complete manifest of all files in the collection with cryptographic hashes and metadata. This file enables integrity verification, deduplication, and efficient synchronization.
+
+**Schema:**
+
+```json
+{
+  "version": "1.0",
+  "generated": "2025-11-12T10:00:00Z",
+  "root_hash": "sha256-of-entire-tree",
+  "tree": [
+    {
+      "path": "collection.json",
+      "type": "file",
+      "size": 2048,
+      "hashes": {
+        "sha1": "a1b2c3d4e5f6...",
+        "tlsh": "T1A2B3C4D5E6...",
+        "sha256": "f1e2d3c4b5a6..."
+      },
+      "added": "2025-11-12T10:00:00Z",
+      "modified": "2025-11-12T10:00:00Z",
+      "author": "npub1..."
+    },
+    {
+      "path": "books/fiction/book1.epub",
+      "type": "file",
+      "size": 1048576,
+      "hashes": {
+        "sha1": "abc123def456...",
+        "tlsh": "T1234567890ABCDEF...",
+        "sha256": "def456789abc...",
+  p
+- No need to extract entire archive for viewing metadata
+
+**Creating Collections:**
+1. Author creates/modifies files in folder
+2. Author generates/updates `tree.json` with hashes
+3. Author updates `log.txt` with changes
+4. Author packages folder as `.colz` ZIP file
+5. Author computes hash of `.colz` file
+6. Author publishes NOSTR event with hash and download link
+
+**Updating Collections:**
+1. Author extracts existing `.colz` file
+2. Author makes modifications
+3. Author updates `tree.json` and `log.txt`
+4. Author increments version in `collection.json`
+5. Author re-packages as new `.colz` file
+6. Author publishes update event on NOSTR
+
+---
+
+## Future Enhancements
+
+### Planned Features
+
+1. **Multi-signature Collections**: Require multiple owners to approve changes
+2. **Branching/Forking**: Users can create derived collections
+3. **Merge Requests**: Formal proposal system for changes
+4. **Automated Moderation**: AI-based content filtering
+5. **Reputation System**: Track contributor quality
+6. **Collection Analytics**: Download stats, popular files
+7. **Differential Updates**: Binary diffs for large file updates
+8. **Encrypted Collections**: End-to-end encrypted content
+9. **Smart Collections**: Dynamic collections based on rules
+10. **Cross-collection References**: Collections that reference other collections
+
+### Open Questions
+
+1. **NOSTR Event Kinds**: Which event kinds to use for collections?
+2. **Large File Handling**: How to handle files >100MB? Split into multiple ZIPs?
+3. **Deletion Semantics**: Hard delete vs. soft delete in updates?
+4. **Version History**: Keep old `.colz` versions or only latest?
+5. **Bandwidth Optimization**: Best approach for differential ZIP updates?
+6. **Search Index**: Centralized or decentralized search?
+7. **ZIP Streaming**: Support streaming extraction for large collections?
+8. **Compression Trade-offs**: Balance between compression ratio and extraction speed?
+9. **Signature Embedding**: Embed cryptographic signatures in ZIP extra fields?
+10. **Multi-part Archives**: Support split ZIPs for very large collections?
+
+---
+
+## Related Specifications
+
+This specification should be complemented with:
+
+1. **Relay Specification**: How relays synchronize collections
+2. **Client Specification**: How mobile/desktop clients handle collections
+3. **Protocol Specification**: Wire protocol for collection transfer
+4. **Security Specification**: Encryption, signing, verification details
+5. **API Specification**: REST/RPC APIs for collection operations
+
+---
+
+## Appendix
+
+### Example Collection: "Classic Sci-Fi Books"
+
+**As Distributed (ZIP Archive):**
+- Filename: `classic-scifi-books-v1.0.0.collection.zip`
+- Size: 15.3 MB (compressed from 18.2 MB)
+- SHA256: `a3f8b9c1d2e3f4g5h6i7j8k9l0m1n2o3p4q5r6s7t8u9v0w1x2y3z4a5b6c7d8`
+
+**Contents (when extracted):**
+
+```
+classic-scifi-books/
+├── collection.json          [First in ZIP]
+├── tree.json               [Second in ZIP]
+├── log.txt                 [Third in ZIP]
+├── thumbnail.png           [PNG thumbnail]
+├── thumbnail.txt           [ASCII art thumbnail]
+├── README.md               [Collection description]
+├── books/
+│   ├── asimov/
+│   │   ├── foundation.epub
+│   │   ├── foundation-metadata.json
+│   │   └── foundation-cover.jpg
+│   ├── heinlein/
+│   │   ├── stranger-in-a-strange-land.epub
+│   │   └── stranger-cover.jpg
+│   └── herbert/
+│       ├── dune.epub
+│       └── dune-cover.jpg
+└── covers/
+    ├── collection-banner.png
+    └── ascii-art-logo.txt
+```
+
+**Working with this collection:**
+```bash
+# Download the collection
+wget https://collections.example.com/classic-scifi-books-v1.0.0.collection.zip
+
+# Verify integrity
+sha256sum classic-scifi-books-v1.0.0.collection.zip
+
+# Extract to view/use
+unzip classic-scifi-books-v1.0.0.collection.zip -d ./collections/
+
+# Quick metadata check (without full extraction)
+unzip -p classic-scifi-books-v1.0.0.collection.zip collection.json | jq .
+
+# List contents
+unzip -l classic-zip` files)
+- Can be extracted to a directory for browsing/editing
+- Original ZIP kept for integrity verification
+- Easy to browse: just extract the ZIP file
+
+**Working with Collections:**
+- **Compressed Form**: Single `.colz` file for distribution/storage
+- **Extracted Form**: Unzipped folder for editing and browsing
+- Clients can maintain both forms (compressed for backup, extracted for access)
+
+**Cloud/Remote Storage:**
+- Collections hosted as single ZIP files on HTTP servers
+- Simple download URLs (e.g., `https://example.com/collections/my-collection.collection.zip`)
+- CDN-friendly (single file, easy caching)
+- Supports HTTP range requests for partial downloads
+
+**Distributed Storage:**
+- IPFS integration: Collections as single CID
+- Bittorrent: `.colz` file as a torrent
+- Easier seeding and distribution (single file)
+- Magnet links for collection sharing
+
+### Synchronization
+
+**Sync Strategies:**
+
+1. **Full Sync**: Download entire `.colz` file
+   - Simple: one download, one file
+   - Best for small/medium collections
+   - Ensures complete integrity
+
+2. **Incremental Sync**: Compare versions and download only if changed
+   - Check `tree.json` root_hash before downloading
+   - Download new version only if different
+   - Client can cache old versions
+
+3. **Differential Updates** (Advanced):
+   - For large collections, use binary diff (e.g., zsync, bsdiff)
+   - Download only changed bytes between ZIP versions
+   - Requires server-side diff generation
+   - Significantly reduces bandwidth for small changes
+
+4. **Smart Sync**:
+   - Download collection metadata first (extract only `collection.json` and `tree.json` from ZIP)
+   - Let user choose what to download
+   - Selective file extraction from ZIP (supported by ZIP format)
+
+**Update Detection:**
+1. Client checks collection's NOSTR event for latest version
+2. Compares `tree.json` hash with local version
+3. If different, downloads new `.colz` file
+4. Extracts and replaces local copy
+
+**Conflict Resolution:**
+- Collections are immutable once published (each version is unique)
+- Updates create new versions (incremented version number)
+- Local modifications create a fork (new collection ID)
+- No merge conflicts (owner/admin changes are authoritative)
+
+### Performance
+
+**Optimization Strategies:**
+
+1. **Lazy Loading**: Don't parse entire `tree.json` upfront
+2. **Indexing**: Create local database index of tree
+3. **Caching**: Cache frequently accessed metadata
+4. **Compression**: Compress `tree.json` for large collections
+5. **Chunking**: Split large `tree.json` into multiple files
+
+### Migration
+
+**Version Compatibility:**
+- Collections specify schema version
+- Clients support multiple schema versions
+- Migration tools for upgrading old collections
+
+### ZIP Archive Technical Details
+
+**Compression:**
+- Use standard DEFLATE compression (ZIP standard)
+- Compression level: Configurable (6-9 recommended for balance)
+- Store mode for already-compressed files (JPG, PNG, MP4, etc.)
+- Maximum compression for text files (JSON, TXT, MD)
+
+**ZIP File Naming:**
+- Primary format: `collection-name.collection.zip`
+- Short form: `collection-name.colz` (optional, for brevity)
+- Include version in filename: `collection-name-v1.2.3.collection.zip`
+- Use URL-safe characters (no spaces, special chars)
+
+**Archive Hash:**
+- SHA256 hash of entire `.collection.zip` file
+- Published in NOSTR event for verification
+- Used for integrity checking after download
+
+**Metadata in ZIP:**
+- ZIP comment field can contain collection ID
+- Extra fields for fast metadata lookup
+- No encryption by default (use separate encryption layer if needed)
+
+**ZIP64 Support:**
+- Use ZIP64 extension for collections >4GB
+- Required for large media collections
+- Broad compatibility with modern tools
+
+**File Order in ZIP:**
+- `collection.json` first (fast access to metadata)
+- `tree.json` second (file manifest)
+- `log.txt` third (change history)
+- Thumbnails next (quick preview)
+- Content files sorted alphabetically
+
+**Partial Extraction:**
+- Clients can extract only needed files
+- ZIP central directory at end allows fast file looku`curated`, `community`, `official`, `archive`
+
+### Thumbnails
+
+Collections can have multiple thumbnail representations:
+
+1. **Image Thumbnails:**
+   - PNG, JPG, WebP
+   - Multiple sizes (512x512, 256x256, 128x128)
+   - Used in graphical interfaces
+
+2. **ASCII Art Thumbnails:**
+   - Plain text representation
+   - Useful for terminal/CLI interfaces
+   - Nostalgic aesthetic
+
+3. **Emoji/Icon:**
+   - Single character representation
+   - Quick visual identification
+
+### Descriptions
+
+Collections support multiple levels of description:
+
+1. **Short Description** (`collection.json`): One-line summary
+2. **Detailed Description**: Markdown file with full information
+3. **File Descriptions** (`tree.json`): Per-file metadata
+4. **External References**: Links to websites, documentation
+
+---
+
+## Hashing & Integrity
+
+### Hash Algorithms
+
+**SHA-1:**
+- Standard for compatibility
+- Quick computation
+- Good for exact file matching
+
+**SHA-256:**
+- Enhanced security
+- Better collision resistance
+- Recommended for critical integrity checks
+
+**TLSH (Trend Micro Locality Sensitive Hash):**
+- Fuzzy matching capability
+- Detect similar files (duplicates, variations)
+- Useful for finding near-duplicate content
+
+### Verification Workflow
+
+1. **On Download:**
+   - Compute hash of downloaded file
+   - Compare with hash in `tree.json`
+   - Reject if mismatch
+
+2. **On Sync:**
+   - Compare local `tree.json` with remote
+   - Identify changed files (hash mismatch)
+   - Download only changed files
+
+3. **On Submission:**
+   - Submitter provides hashes
+   - Owner verifies by computing hashes
+   - Ensures file integrity
+
+### Tree Hash
+
+The `root_hash` in `tree.json` is computed from:
+- All file hashes
+- File paths
+- Directory structure
+
+This provides a single hash representing the entire collection state.
+
+**Algorithm (conceptual):**
+```
+root_hash = SHA256(
+  sorted(file_path + ":" + file_sha256 for each file)
+)
+```
+
+---
+
+## Sharing & Permissions
+
+### Permission Levels
+
+**Public Collections:**
+- Anyone can view and download
+- `public_read: true`
+
+**Private Collections:**
+- Only allowed users can access
+- `public_read: false`
+- Requires permission mechanism (TBD)
+
+**Submission Permissions:**
+- `allow_submissions: true` - Anyone can submit files
+- `allowed_contributors: [npubs]` - Only specific users can contribute
+- `blocked_users: [npubs]` - Blacklist specific users
+
+### Access Control
+
+Access control can be implemented through:
+1. **NOSTR-based**: Encrypt content, share keys with allowed npubs
+2. **Relay-based**: Collections hosted on private relays
+3. **Out-of-band**: Traditional access control on hosting servers
+
+---
+
+## Use Cases
+
+### 1. Digital Library
+
+**Example: Classic Literature Collection**
+- Owner curates public domain books
+- Users subscribe to receive new additions
+- Community members submit missing books
+- Rich metadata with author info, genres, publication dates
+- Full-text search via descriptions in `tree.json`
+
+### 2. Game Archive
+
+**Example: Retro Gaming Collection**
+- ROMs organized by console/system
+- Each game has metadata (title, year, publisher)
+- Cover art thumbnails
+- Save states and guides as supplementary files
+- Users submit missing games or better ROM dumps
+
+### 3. Software Repository
+
+**Example: Linux Utilities Collection**
+- Curated command-line tools
+- Each tool has description, documentation
+- Versioned releases
+- Community contributions with approval process
+- Tags for categories (networking, file management, etc.)
+
+### 4. Media Archive
+
+**Example: Documentary Collection**
+- Video files with subtitle files
+- Rich metadata (director, year, topic)
+- Thumbnail previews
+- Episode collections organized hierarchically
+- Community subtitles in different languages
+
+### 5. Research Papers
+
+**Example: AI Research Collection**
+- Academic papers (PDFs)
+- Organized by topic and year
+- Metadata includes authors, abstracts, citations
+- Supplementary materials (code, datasets)
+- Community annotations and notes
+
+---
+
+## Implementation Considerations
+
+### Storage
+
+**Local Storage:**
+- Collections stored as ZIP archives (`.colz` or `.collection.ollection-id",
+  "title": "My Awesome Collection",
+  "description": "A comprehensive collection...",
+  "version": "1.2.0",
+  "updated": "2025-11-12T10:00:00Z",
+  "tags": ["books", "sci-fi"],
+  "thumbnail_url": "...",
+  "tree_hash": "sha256...",
+  "download_hints": [
+    "relay://collection-relay.example.com",
+    "https://cdn.example.com/collections/..."
+  ]
+}
+```
+
+**Event Tags:**
+- `["d", "unique-collection-id"]` - Replaceable event identifier
+- `["title", "My Awesome Collection"]`
+- `["t", "books"]`, `["t", "sci-fi"]` - Searchable tags
+- `["content-type", "collection"]`
+
+### Social Interactions
+
+Collections support standard NOSTR interactions:
+
+1. **Likes (Reactions)**: Users can like/react to collections
+   - Event kind 7 (reaction) referencing collection event
+
+2. **Comments**: Users can comment on collections
+   - Event kind 1 (text note) with collection event reference
+
+3. **Subscriptions**: Users express interest in receiving updates
+   - Custom event or list-based subscription mechanism
+
+4. **Recommendations**: Users can recommend collections to others
+   - Event kind 1 with collection reference
+
+### Update Notifications
+
+When a collection is updated:
+1. Author publishes new collection announcement event (replaceable)
+2. Subscribers detect the change (new event replaces old)
+3. Subscribers can fetch updated `tree.json` to see what changed
+4. Subscribers can selectively download changed files
+
+---
+
+## Features
+
+### Subscription Mechanism
+
+Users can subscribe to collections to:
+- Receive notifications when updates occur
+- Automatically sync changes
+- Track collection versions
+
+**Subscription Workflow:**
+1. User discovers collection via NOSTR event
+2. User initiates subscription in their client
+3. Client monitors collection's NOSTR events
+4. On update event, client checks `tree.json` for changes
+5. Client downloads modified/new files
+6. Client updates local collection copy
+
+### Update Detection
+
+Changes are detected by comparing:
+1. **tree.json** root_hash - Quick check if anything changed
+2. Individual file hashes - Identify specific changed files
+3. Log entries - Understand what actions occurred
+
+### File Submission Workflow
+
+**For Collections with `allow_submissions: true`:**
+
+1. **User Prepares Submission:**
+   - Creates/modifies files
+   - Generates hashes
+   - Creates submission metadata
+
+2. **User Sends Submission:**
+   - Creates NOSTR event (custom kind) containing:
+     - Collection ID
+     - File path(s)
+     - File hash(es)
+     - File content (or reference to content)
+     - Description/reason for submission
+   - Tags collection owner(s)
+
+3. **Owner Reviews Submission:**
+   - Receives submission event
+   - Reviews file(s)
+   - Verifies hashes
+   - Makes decision
+
+4. **Owner Approves:**
+   - Adds file to collection
+   - Updates `tree.json`
+   - Adds `APPROVED` and `ADDED` entries to `log.txt`
+   - Updates `collection.json` (updated timestamp)
+   - Publishes new collection announcement event
+   - Optionally replies to submission event with approval
+
+5. **Owner Rejects:**
+   - Adds `REJECTED` entry to `log.txt` (optional, for transparency)
+   - Replies to submission event with rejection reason
+   - Does not update collection files
+
+**For Authorized Contributors:**
+- If user is in `allowed_contributors` list, they can add files directly
+- Still logged in `log.txt` with their npub
+
+### Administrator Actions
+
+**Owner Roles:**
+- Full control over collection
+- Approve/reject submissions
+- Add/remove contributors
+- Modify permissions
+- Delete collection
+
+**Admin Roles:**
+- Approve/reject submissions
+- Add files
+- Cannot modify permissions or owners
+
+**Contributor Roles:**
+- Add files (if permitted)
+- Submit files for approval
+- Cannot modify permissions
+
+---
+
+## Metadata & Discovery
+
+### Tags
+
+Tags enable categorization and discovery:
+
+**Content Type Tags:**
+- `books`, `games`, `software`, `media`, `documents`
+
+**Genre/Category Tags:**
+- `sci-fi`, `fantasy`, `rpg`, `fps`, `tools`
+
+**Language Tags:**
+- `en`, `es`, `fr`, `de`, `pt`, etc.
+
+**Format Tags:**
+- `epub`, `pdf`, `rom`, `iso`, `mp4`
+
+**Attribute Tags:**
+- F-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Classic Sci-Fi Books Collection</title>
+  <link href="https://collections.example.com/classic-scifi-books"/>
+  <link rel="self" href="https://collections.example.com/classic-scifi-books.collection.zip!/feed.rss"/>
+  <updated>2025-11-15T14:30:00Z</updated>
+  <id>urn:uuid:classic-scifi-books</id>
+  <subtitle>A curated collection of classic science fiction literature</subtitle>
+
+  <author>
+    <name>Collection Curator</name>
+    <uri>nostr:npub1qvr3x8zjxyz9qwer...</uri>
+  </author>
+
+  <category term="books"/>
+  <category term="sci-fi"/>
+  <category term="literature"/>
+
+  <entry>
+    <title>Collection Updated to v1.2.0 - Added 5 New Books</title>
+    <link href="https://collections.example.com/classic-scifi-books"/>
+    <id>urn:uuid:classic-scifi-books:update:2025-11-15</id>
+    <updated>2025-11-15T14:30:00Z</updated>
+    <summary>Added 5 new classic sci-fi books: Foundation and Empire, The Left Hand of Darkness, and more.</summary>
+    <content type="html"><![CDATA[
+      <p>Added 5 new classic sci-fi books to the collection:</p>
+      <ul>
+        <li>Foundation and Empire by Isaac Asimov</li>
+        <li>The Left Hand of Darkness by Ursula K. Le Guin</li>
+        <li>Neuromancer by William Gibson</li>
+        <li>Do Androids Dream of Electric Sheep? by Philip K. Dick</li>
+        <li>The Stars My Destination by Alfred Bester</li>
+      </ul>
+      <p>Total collection size: 150 books</p>
+    ]]></content>
+  </entry>
+</feed>
+```
+
+**Feed Content Guidelines:**
+
+1. **Channel/Feed Information:**
+   - `title`: Collection title (matches `collection.json`)
+   - `description`/`subtitle`: Collection description
+   - `link`: URL to collection or download page
+   - `category`: Tags from collection (for discoverability)
+
+2. **Item Types to Include:**
+   - **Collection Updates**: New version releases
+   - **Content Additions**: Individual files/items added
+   - **Announcements**: News about the collection
+   - **Changes**: Significant modifications or restructuring
+
+3. **Item Fields:**
+   - `title`: Clear, descriptive title of the update
+   - `description`/`content`: Detailed information about the change
+   - `pubDate`/`updated`: When the change occurred
+   - `author`: npub of the person who made the change
+   - `guid`/`id`: Unique identifier for this feed item
+   - `enclosure`: Link to download the collection ZIP (optional but recommended)
+
+4. **Enclosure for Downloads:**
+   ```xml
+   <enclosure url="https://example.com/collection-v1.2.0.collection.zip"
+              length="157286400"
+              type="application/zip" />
+   ```
+   - Use enclosures to provide direct download links
+   - Include file size in bytes
+   - Type should be "application/zip" for .collection.zip files
+
+**NOSTR Integration:**
+- Author field can reference npubs: `nostr:npub1...` or as plain text
+- Feed items can correspond to NOSTR events
+- Clients can cross-reference feed updates with NOSTR announcements
+
+**Updating the Feed:**
+- Add new `<item>` entries at the top when changes occur
+- Keep recent items (recommend 20-50 most recent)
+- Update `lastBuildDate`/`updated` timestamp
+- Maintain chronological order (newest first)
+
+**Feed Discovery:**
+- Include feed URL in `collection.json` metadata
+- Use standard file name: `feed.rss` or `feed.xml`
+- Support both RSS 2.0 and Atom 1.0 formats
+
+**Benefits:**
+- Universal compatibility with RSS readers
+- Standard notification mechanism
+- Works offline (feed included in collection)
+- No dependency on NOSTR relays
+- Familiar user experience for content subscriptions
+
+---
+
+## NOSTR Integration
+
+### Author Identification
+
+All authors and contributors are identified by their NOSTR public keys (npubs). This provides:
+- Cryptographic verification of authorship
+- Decentralized identity
+- Integration with existing NOSTR social graphs
+
+### Collection Announcements
+
+When a collection is created or updated, a NOSTR event should be published:
+
+**Event Kind**: TBD (custom kind for collections, e.g., kind 30000+)
+
+**Event Content Example:**
+```json
+{
+  "collection_id": "unique-c Share news and announcements about the collection
+- Provide a standard subscription mechanism compatible with existing RSS tools
+
+**RSS 2.0 Example:**
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Classic Sci-Fi Books Collection</title>
+    <link>https://collections.example.com/classic-scifi-books</link>
+    <description>A curated collection of classic science fiction literature</description>
+    <language>en-us</language>
+    <pubDate>Wed, 12 Nov 2025 10:00:00 GMT</pubDate>
+    <lastBuildDate>Wed, 15 Nov 2025 14:30:00 GMT</lastBuildDate>
+    <generator>Geogram Collection Manager v1.0</generator>
+
+    <!-- Self-reference for feed discovery -->
+    <atom:link href="https://collections.example.com/classic-scifi-books.collection.zip!/feed.rss"
+               rel="self" type="application/rss+xml" />
+
+    <!-- Collection metadata -->
+    <category>books</category>
+    <category>sci-fi</category>
+    <category>literature</category>
+
+    <image>
+      <url>https://collections.example.com/classic-scifi-books/thumbnail.png</url>
+      <title>Classic Sci-Fi Books Collection</title>
+      <link>https://collections.example.com/classic-scifi-books</link>
+    </image>
+
+    <!-- Item for collection update -->
+    <item>
+      <title>Collection Updated to v1.2.0 - Added 5 New Books</title>
+      <link>https://collections.example.com/classic-scifi-books</link>
+      <description><![CDATA[
+        Added 5 new classic sci-fi books to the collection:
+        - Foundation and Empire by Isaac Asimov
+        - The Left Hand of Darkness by Ursula K. Le Guin
+        - Neuromancer by William Gibson
+        - Do Androids Dream of Electric Sheep? by Philip K. Dick
+        - The Stars My Destination by Alfred Bester
+
+        Total collection size: 150 books
+      ]]></description>
+      <author>npub1qvr3x8zjxyz9qwer... (Collection Curator)</author>
+      <pubDate>Wed, 15 Nov 2025 14:30:00 GMT</pubDate>
+      <guid isPermaLink="false">classic-scifi-books:update:2025-11-15</guid>
+      <enclosure url="https://collections.example.com/classic-scifi-books-v1.2.0.collection.zip"
+                 length="157286400"
+                 type="application/zip" />
+    </item>
+
+    <!-- Item for new content addition -->
+    <item>
+      <title>New Book Added: The Moon is a Harsh Mistress</title>
+      <link>https://collections.example.com/classic-scifi-books</link>
+      <description><![CDATA[
+        Added "The Moon is a Harsh Mistress" by Robert A. Heinlein to the collection.
+
+        File: books/heinlein/moon-harsh-mistress.epub
+        Size: 892 KB
+        SHA-1: a3f8b9c1d2e3f4g5h6i7j8k9l0m1n2o3p4q5r6s7
+      ]]></description>
+      <author>npub1qvr3x8zjxyz9qwer... (Collection Curator)</author>
+      <pubDate>Tue, 14 Nov 2025 09:15:00 GMT</pubDate>
+      <guid isPermaLink="false">classic-scifi-books:addition:2025-11-14:moon</guid>
+      <category>heinlein</category>
+      <category>new-addition</category>
+    </item>
+
+    <!-- Item for collection announcement -->
+    <item>
+      <title>Collection Created: Classic Sci-Fi Books</title>
+      <link>https://collections.example.com/classic-scifi-books</link>
+      <description><![CDATA[
+        Welcome to the Classic Sci-Fi Books collection! This curated collection features
+        timeless science fiction literature from the golden age of sci-fi.
+
+        Starting with 120 books from legendary authors like Asimov, Heinlein, Herbert, and more.
+
+        Subscribe to this feed to receive notifications when new books are added!
+      ]]></description>
+      <author>npub1qvr3x8zjxyz9qwer... (Collection Curator)</author>
+      <pubDate>Wed, 12 Nov 2025 10:00:00 GMT</pubDate>
+      <guid isPermaLink="false">classic-scifi-books:created:2025-11-12</guid>
+      <enclosure url="https://collections.example.com/classic-scifi-books-v1.0.0.collection.zip"
+                 length="145829120"
+                 type="application/zip" />
+    </item>
+  </channel>
+</rss>
+```
+
+**Atom 1.0 Alternative Example:**
+
+```xml
+<?xml version="1.0" encoding="UTable title
+- `description` (string): Short description
+- `subtitle_file` (string): Path to file with detailed description
+- `cover` (string): Path to cover/thumbnail image
+- `mime_type` (string): MIME type of the file
+- `tags` (array): Tags for categorization and search
+- `custom` (object): Any custom fields relevant to the content type
+
+---
+
+#### Directory Entries (`type: "directory"`)
+
+**Required Fields:**
+- `path` (string): Relative path from collection root
+- `type` (string): Must be "directory"
+
+**Optional Fields:**
+- `metadata` (object): Information about the directory
+  - `description` (string): What this directory contains
+  - `tags` (array): Tags for categorization
+
+**Note:** Directories do not have hashes or size fields.
+
+---
+
+#### Collection Entries (`type: "collection"`)
+
+Used for nested sub-collections within a parent collection.
+
+**Required Fields:**
+- `path` (string): Relative path to sub-collection folder
+- `type` (string): Must be "collection"
+- `collection_id` (string): Unique identifier of the sub-collection
+
+**Optional Fields:**
+- `metadata` (object): Information about the sub-collection
+  - `title` (string): Sub-collection title
+  - `description` (string): What this sub-collection contains
+
+**Important Nested Collection Rules:**
+1. Parent's `tree.json` lists the sub-collection folder but does NOT enumerate its internal files
+2. Each sub-collection has its own `collection.json`, `tree.json`, and `feed.rss`
+3. Sub-collections are independent and can be extracted/distributed separately
+4. To explore a sub-collection's contents, open its own `tree.json` file
+5. Parent collection's integrity hash does NOT include sub-collection contents
+
+**Example Hierarchy:**
+```
+parent-collection/
+├── tree.json              # Lists "sub-collection-1" as type: "collection"
+└── sub-collection-1/
+    ├── collection.json
+    ├── tree.json          # Lists files inside sub-collection-1
+    └── files...
+```
+
+---
+
+**Complete Example with All Entry Types:**
+
+See the schema example above for a comprehensive demonstration including:
+- Core collection files (collection.json)
+- Regular files with rich metadata (books, videos)
+- Directories for organization
+- Nested sub-collections
+- Multiple hash algorithms
+- Custom metadata fields
+
+### log.txt
+
+The `log.txt` file contains a chronological record of all actions performed on the collection.
+
+**Format:**
+
+```
+[2025-11-12T10:00:00Z] CREATED collection by npub1...
+[2025-11-12T10:05:00Z] ADDED books/fiction/book1.epub by npub1... (sha1: abc123...)
+[2025-11-12T10:10:00Z] UPDATED collection.json by npub1... (added tag: sci-fi)
+[2025-11-13T09:00:00Z] SUBMISSION books/fiction/book2.epub by npub2... (sha1: def456...) [PENDING]
+[2025-11-13T09:30:00Z] APPROVED books/fiction/book2.epub by npub1... (submission by npub2...)
+[2025-11-13T09:30:00Z] ADDED books/fiction/book2.epub by npub2... (sha1: def456...)
+[2025-11-14T14:00:00Z] REMOVED books/old/deprecated.txt by npub1... (reason: outdated)
+[2025-11-15T11:00:00Z] CONTRIBUTOR_ADDED npub3... by npub1... (role: contributor)
+[2025-11-16T10:00:00Z] REJECTED books/spam/ad.txt by npub1... (submission by npub4..., reason: spam)
+```
+
+**Action Types:**
+
+- **CREATED**: Collection initialization
+- **ADDED**: File added to collection
+- **UPDATED**: File or config modified
+- **REMOVED**: File deleted from collection
+- **SUBMISSION**: New file submitted by non-owner
+- **APPROVED**: Submission accepted by administrator
+- **REJECTED**: Submission denied by administrator
+- **CONTRIBUTOR_ADDED**: New contributor granted access
+- **CONTRIBUTOR_REMOVED**: Contributor access revoked
+- **PERMISSION_CHANGED**: Permission settings modified
+
+**Log Entry Format:**
+```
+[ISO8601-TIMESTAMP] ACTION target by npub... (details) [STATUS]
+```
+
+### feed.rss
+
+The `feed.rss` file provides an RSS/Atom feed for subscribing to collection updates and news. This enables users to track changes using standard RSS readers and applications.
+
+**Format:** RSS 2.0 or Atom 1.0
+
+**Purpose:**
+- Notify subscribers of collection updates
+- Announce new content additions
+-      "md5": "optional-md5-hash..."
+      },
+      "added": "2025-11-12T10:00:00Z",
+      "modified": "2025-11-12T10:00:00Z",
+      "author": "npub1...",
+      "metadata": {
+        "title": "Amazing Science Fiction Book",
+        "description": "A thrilling adventure through space and time",
+        "subtitle_file": "books/fiction/book1-description.txt",
+        "cover": "covers/book1.png",
+        "mime_type": "application/epub+zip",
+        "tags": ["sci-fi", "adventure", "2024"],
+        "custom": {
+          "isbn": "978-1234567890",
+          "pages": 320,
+          "author": "John Doe",
+          "publisher": "Example Press"
+        }
+      }
+    },
+    {
+      "path": "videos/movie.mp4",
+      "type": "file",
+      "size": 1073741824,
+      "hashes": {
+        "sha1": "fedcba987654...",
+        "tlsh": "T9876543210FEDCBA...",
+        "sha256": "1234567890abcdef..."
+      },
+      "added": "2025-11-12T11:00:00Z",
+      "modified": "2025-11-12T11:00:00Z",
+      "author": "npub1...",
+      "metadata": {
+        "title": "Documentary: The Future of Computing",
+        "description": "An exploration of quantum computing",
+        "mime_type": "video/mp4",
+        "duration_seconds": 3600,
+        "resolution": "1920x1080",
+        "tags": ["documentary", "technology", "quantum"]
+      }
+    },
+    {
+      "path": "books/fiction",
+      "type": "directory",
+      "metadata": {
+        "description": "Science fiction and fantasy books",
+        "tags": ["sci-fi", "fantasy"]
+      }
+    },
+    {
+      "path": "videos",
+      "type": "directory",
+      "metadata": {
+        "description": "Video content and documentaries"
+      }
+    },
+    {
+      "path": "sub-collections/retro-games",
+      "type": "collection",
+      "collection_id": "retro-games-unique-id",
+      "metadata": {
+        "title": "Retro Games Collection",
+        "description": "A nested collection of classic video games"
+      }
+    }
+  ]
+}
+```
+
+**Field Descriptions:**
+
+- **version**: Tree specification version (current: "1.0")
+- **generated**: ISO8601 timestamp when this tree was generated
+- **root_hash**: SHA256 hash of the entire tree structure for quick integrity verification
+- **tree**: Array of all files, directories, and sub-collections
+
+**Entry Types:**
+
+Each entry in the `tree` array has a `type` field indicating what kind of entry it is:
+
+1. **"file"** - Regular file
+2. **"directory"** - Folder/directory
+3. **"collection"** - Nested sub-collection
+
+---
+
+#### File Entries (`type: "file"`)
+
+**Required Fields:**
+- `path` (string): Relative path from collection root
+- `type` (string): Must be "file"
+- `size` (integer): File size in bytes
+- `hashes` (object): Cryptographic hashes (see below)
+
+**Optional Fields:**
+- `added` (ISO8601): When file was added to collection
+- `modified` (ISO8601): When file was last modified
+- `author` (npub): Who added/modified the file
+- `metadata` (object): Rich metadata about the file
+
+**Hash Requirements:**
+
+The `hashes` object **MUST** contain at minimum:
+- `sha1` (string): SHA-1 hash (40 hex characters) - **REQUIRED**
+- `tlsh` (string): Trend Micro Locality Sensitive Hash - **REQUIRED**
+
+Additional hash algorithms can be included for enhanced security or compatibility:
+- `sha256` (string): SHA-256 hash (64 hex characters) - **RECOMMENDED**
+- `md5` (string): MD5 hash (32 hex characters) - Optional, for legacy compatibility
+- `blake2b` (string): BLAKE2b hash - Optional, for future compatibility
+- `blake3` (string): BLAKE3 hash - Optional, for future compatibility
+
+**Why SHA-1 and TLSH are required:**
+- **SHA-1**: Universal compatibility, widely supported, good for exact file matching
+- **TLSH**: Enables fuzzy matching, detects similar files, useful for finding duplicates and variations
+
+**Future Hash Algorithms:**
+The specification is extensible - new hash algorithms can be added to the `hashes` object as they become relevant. Clients should gracefully ignore unknown hash types.
+
+**Metadata Object (Optional):**
+The `metadata` object can contain any structured information about the file:
+- `title` (string): Human-read

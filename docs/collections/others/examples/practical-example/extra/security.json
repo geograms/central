@@ -1,0 +1,27 @@
+{
+  "_comment": "Classic Sci-Fi Books Collection - Security Configuration",
+  "version": "1.0",
+  "visibility": "public",
+  "permissions": {
+    "public_read": true,
+    "allow_submissions": true,
+    "submission_requires_approval": true,
+    "can_users_comment": true,
+    "can_users_like": true,
+    "can_users_dislike": true,
+    "can_users_rate": true,
+    "whitelisted_users": [],
+    "blocked_users": []
+  },
+  "content_warnings": [],
+  "age_restriction": {
+    "enabled": false,
+    "minimum_age": 0,
+    "verification_required": false
+  },
+  "encryption": {
+    "enabled": false,
+    "method": null,
+    "encrypted_files": []
+  }
+}

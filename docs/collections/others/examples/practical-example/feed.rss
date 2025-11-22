@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Classic Sci-Fi Books Collection</title>
+    <link>https://scifi-classics.example.com/classic-scifi-books</link>
+    <description>A curated collection of classic science fiction literature from the golden age (1950s-1970s). Features seminal works by Isaac Asimov, Robert A. Heinlein, Frank Herbert, and Ursula K. Le Guin.</description>
+    <language>en-us</language>
+    <pubDate>Tue, 12 Nov 2025 10:00:00 GMT</pubDate>
+    <lastBuildDate>Sat, 16 Nov 2025 14:30:00 GMT</lastBuildDate>
+    <generator>Geogram Collection Manager v1.0</generator>
+
+    <!-- Self-reference for feed discovery -->
+    <atom:link href="https://scifi-classics.example.com/classic-scifi-books/feed.rss"
+               rel="self" type="application/rss+xml" />
+
+    <!-- Collection metadata -->
+    <category>books</category>
+    <category>science-fiction</category>
+    <category>classic</category>
+    <category>literature</category>
+    <category>markdown</category>
+
+    <image>
+      <url>https://scifi-classics.example.com/classic-scifi-books/thumbnail.png</url>
+      <title>Classic Sci-Fi Books Collection</title>
+      <link>https://scifi-classics.example.com/classic-scifi-books</link>
+    </image>
+
+    <!-- Latest update: Version 1.2.0 -->
+    <item>
+      <title>Collection Updated to v1.2.0 - Added Le Guin's "The Left Hand of Darkness"</title>
+      <link>https://scifi-classics.example.com/classic-scifi-books</link>
+      <description><![CDATA[
+        <h2>New Addition: Ursula K. Le Guin</h2>
+
+        <p>We're excited to announce the addition of Ursula K. Le Guin to our collection!</p>
+
+        <h3>Added Books:</h3>
+        <ul>
+          <li><strong>The Left Hand of Darkness</strong> (1969) - An exploration of gender and society on the planet Gethen where inhabitants are ambisexual.</li>
+        </ul>
+
+        <h3>Files Added:</h3>
+        <ul>
+          <li><code>books/le-guin/left-hand.md</code> (446 KB)</li>
+          <li><code>books/le-guin/left-hand-cover.jpg</code> (87 KB)</li>
+          <li><code>books/le-guin/README.md</code> (2 KB)</li>
+        </ul>
+
+        <h3>Collection Stats:</h3>
+        <ul>
+          <li>Total Books: 6</li>
+          <li>Total Authors: 4</li>
+          <li>Total Size: 2.5 MB</li>
+          <li>Downloads: 1,543</li>
+          <li>Rating: 4.8/5.0 (89 ratings)</li>
+        </ul>
+
+        <p>Thanks to contributor <code>npub3uvwxyz...</code> for this excellent addition!</p>
+      ]]></description>
+      <author>scifi-curator@example.com (Sci-Fi Curator)</author>
+      <pubDate>Fri, 15 Nov 2025 14:15:00 GMT</pubDate>
+      <guid isPermaLink="false">classic-scifi-books:update:2025-11-15:v1.2.0</guid>
+      <enclosure url="https://scifi-classics.example.com/classic-scifi-books-v1.2.0.colz"
+                 length="2621440"
+                 type="application/zip" />
+      <category>le-guin</category>
+      <category>new-author</category>
+    </item>
+
+    <!-- Previous update: Version 1.1.0 -->
+    <item>
+      <title>Collection Updated to v1.1.0 - Added Heinlein's "The Moon is a Harsh Mistress"</title>
+      <link>https://scifi-classics.example.com/classic-scifi-books</link>
+      <description><![CDATA[
+        <h2>New Book Added</h2>
+
+        <p>Added another classic from Robert A. Heinlein!</p>
+
+        <h3>New Book:</h3>
+        <p><strong>The Moon is a Harsh Mistress</strong> (1966)</p>
+        <p>A revolution story set on the Moon featuring an intelligent computer named Mike. One of Heinlein's most celebrated works.</p>
+
+        <h3>Files Added:</h3>
+        <ul>
+          <li><code>books/heinlein/moon.md</code> (467 KB)</li>
+          <li><code>books/heinlein/moon-cover.jpg</code> (92 KB)</li>
+        </ul>
+
+        <p>This was our first community submission! Thanks to <code>npub2abc123...</code> who has been added as a contributor.</p>
+      ]]></description>
+      <author>scifi-curator@example.com (Sci-Fi Curator)</author>
+      <pubDate>Wed, 13 Nov 2025 09:40:00 GMT</pubDate>
+      <guid isPermaLink="false">classic-scifi-books:update:2025-11-13:v1.1.0</guid>
+      <enclosure url="https://scifi-classics.example.com/classic-scifi-books-v1.1.0.colz"
+                 length="2345678"
+                 type="application/zip" />
+      <category>heinlein</category>
+      <category>community-submission</category>
+    </item>
+
+    <!-- Submissions Now Open -->
+    <item>
+      <title>Collection Now Accepting Community Submissions</title>
+      <link>https://scifi-classics.example.com/classic-scifi-books</link>
+      <description><![CDATA[
+        <h2>We're Opening Up!</h2>
+
+        <p>The Classic Sci-Fi Books Collection is now accepting community submissions!</p>
+
+        <h3>What We're Looking For:</h3>
+        <ul>
+          <li>Classic science fiction from the golden age (1950s-1970s)</li>
+          <li>Books converted to markdown format</li>
+          <li>Cover images in JPEG format</li>
+          <li>Author README files with biographical info</li>
+          <li>Public domain or properly licensed works</li>
+        </ul>
+
+        <h3>How to Submit:</h3>
+        <ol>
+          <li>Format your book in markdown following our template</li>
+          <li>Calculate SHA-1 and TLSH hashes of your files</li>
+          <li>Submit via NOSTR to <code>npub1qvr3x...</code></li>
+          <li>Include file paths, hashes, and a description</li>
+        </ol>
+
+        <p>All submissions require curator approval. See <code>guides/contributing.md</code> for full guidelines.</p>
+
+        <p>We're excited to grow this collection with your help!</p>
+      ]]></description>
+      <author>scifi-curator@example.com (Sci-Fi Curator)</author>
+      <pubDate>Sat, 16 Nov 2025 10:05:00 GMT</pubDate>
+      <guid isPermaLink="false">classic-scifi-books:announcement:2025-11-16:submissions</guid>
+    </item>
+
+    <!-- Initial creation -->
+    <item>
+      <title>Collection Created: Classic Sci-Fi Books</title>
+      <link>https://scifi-classics.example.com/classic-scifi-books</link>
+      <description><![CDATA[
+        <h2>Welcome to the Classic Sci-Fi Books Collection!</h2>
+
+        <p>This curated collection features timeless science fiction literature from the golden age of sci-fi (1950s-1970s).</p>
+
+        <h3>Initial Authors:</h3>
+        <ul>
+          <li><strong>Isaac Asimov</strong> - Foundation, I Robot</li>
+          <li><strong>Robert A. Heinlein</strong> - Stranger in a Strange Land</li>
+          <li><strong>Frank Herbert</strong> - Dune</li>
+        </ul>
+
+        <h3>Features:</h3>
+        <ul>
+          <li>📖 All books in markdown format for easy reading</li>
+          <li>🎨 Cover images included</li>
+          <li>👤 Author biographies and reading guides</li>
+          <li>🔐 Verified with SHA-1 and TLSH hashes</li>
+          <li>📡 Shareable via P2P, torrents, and HTTP</li>
+        </ul>
+
+        <h3>Why Markdown?</h3>
+        <p>Markdown books can be read on any device with any text editor. No special software required. Perfect for offline reading, searchable, and future-proof.</p>
+
+        <h3>Subscribe:</h3>
+        <p>Add this feed to your RSS reader to get notified when new books are added!</p>
+
+        <h3>Stats:</h3>
+        <ul>
+          <li>Books: 5</li>
+          <li>Authors: 3</li>
+          <li>Total Size: 2.1 MB</li>
+        </ul>
+
+        <p>Happy reading! 🚀</p>
+      ]]></description>
+      <author>scifi-curator@example.com (Sci-Fi Curator)</author>
+      <pubDate>Tue, 12 Nov 2025 11:30:00 GMT</pubDate>
+      <guid isPermaLink="false">classic-scifi-books:created:2025-11-12</guid>
+      <enclosure url="https://scifi-classics.example.com/classic-scifi-books-v1.0.0.colz"
+                 length="2097152"
+                 type="application/zip" />
+      <category>initial-release</category>
+    </item>
+
+  </channel>
+</rss>

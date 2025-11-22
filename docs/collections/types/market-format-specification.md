@@ -476,6 +476,7 @@ CREATED: 2025-11-22 15:00_00
 UPDATED: 2025-11-22 15:00_00
 STATUS: available
 TYPE: physical
+DELIVERY_METHOD: physical
 ```
 
 **Basic Information**:
@@ -502,7 +503,7 @@ MIN_ORDER: 1
 MAX_ORDER: 5
 ```
 
-**Geographic Availability** (optional, for services and local items):
+**Geographic Availability** (REQUIRED for all items and services):
 ```
 LOCATION: Lisbon, Portugal
 LATITUDE: 38.7223
@@ -510,6 +511,8 @@ LONGITUDE: -9.1393
 RADIUS: 25
 RADIUS_UNIT: km
 ```
+
+**Important**: All items and services MUST specify location and radius (max 200km), even for online/digital delivery. This defines the geographic area where the item/service is available.
 
 **Note on CATEGORY Field**:
 - The `CATEGORY:` metadata field is **deprecated**
@@ -596,21 +599,55 @@ SHIPS_FROM: Lisbon, Portugal
 
 ### Item Type Values
 
+**Note**: ALL items and services require `LOCATION`, `LATITUDE`, `LONGITUDE`, `RADIUS` fields regardless of delivery method.
+
 - `physical`: Physical product requiring shipping
   - Examples: radios, tools, books, clothing, food
   - Requires shipping information
   - Stock tracking applies
+  - Must specify location and radius (where item ships from/available)
 
 - `digital`: Digital download (software, ebooks, etc.)
   - Examples: ebooks, software licenses, music, videos
-  - No shipping required
+  - No physical shipping required
   - Can use `STOCK: unlimited`
+  - Must specify location and radius (geographic availability zone)
 
 - `service`: Service offering
   - Examples: cleaning, repairs, tutoring, consulting, landscaping, maintenance
-  - Requires `LOCATION` and `RADIUS` fields
   - Delivery happens at buyer's location or service provider's location
   - Stock represents available appointment slots or capacity
+  - Must specify location and radius (service area)
+
+### Delivery Method Values
+
+The `DELIVERY_METHOD` field specifies how the item/service is delivered:
+
+- `physical`: Physical shipment via mail/courier
+  - Item is shipped to buyer's address
+  - Requires shipping information (weight, dimensions)
+  - Example: Radio shipped via postal service
+
+- `digital`: Digital/online delivery
+  - Download link, license key, or online access provided
+  - No physical shipment
+  - Example: Ebook PDF, software license
+
+- `in-person`: Service delivered in person
+  - Service provider visits buyer's location
+  - Or buyer visits service provider's location
+  - Example: House cleaning, repair services
+
+- `online`: Service delivered remotely/online
+  - Conducted via video call, screen sharing, etc.
+  - Still requires location and radius for timezone/availability
+  - Example: Online tutoring, remote consulting, virtual language lessons
+
+**RADIUS Limits**:
+- Minimum: 1 km
+- Maximum: 200 km
+- All items/services must respect this range
+- Even for `DELIVERY_METHOD: online` or `digital`, radius defines the geographic market area
 
 ### Price Values
 
@@ -645,13 +682,39 @@ CURRENCY: USD
 
 For `TYPE: service` items, these fields are especially important:
 
-**Geographic Availability**:
+**Geographic Availability** (REQUIRED):
 ```
 LOCATION: Lisbon, Portugal
 LATITUDE: 38.7223
 LONGITUDE: -9.1393
-RADIUS: 25              # Service area radius
+RADIUS: 25              # Service area radius (max 200km)
 RADIUS_UNIT: km
+DELIVERY_METHOD: online # Can be: in-person, online
+```
+
+**Example: Online Service** (still requires location):
+```
+ITEM_ID: item-tutor123
+TYPE: service
+DELIVERY_METHOD: online
+LOCATION: Porto, Portugal
+LATITUDE: 41.1579
+LONGITUDE: -8.6291
+RADIUS: 150             # Max 200km - defines timezone/availability zone
+RADIUS_UNIT: km
+
+# TITLE_EN: Online Portuguese Language Tutoring
+
+[EN]
+Learn Portuguese online via video call. Sessions available for students
+within 150km radius (same timezone) for optimal scheduling.
+
+AVAILABILITY_EN:
+Monday-Friday: 14:00-20:00 (Western European Time)
+Saturday: 10:00-14:00
+Sunday: Closed
+
+Conducted via Zoom or Google Meet.
 ```
 
 **Service Schedule** (optional):
