@@ -1,6 +1,6 @@
 # Market Format Specification
 
-**Version**: 1.1
+**Version**: 1.2
 **Last Updated**: 2025-11-22
 **Status**: Active
 
@@ -37,43 +37,45 @@ This document specifies the text-based format used for storing marketplace data 
 
 ### Key Features
 
-- **Decentralized Shops**: Each user can create and manage their own shops
+- **Single Shop Per Collection**: Each collection represents one shop
 - **Offline-First**: Complete marketplace functionality without internet
-- **Shared Items Pool**: Collection-wide items available to all shops
 - **Free Items**: Support for free giveaways and donations (price: 0 or free)
 - **Services & Products**: Sell physical items, digital goods, or services
 - **Geographic Radius**: Specify service/delivery area in kilometers
 - **Inventory Management**: Real-time stock tracking and updates
 - **Order Tracking**: Complete order lifecycle from request to delivery
 - **Verified Reviews**: Only purchasers with completed orders can review
-- **Multilanguage Support**: Items and shops support multiple languages
+- **Multilanguage Support**: Items and shop support multiple languages
 - **Folder-Based Categories**: Organize items using directory structure
 - **Rich Media**: Photo and video galleries for items
 - **FAQ System**: Questions and answers for each item
 - **Rating System**: 1-5 star ratings from verified buyers
+- **Reactions**: React to shop and individual items
 - **Payment Flexibility**: Supports multiple payment methods (including free)
-- **Shipping Integration**: Multiple shipping options per shop
+- **Shipping Integration**: Multiple shipping options
 - **Return Policy**: Configurable return windows and policies
 - **NOSTR Signatures**: Cryptographic verification for all transactions
 - **P2P Distribution**: Entire marketplace syncs via collections
 
 ### Conceptual Model
 
-Think of the Geogram market like a decentralized bazaar:
+Think of the Geogram market collection as a single shop:
 
-1. **Shop Owners** create shops and list items for sale
+1. **Shop Owner** creates one shop per collection and lists items for sale
 2. **Buyers** browse items and place orders
 3. **Orders** track the complete transaction lifecycle
 4. **Verified Reviews** provide trust signals from actual purchasers
 5. **Inventory** updates automatically as sales occur
-6. **No Central Authority**: Everything is peer-to-peer via collections
+6. **Reactions** allow customers to react to shop and items
+7. **No Central Authority**: Everything is peer-to-peer via collections
 
 Unlike centralized marketplaces (eBay, Amazon), the Geogram market:
+- One shop per collection (simple structure)
 - Requires no servers or central infrastructure
 - Syncs via P2P collection distribution
 - Works completely offline
 - Cryptographically verifies all transactions
-- Gives complete control to shop owners
+- Gives complete control to shop owner
 
 ## File Organization
 
@@ -82,84 +84,74 @@ Unlike centralized marketplaces (eBay, Amazon), the Geogram market:
 ```
 collection_name/
 └── market/
-    ├── items/                          # MASTER CATALOG (base product definitions)
-    │   ├── electronics/
-    │   │   ├── radios/
-    │   │   │   └── item-abc123/       # Catalog item (no pricing/stock)
-    │   │   │       ├── item.txt       # Product description, specs, photos
-    │   │   │       └── gallery/
-    │   │   │           ├── photo1.jpg
-    │   │   │           └── photo2.jpg
-    │   │   └── antennas/
-    │   │       └── item-def456/
-    │   │           ├── item.txt
-    │   │           └── gallery/
-    │   │               └── antenna.jpg
-    │   ├── services/
-    │   │   ├── cleaning/
-    │   │   │   └── item-ghi789/       # Service definition
-    │   │   │       └── item.txt
-    │   │   └── repairs/
-    │   │       └── item-jkl012/
-    │   │           └── item.txt
-    │   └── free/
-    │       └── item-mno345/
-    │           └── item.txt
-    ├── shops/
-    │   ├── shop-CR7BBQ/
-    │   │   ├── shop.txt
-    │   │   ├── logo.jpg
-    │   │   ├── banner.jpg
-    │   │   └── items/
-    │   │       ├── electronics/
-    │   │       │   └── radios/
-    │   │       │       └── item-abc123/          # Shop listing (references catalog)
-    │   │       │           ├── item-ref.txt      # Price, stock, discount
-    │   │       │           ├── reviews/          # Shop-specific reviews
-    │   │       │           │   ├── review-ALPHA1.txt
-    │   │       │           │   └── review-BRAVO2.txt
-    │   │       │           └── faq/              # Shop-specific FAQs
-    │   │       │               └── question-001.txt
-    │   │       └── custom/
-    │   │           └── item-custom123/           # Shop-unique item
-    │   │               ├── item.txt              # Full definition (not a reference)
-    │   │               └── gallery/
-    │   │                   └── custom-product.jpg
-    │   └── shop-ALPHA1/
-    │       ├── shop.txt
-    │       └── items/
-    │           ├── electronics/
-    │           │   └── radios/
-    │           │       └── item-abc123/          # Same catalog item, different shop
-    │           │           ├── item-ref.txt      # Different price/stock than CR7BBQ
-    │           │           └── reviews/          # Different reviews
-    │           │               └── review-BRAVO2.txt
-    │           └── services/
-    │               └── cleaning/
-    │                   └── item-ghi789/
-    │                       ├── item-ref.txt
-    │                       └── reviews/
-    │                           └── review-DELTA3.txt
-    ├── orders/
-    │   ├── 2025/
-    │   │   ├── order-2025-11-22_abc123.txt
-    │   │   ├── order-2025-11-22_def456.txt
-    │   │   └── order-2025-11-21_xyz789.txt
-    │   └── 2024/
-    │       └── order-2024-12-25_old123.txt
-    └── .reactions/
-        └── market.txt
+    ├── shop/
+    │   ├── shop.txt
+    │   ├── logo.jpg
+    │   ├── banner.jpg
+    │   ├── .reactions/           # Reactions to the shop itself
+    │   │   └── shop.txt
+    │   └── items/
+    │       ├── electronics/      # Category folder
+    │       │   ├── radios/       # Subcategory folder
+    │       │   │   └── item-abc123/
+    │       │   │       ├── item.txt
+    │       │   │       ├── gallery/
+    │       │   │       │   ├── photo1.jpg
+    │       │   │       │   ├── photo2.jpg
+    │       │   │       │   └── demo-video.mp4
+    │       │   │       ├── reviews/
+    │       │   │       │   ├── review-ALPHA1.txt
+    │       │   │       │   └── review-BRAVO2.txt
+    │       │   │       ├── faq/
+    │       │   │       │   ├── question-001.txt
+    │       │   │       │   └── question-002.txt
+    │       │   │       └── .reactions/    # Reactions to this item
+    │       │   │           └── item.txt
+    │       │   └── antennas/
+    │       │       └── item-def456/
+    │       │           ├── item.txt
+    │       │           ├── gallery/
+    │       │           │   └── antenna.jpg
+    │       │           └── .reactions/
+    │       │               └── item.txt
+    │       ├── services/
+    │       │   ├── cleaning/
+    │       │   │   └── item-ghi789/
+    │       │   │       ├── item.txt
+    │       │   │       ├── reviews/
+    │       │   │       │   └── review-BRAVO2.txt
+    │       │   │       └── .reactions/
+    │       │   │           └── item.txt
+    │       │   └── repairs/
+    │       │       └── item-jkl012/
+    │       │           ├── item.txt
+    │       │           └── .reactions/
+    │       │               └── item.txt
+    │       └── free/
+    │           └── item-mno345/
+    │               ├── item.txt
+    │               ├── gallery/
+    │               │   └── seeds.jpg
+    │               └── .reactions/
+    │                   └── item.txt
+    └── orders/
+        ├── 2025/
+        │   ├── order-2025-11-22_abc123.txt
+        │   ├── order-2025-11-22_def456.txt
+        │   └── order-2025-11-21_xyz789.txt
+        └── 2024/
+            └── order-2024-12-25_old123.txt
 ```
 
-### Shop Folder Naming
+### Shop Folder
 
-**Pattern**: `shop-{CALLSIGN}/`
+**Pattern**: `shop/`
 
-**Callsign**:
-- Owner's amateur radio callsign
-- Uppercase, alphanumeric
-- Unique identifier for the shop
-- Examples: `shop-CR7BBQ`, `shop-ALPHA1`, `shop-KE7XYZ`
+**Single Shop Per Collection**:
+- Each market collection represents one shop
+- Shop owner identified in `shop.txt` via OWNER_NPUB
+- Shop folder at root of market collection
+- Contains shop metadata, logo, banner, and all items
 
 ### Item Folder Naming
 
@@ -237,69 +229,33 @@ items/
 - Simple to add new categories
 - Natural hierarchical structure
 
-### Shared Items Pool (Inventory Catalog)
+### Reactions System
 
-The `market/items/` directory contains the **master product catalog** - templates/definitions that shops can reference:
+The market collection supports reactions at two levels:
 
-**Purpose**:
-- Collection-wide inventory catalog
-- Base product definitions with descriptions and photos
-- Any shop can list these items
-- Eliminates duplication of product descriptions
-- Community-contributed catalog
+**Shop Reactions**:
+- **Location**: `shop/.reactions/shop.txt`
+- Users can react to the shop as a whole
+- Example reactions: like, love, trust, recommend
 
-**Catalog Items Contain**:
-- Basic product information (title, description)
-- Product photos and videos (gallery)
-- Specifications
-- Brand, model, SKU
-- Multilanguage descriptions
-- **NO pricing, stock, or reviews** (those are shop-specific)
+**Item Reactions**:
+- **Location**: `shop/items/.../item-abc123/.reactions/item.txt`
+- Users can react to individual items
+- Each item has its own reactions file
+- Example reactions: like, love, want, interested
 
-**Shop Item References**:
-
-When a shop lists an item from the catalog, they create a **reference file** in their own items folder:
-
-**File**: `shops/shop-CR7BBQ/items/electronics/radios/item-abc123/item-ref.txt`
-
+**Reactions File Format** (follows standard collections reactions format):
 ```
-ITEM_REF: market/items/electronics/radios/item-abc123
-SHOP_ID: shop-CR7BBQ
-LISTED: 2025-11-22 15:00_00
+> 2025-11-22 10:00_00 -- ALPHA1
+👍
+--> npub: npub1alpha123...
+--> signature: 3045022100react...
 
-# Shop-specific data
-PRICE: 35.00           # This shop's price (can differ from other shops)
-CURRENCY: USD
-STOCK: 15              # This shop's inventory
-SOLD: 47               # Sales from this shop
-DISCOUNT: 10%          # Optional shop-specific discount
-CONDITION: new         # new, used, refurbished
-
---> npub: npub1abc123...
---> signature: 3045022100abcd...
+> 2025-11-22 11:30_00 -- BRAVO2
+❤️
+--> npub: npub1bravo456...
+--> signature: 3045022100love...
 ```
-
-**Shop-Specific Data Stored Separately**:
-- `reviews/` - Reviews for this shop's listing
-- `faq/` - Shop-specific questions and answers
-- Pricing and discounts (in reference file)
-- Stock levels (in reference file)
-- Sales count (in reference file)
-
-**Benefits**:
-- Multiple shops can sell the same product
-- Each shop sets own price and stock
-- Product description maintained centrally
-- Reviews are shop-specific (trust per seller)
-- Easy to add new products from catalog
-
-**Shop-Unique Items**:
-
-Shops can also create their own unique items (not in catalog):
-
-**File**: `shops/shop-CR7BBQ/items/custom-antenna/item-custom123/item.txt`
-
-These contain full item definition (description, photos, pricing, etc.) since they're not referencing the catalog.
 
 ### Special Directories
 
@@ -322,8 +278,10 @@ These contain full item definition (description, photos, pricing, etc.) since th
 
 **`.reactions/` Directory**:
 - Hidden directory (starts with dot)
-- Contains reaction files for the market collection
-- Not specific to individual items or shops
+- Exists at shop level (`shop/.reactions/`) for shop reactions
+- Exists at item level (`shop/items/.../item-abc123/.reactions/`) for item reactions
+- Contains reactions from users
+- Follows standard collections reactions format
 
 **`.hidden/` Directory** (see Moderation System):
 - Hidden directory for moderated content
@@ -350,7 +308,6 @@ Every shop must have a `shop.txt` file in the shop folder root.
 
 **Required Fields**:
 ```
-SHOP_ID: shop-CR7BBQ
 SHOP_NAME: CR7 Radio Gear
 SHOP_OWNER: CR7BBQ
 OWNER_NPUB: npub1abc123...
@@ -442,8 +399,9 @@ Reembolso emitido no prazo de 5 dias úteis após receber a devolução.
 
 ### Complete Shop Example
 
+**File**: `shop/shop.txt`
+
 ```
-SHOP_ID: shop-CR7BBQ
 SHOP_NAME: CR7 Radio Gear
 SHOP_OWNER: CR7BBQ
 OWNER_NPUB: npub1abc123...
@@ -488,111 +446,15 @@ Refund issued within 5 business days of receiving return.
 
 ## Item Format
 
-### Two Types of Items
+### Item File
 
-The market system supports two types of item definitions:
+Every item is a self-contained definition in its own folder.
 
-1. **Catalog Items** (`market/items/.../ item.txt`)
-   - Master product definitions
-   - Contain descriptions, specs, photos
-   - **NO pricing, stock, or shop-specific data**
-   - Can be referenced by multiple shops
-
-2. **Shop Reference Items** (`shops/shop-XXX/items/.../item-ref.txt`)
-   - References a catalog item
-   - Contains shop-specific pricing and stock
-   - Shop-specific reviews and FAQs
-   - Discounts and conditions
-
-3. **Shop-Unique Items** (`shops/shop-XXX/items/.../item.txt`)
-   - Complete item definition (not referencing catalog)
-   - Unique to one shop
-   - Contains all data (description, pricing, stock)
-
-### Catalog Item File
-
-Catalog items define the base product available in the collection.
-
-**File**: `market/items/electronics/radios/item-abc123/item.txt`
+**File**: `shop/items/electronics/radios/item-abc123/item.txt`
 
 **Required Fields**:
 ```
 ITEM_ID: item-abc123
-CREATED: 2025-11-22 15:00_00
-UPDATED: 2025-11-22 15:00_00
-TYPE: physical
-```
-
-**NO Shop-Specific Fields** (these go in shop reference):
-- ~~SHOP_ID~~ (not in catalog)
-- ~~PRICE~~ (shop-specific)
-- ~~STOCK~~ (shop-specific)
-- ~~SOLD~~ (shop-specific)
-- ~~RATING~~ (shop-specific)
-- ~~REVIEW_COUNT~~ (shop-specific)
-
-**Catalog Item Contains**:
-- Product title and description
-- Specifications
-- Photos/videos
-- Brand, model, SKU
-- Geographic availability (for services)
-- Type (physical/digital/service)
-
-### Shop Reference Item File
-
-When a shop lists a catalog item, they create a reference file.
-
-**File**: `shops/shop-CR7BBQ/items/electronics/radios/item-abc123/item-ref.txt`
-
-**Required Fields**:
-```
-ITEM_REF: market/items/electronics/radios/item-abc123
-SHOP_ID: shop-CR7BBQ
-LISTED: 2025-11-22 15:00_00
-STATUS: available
-```
-
-**Shop-Specific Pricing**:
-```
-PRICE: 35.00
-CURRENCY: USD
-DISCOUNT: 10%         # Optional shop discount
-CONDITION: new        # new, used, refurbished
-```
-
-**Shop-Specific Inventory**:
-```
-STOCK: 15            # This shop's inventory
-SOLD: 47             # Sales from this shop only
-MIN_ORDER: 1
-MAX_ORDER: 5
-```
-
-**Shop-Specific Stats** (calculated from reviews):
-```
-RATING: 4.7          # Average rating for this shop's listing
-REVIEW_COUNT: 23     # Reviews for this shop's listing
-```
-
-**NOSTR Signature**:
-```
---> npub: npub1shop123...
---> signature: 3045022100ref...
-```
-
-### Shop-Unique Item File
-
-For items not in the shared catalog, shops create complete item definitions.
-
-**File**: `shops/shop-CR7BBQ/items/custom-antenna/item-custom123/item.txt`
-
-This format combines both catalog and shop reference data in one file (same as legacy format).
-
-**Required Fields**:
-```
-ITEM_ID: item-abc123
-SHOP_ID: shop-CR7BBQ
 CREATED: 2025-11-22 15:00_00
 UPDATED: 2025-11-22 15:00_00
 STATUS: available
@@ -839,15 +701,15 @@ free/samples
 
 ### Complete Item Example
 
+**File**: `shop/items/electronics/radios/item-abc123/item.txt`
+
 ```
 ITEM_ID: item-abc123
-SHOP_ID: shop-CR7BBQ
 CREATED: 2025-11-22 15:00_00
 UPDATED: 2025-11-22 15:00_00
 STATUS: available
 TYPE: physical
 
-CATEGORY: electronics/radios
 SKU: UV-K5-2023
 BRAND: Quansheng
 MODEL: UV-K5
@@ -908,7 +770,6 @@ BUYER_CALLSIGN: ALPHA1
 BUYER_NPUB: npub1buyer123...
 SELLER_CALLSIGN: CR7BBQ
 SELLER_NPUB: npub1seller456...
-SHOP_ID: shop-CR7BBQ
 CREATED: 2025-11-22 16:30_00
 STATUS: requested
 ```
@@ -1022,7 +883,6 @@ BUYER_CALLSIGN: ALPHA1
 BUYER_NPUB: npub1buyer123...
 SELLER_CALLSIGN: CR7BBQ
 SELLER_NPUB: npub1seller456...
-SHOP_ID: shop-CR7BBQ
 CREATED: 2025-11-22 16:30_00
 STATUS: delivered
 
@@ -1740,12 +1600,11 @@ reviews/
     └── review-SPAMMER.txt       # Moved here
 ```
 
-**Hidden Shops**:
+**Hidden Shop** (if shop is banned):
 ```
-shops/
+market/
 └── .hidden/
-    └── shop-SCAMMER/            # Entire shop hidden
-        └── shop.txt
+    └── shop.txt                 # Entire shop hidden
 ```
 
 ### Moderation Log
@@ -1807,12 +1666,12 @@ Each action creates a canonical message for signing:
 
 **Shop Creation**:
 ```
-market:shop:create:{SHOP_ID}:{SHOP_NAME}:{OWNER_NPUB}:{CREATED}
+market:shop:create:{SHOP_NAME}:{OWNER_NPUB}:{CREATED}
 ```
 
 **Item Creation**:
 ```
-market:item:create:{ITEM_ID}:{SHOP_ID}:{TITLE}:{PRICE}:{CREATED}
+market:item:create:{ITEM_ID}:{TITLE}:{PRICE}:{CREATED}
 ```
 
 **Order Placement**:
@@ -1846,9 +1705,8 @@ NOSTR npubs provide decentralized identity:
 
 ### Example 1: Complete Shop with Items
 
-**File**: `shops/shop-CR7BBQ/shop.txt`
+**File**: `shop/shop.txt`
 ```
-SHOP_ID: shop-CR7BBQ
 SHOP_NAME: CR7 Radio Gear
 SHOP_OWNER: CR7BBQ
 OWNER_NPUB: npub1abc123...
@@ -1882,10 +1740,9 @@ SHIPPING_INFO_EN:
 --> signature: 3045022100abcd...
 ```
 
-**File**: `shops/shop-CR7BBQ/items/item-abc123/item.txt`
+**File**: `shop/items/electronics/radios/item-abc123/item.txt`
 ```
 ITEM_ID: item-abc123
-SHOP_ID: shop-CR7BBQ
 CREATED: 2025-11-22 15:00_00
 UPDATED: 2025-11-22 15:00_00
 STATUS: available
@@ -1930,7 +1787,6 @@ BUYER_CALLSIGN: ALPHA1
 BUYER_NPUB: npub1buyer123...
 SELLER_CALLSIGN: CR7BBQ
 SELLER_NPUB: npub1seller456...
-SHOP_ID: shop-CR7BBQ
 CREATED: 2025-11-22 16:30_00
 STATUS: completed
 
@@ -1971,7 +1827,7 @@ STATUS_HISTORY:
 
 ### Example 3: Verified Review
 
-**File**: `shops/shop-CR7BBQ/items/item-abc123/reviews/review-ALPHA1.txt`
+**File**: `shop/items/electronics/radios/item-abc123/reviews/review-ALPHA1.txt`
 ```
 REVIEWER: ALPHA1
 REVIEWER_NPUB: npub1reviewer123...
@@ -2004,7 +1860,7 @@ HELPFUL_NO: 2
 
 ### Example 4: FAQ Entry
 
-**File**: `shops/shop-CR7BBQ/items/item-abc123/faq/question-001.txt`
+**File**: `shop/items/electronics/radios/item-abc123/faq/question-001.txt`
 ```
 QUESTION_ID: 001
 ITEM_ID: item-abc123
@@ -2037,10 +1893,9 @@ HELPFUL_NO: 0
 
 ### Example 5: Service Item with Geographic Radius
 
-**File**: `market/items/services/cleaning/item-def789/item.txt`
+**File**: `shop/items/services/cleaning/item-def789/item.txt`
 ```
 ITEM_ID: item-def789
-SHOP_ID: shop-ALPHA1
 CREATED: 2025-11-22 12:00_00
 UPDATED: 2025-11-22 12:00_00
 STATUS: available
@@ -2121,10 +1976,9 @@ QUALIFICATIONS_PT:
 
 ### Example 6: Free Item (Community Donation)
 
-**File**: `market/items/free/item-xyz456/item.txt`
+**File**: `shop/items/free/item-xyz456/item.txt`
 ```
 ITEM_ID: item-xyz456
-SHOP_ID: shared
 CREATED: 2025-11-22 09:00_00
 UPDATED: 2025-11-22 09:00_00
 STATUS: available
@@ -2214,9 +2068,9 @@ Location: Quinta do Caracol, Lisbon
 Format: `KEY: value`
 
 ```
-SHOP_ID: shop-CR7BBQ
 STATUS: active
 PRICE: 35.00
+STOCK: 15
 ```
 
 Extract key and value, trim whitespace.
@@ -2301,7 +2155,6 @@ Split on `|`, extract timestamp, status, and description.
 ### Shop Validation
 
 Required fields:
-- `SHOP_ID` must match pattern `shop-{CALLSIGN}`
 - `OWNER_NPUB` must be valid NOSTR public key
 - `STATUS` must be valid status value
 - `CREATED` timestamp must be valid
@@ -2312,7 +2165,6 @@ Required fields:
 
 Required fields:
 - `ITEM_ID` must match pattern `item-{hash}`
-- `SHOP_ID` must reference existing shop
 - `TYPE` must be valid type value
 - `STATUS` must be valid status value
 - `PRICE` must be positive number
@@ -2328,7 +2180,6 @@ Required fields:
 - `ORDER_ID` must match pattern `order-YYYY-MM-DD_{hash}`
 - `BUYER_NPUB` must be valid NOSTR public key
 - `SELLER_NPUB` must match shop owner
-- `SHOP_ID` must reference existing shop
 - All item IDs must reference existing items
 - Quantities must respect MIN_ORDER and MAX_ORDER
 - Stock must be available for all items
@@ -2543,6 +2394,25 @@ Required fields:
 
 ## Change Log
 
+### Version 1.2 (2025-11-22)
+
+**Simplified Architecture**:
+
+- **Single Shop Model**: Simplified to one shop per collection (removed multi-shop support)
+- **Directory Structure**: Root now contains only `shop/` and `orders/` folders
+- **Self-Contained Items**: Items now stored directly in `shop/items/` with category folders
+- **Removed Shared Catalog**: Eliminated separate `market/items/` directory concept
+- **Removed SHOP_ID Field**: No longer needed with single shop per collection
+- **Reactions System**: Added `.reactions/` folders for shop and item reactions
+- **Simplified Validation**: Removed SHOP_ID validation rules
+- **Updated Event Format**: Simplified NOSTR event signatures without SHOP_ID
+
+**Breaking Changes**:
+- Directory structure changed from `shops/{shop-id}/` to `shop/`
+- Removed `market/items/` shared catalog
+- SHOP_ID field removed from all file formats (shop.txt, item.txt, order.txt)
+- File paths updated in all examples
+
 ### Version 1.1 (2025-11-22)
 
 **Major Updates**:
@@ -2586,7 +2456,7 @@ Initial release of Market format specification.
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.2
 **Last Updated**: 2025-11-22
 **Maintained by**: Geogram Contributors
 **License**: Apache 2.0
