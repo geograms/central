@@ -1,6 +1,6 @@
 # Market Format Specification
 
-**Version**: 1.2
+**Version**: 1.3
 **Last Updated**: 2025-11-22
 **Status**: Active
 
@@ -11,12 +11,16 @@
 - [Market Structure](#market-structure)
 - [Shop Format](#shop-format)
 - [Item Format](#item-format)
+- [Shopping Cart Format](#shopping-cart-format)
+- [Promotion Format](#promotion-format)
+- [Coupon Format](#coupon-format)
 - [Order Format](#order-format)
 - [Review System](#review-system)
 - [FAQ System](#faq-system)
 - [Inventory Management](#inventory-management)
 - [Payment Integration](#payment-integration)
 - [Shipping Information](#shipping-information)
+- [Tax Integration](#tax-integration)
 - [Status Tracking](#status-tracking)
 - [Multilanguage Support](#multilanguage-support)
 - [Media Management](#media-management)
@@ -39,11 +43,16 @@ This document specifies the text-based format used for storing marketplace data 
 
 - **Single Shop Per Collection**: Each collection represents one shop
 - **Offline-First**: Complete marketplace functionality without internet
+- **Shopping Cart**: Buy multiple items in a single transaction
+- **Promotions & Bonuses**: Time-based discounts and special offers
+- **Coupon Codes**: Redeemable discount codes for items or entire cart
+- **Tax Support**: Optional Tax ID and percentage for compliant receipts
 - **Free Items**: Support for free giveaways and donations (price: 0 or free)
 - **Services & Products**: Sell physical items, digital goods, or services
 - **Geographic Radius**: Specify service/delivery area in kilometers
 - **Inventory Management**: Real-time stock tracking and updates
-- **Order Tracking**: Complete order lifecycle from request to delivery
+- **Order Tracking**: Complete order lifecycle from request to delivery with receipts
+- **Dual Status Tracking**: Separate buyer and seller status views
 - **Verified Reviews**: Only purchasers with completed orders can review
 - **Multilanguage Support**: Items and shop support multiple languages
 - **Folder-Based Categories**: Organize items using directory structure
@@ -83,64 +92,72 @@ Unlike centralized marketplaces (eBay, Amazon), the Geogram market:
 
 ```
 collection_name/
-└── market/
-    ├── shop/
-    │   ├── shop.txt
-    │   ├── logo.jpg
-    │   ├── banner.jpg
-    │   ├── .reactions/           # Reactions to the shop itself
-    │   │   └── shop.txt
-    │   └── items/
-    │       ├── electronics/      # Category folder
-    │       │   ├── radios/       # Subcategory folder
-    │       │   │   └── item-abc123/
-    │       │   │       ├── item.txt
-    │       │   │       ├── gallery/
-    │       │   │       │   ├── photo1.jpg
-    │       │   │       │   ├── photo2.jpg
-    │       │   │       │   └── demo-video.mp4
-    │       │   │       ├── reviews/
-    │       │   │       │   ├── review-ALPHA1.txt
-    │       │   │       │   └── review-BRAVO2.txt
-    │       │   │       ├── faq/
-    │       │   │       │   ├── question-001.txt
-    │       │   │       │   └── question-002.txt
-    │       │   │       └── .reactions/    # Reactions to this item
-    │       │   │           └── item.txt
-    │       │   └── antennas/
-    │       │       └── item-def456/
-    │       │           ├── item.txt
-    │       │           ├── gallery/
-    │       │           │   └── antenna.jpg
-    │       │           └── .reactions/
-    │       │               └── item.txt
-    │       ├── services/
-    │       │   ├── cleaning/
-    │       │   │   └── item-ghi789/
-    │       │   │       ├── item.txt
-    │       │   │       ├── reviews/
-    │       │   │       │   └── review-BRAVO2.txt
-    │       │   │       └── .reactions/
-    │       │   │           └── item.txt
-    │       │   └── repairs/
-    │       │       └── item-jkl012/
-    │       │           ├── item.txt
-    │       │           └── .reactions/
-    │       │               └── item.txt
-    │       └── free/
-    │           └── item-mno345/
-    │               ├── item.txt
-    │               ├── gallery/
-    │               │   └── seeds.jpg
-    │               └── .reactions/
-    │                   └── item.txt
-    └── orders/
-        ├── 2025/
-        │   ├── order-2025-11-22_abc123.txt
-        │   ├── order-2025-11-22_def456.txt
-        │   └── order-2025-11-21_xyz789.txt
-        └── 2024/
-            └── order-2024-12-25_old123.txt
+├── shop/
+│   ├── shop.txt
+│   ├── logo.jpg
+│   ├── banner.jpg
+│   ├── .reactions/           # Reactions to the shop itself
+│   │   └── shop.txt
+│   ├── promotions/           # Time-based discounts and bonuses
+│   │   ├── promo-black-friday-2025.txt
+│   │   └── promo-new-year-2025.txt
+│   └── items/
+│       ├── electronics/      # Category folder
+│       │   ├── radios/       # Subcategory folder
+│       │   │   └── item-abc123/
+│       │   │       ├── item.txt
+│       │   │       ├── gallery/
+│       │   │       │   ├── photo1.jpg
+│       │   │       │   ├── photo2.jpg
+│       │   │       │   └── demo-video.mp4
+│       │   │       ├── reviews/
+│       │   │       │   ├── review-ALPHA1.txt
+│       │   │       │   └── review-BRAVO2.txt
+│       │   │       ├── faq/
+│       │   │       │   ├── question-001.txt
+│       │   │       │   └── question-002.txt
+│       │   │       └── .reactions/    # Reactions to this item
+│       │   │           └── item.txt
+│       │   └── antennas/
+│       │       └── item-def456/
+│       │           ├── item.txt
+│       │           ├── gallery/
+│       │           │   └── antenna.jpg
+│       │           └── .reactions/
+│       │               └── item.txt
+│       ├── services/
+│       │   ├── cleaning/
+│       │   │   └── item-ghi789/
+│       │   │       ├── item.txt
+│       │   │       ├── reviews/
+│       │   │       │   └── review-BRAVO2.txt
+│       │   │       └── .reactions/
+│       │   │           └── item.txt
+│       │   └── repairs/
+│       │       └── item-jkl012/
+│       │           ├── item.txt
+│       │           └── .reactions/
+│       │               └── item.txt
+│       └── free/
+│           └── item-mno345/
+│               ├── item.txt
+│               ├── gallery/
+│               │   └── seeds.jpg
+│               └── .reactions/
+│                   └── item.txt
+├── coupons/                  # Discount codes (root level)
+│   ├── coupon-WELCOME10.txt
+│   └── coupon-LOYAL25.txt
+├── carts/                    # Shopping carts (buyer-created)
+│   ├── cart-ALPHA1_abc123.txt
+│   └── cart-BRAVO2_def456.txt
+└── orders/                   # Completed purchases
+    ├── 2025/
+    │   ├── order-2025-11-22_abc123.txt
+    │   ├── order-2025-11-22_def456.txt
+    │   └── order-2025-11-21_xyz789.txt
+    └── 2024/
+        └── order-2024-12-25_old123.txt
 ```
 
 ### Shop Folder
@@ -757,6 +774,258 @@ SHIPS_FROM: Lisbon, Portugal
 --> signature: 3045022100abcd...
 ```
 
+## Shopping Cart Format
+
+### Cart File
+
+Shopping carts allow buyers to add multiple items before creating an order. Each cart is stored as a separate file in the `carts/` directory.
+
+**Filename Pattern**: `cart-{BUYER_CALLSIGN}_{hash}.txt`
+
+**Required Fields**:
+```
+CART_ID: cart-ALPHA1_abc123
+BUYER_CALLSIGN: ALPHA1
+BUYER_NPUB: npub1buyer123...
+CREATED: 2025-11-22 14:00_00
+UPDATED: 2025-11-22 15:30_00
+STATUS: active
+```
+
+**Cart Items**:
+```
+ITEMS:
+- item-abc123 | qty: 2 | price: 35.00 | subtotal: 70.00
+- item-def456 | qty: 1 | price: 15.00 | subtotal: 15.00
+- item-ghi789 | qty: 3 | price: 8.00 | subtotal: 24.00
+```
+
+**Applied Discounts** (optional):
+```
+PROMOTIONS:
+- promo-black-friday-2025 | discount: 10% | savings: 10.90
+
+COUPONS:
+- WELCOME10 | discount: 10.00
+```
+
+**Pricing Summary**:
+```
+ITEMS_SUBTOTAL: 109.00
+PROMOTION_DISCOUNT: 10.90
+COUPON_DISCOUNT: 10.00
+SUBTOTAL: 88.10
+SHIPPING_ESTIMATE: 5.00
+TAX_ESTIMATE: 0.00
+ESTIMATED_TOTAL: 93.10
+CURRENCY: USD
+```
+
+**Optional Notes**:
+```
+NOTES:
+Please pack fragile items carefully.
+```
+
+**NOSTR Signature**:
+```
+--> npub: npub1buyer123...
+--> signature: 3045022100cart...
+```
+
+### Cart Status Values
+
+- **`active`**: Cart is being built, items can be added/removed
+- **`checkout`**: Buyer is in checkout process
+- **`converted`**: Cart has been converted to an order
+- **`abandoned`**: Cart not modified for extended period (30+ days)
+- **`expired`**: Items in cart no longer available
+
+### Cart to Order Conversion
+
+When buyer completes checkout:
+1. Cart status changes to `converted`
+2. New order file created in `orders/YYYY/`
+3. Cart references the created ORDER_ID
+4. Inventory is decremented for purchased items
+
+```
+CONVERTED_TO_ORDER: order-2025-11-22_abc123
+CONVERSION_DATE: 2025-11-22 16:30_00
+```
+
+## Promotion Format
+
+### Promotion File
+
+Time-based promotions and bonuses are stored in the `shop/promotions/` directory. Promotions automatically apply during their active period.
+
+**Filename Pattern**: `promo-{name}.txt`
+
+**Required Fields**:
+```
+PROMO_ID: promo-black-friday-2025
+PROMO_NAME: Black Friday 2025
+CREATED: 2025-11-01 00:00_00
+START_DATE: 2025-11-24 00:00_00
+END_DATE: 2025-11-24 23:59_59
+STATUS: active
+TYPE: percentage
+```
+
+**Discount Configuration**:
+```
+DISCOUNT_TYPE: percentage
+DISCOUNT_VALUE: 20
+MAX_DISCOUNT: 50.00
+MIN_PURCHASE: 30.00
+CURRENCY: USD
+```
+
+**Target Items** (optional - omit to apply to all items):
+```
+APPLIES_TO: all
+
+# Or specify categories/items:
+# APPLIES_TO: categories
+# CATEGORIES:
+# - electronics/radios
+# - electronics/antennas
+#
+# Or specific items:
+# APPLIES_TO: items
+# ITEMS:
+# - item-abc123
+# - item-def456
+```
+
+**Usage Limits** (optional):
+```
+MAX_USES: 100
+USES_PER_CUSTOMER: 1
+CURRENT_USES: 47
+```
+
+**Multilanguage Descriptions**:
+```
+# DESCRIPTION_EN:
+20% off all electronics during Black Friday! Maximum discount $50.
+Limited to 100 customers.
+
+# DESCRIPTION_PT:
+20% de desconto em toda eletrônica durante a Black Friday! Desconto máximo $50.
+Limitado a 100 clientes.
+```
+
+**NOSTR Signature**:
+```
+--> npub: npub1seller123...
+--> signature: 3045022100promo...
+```
+
+### Promotion Types
+
+- **`percentage`**: Percentage discount (e.g., 20% off)
+- **`fixed`**: Fixed amount discount (e.g., $10 off)
+- **`bogo`**: Buy one get one (set DISCOUNT_VALUE to percentage off second item)
+- **`free-shipping`**: Free shipping when conditions met
+
+### Automatic Application
+
+Promotions automatically apply when:
+1. Current time is between START_DATE and END_DATE
+2. STATUS is `active`
+3. Cart/order meets MIN_PURCHASE requirement
+4. Usage limits not exceeded
+5. Items match APPLIES_TO criteria
+
+## Coupon Format
+
+### Coupon File
+
+Redeemable discount codes are stored in the `coupons/` directory at the root level. Unlike promotions, coupons require manual entry by buyer.
+
+**Filename Pattern**: `coupon-{CODE}.txt`
+
+**Required Fields**:
+```
+COUPON_CODE: WELCOME10
+COUPON_NAME: Welcome Discount
+CREATED: 2025-11-01 00:00_00
+EXPIRES: 2025-12-31 23:59_59
+STATUS: active
+TYPE: fixed
+```
+
+**Discount Configuration**:
+```
+DISCOUNT_TYPE: fixed
+DISCOUNT_VALUE: 10.00
+MIN_PURCHASE: 25.00
+MAX_DISCOUNT: 10.00
+CURRENCY: USD
+```
+
+**Restrictions**:
+```
+FIRST_ORDER_ONLY: yes
+MAX_USES: 500
+USES_PER_CUSTOMER: 1
+CURRENT_USES: 234
+```
+
+**Target Items** (optional):
+```
+APPLIES_TO: all
+
+# Or limit to categories/items like promotions
+```
+
+**Multilanguage Descriptions**:
+```
+# DESCRIPTION_EN:
+$10 off your first order over $25! Enter code WELCOME10 at checkout.
+
+# DESCRIPTION_PT:
+$10 de desconto no seu primeiro pedido acima de $25! Digite o código WELCOME10 no checkout.
+```
+
+**NOSTR Signature**:
+```
+--> npub: npub1seller123...
+--> signature: 3045022100coupon...
+```
+
+### Coupon Types
+
+- **`fixed`**: Fixed dollar/euro amount off (e.g., $10 off)
+- **`percentage`**: Percentage discount (e.g., 15% off)
+- **`free-shipping`**: Free shipping code
+- **`free-item`**: Free specific item when conditions met
+
+### Coupon Redemption
+
+When buyer enters coupon code:
+1. Validate code exists and is active
+2. Check expiration date
+3. Verify MIN_PURCHASE requirement met
+4. Check usage limits (MAX_USES, USES_PER_CUSTOMER)
+5. Verify FIRST_ORDER_ONLY if applicable
+6. Apply discount to cart/order
+7. Increment CURRENT_USES
+
+### Stacking Rules
+
+By default:
+- **Multiple coupons**: NOT allowed (one coupon per order)
+- **Coupon + Promotion**: ALLOWED (can combine)
+- **Multiple promotions**: ALLOWED (all applicable promotions apply)
+
+Shop owner can override in shop.txt:
+```
+ALLOW_COUPON_STACKING: yes
+```
+
 ## Order Format
 
 ### Order File
@@ -772,7 +1041,14 @@ SELLER_CALLSIGN: CR7BBQ
 SELLER_NPUB: npub1seller456...
 CREATED: 2025-11-22 16:30_00
 STATUS: requested
+BUYER_STATUS: awaiting-confirmation
+SELLER_STATUS: review-order
 ```
+
+**Dual Status Tracking**:
+- `STATUS`: Overall order status (canonical state)
+- `BUYER_STATUS`: Buyer's view of order state
+- `SELLER_STATUS`: Seller's view of order state
 
 **Order Items**:
 ```
@@ -781,14 +1057,33 @@ ITEMS:
 - item-def456 | qty: 1 | price: 15.00 | subtotal: 15.00
 ```
 
+**Applied Discounts** (optional):
+```
+PROMOTIONS:
+- promo-black-friday-2025 | discount: 10% | savings: 8.50
+
+COUPONS:
+- WELCOME10 | discount: 10.00
+```
+
 **Pricing**:
 ```
-SUBTOTAL: 85.00
+ITEMS_SUBTOTAL: 85.00
+PROMOTION_DISCOUNT: 8.50
+COUPON_DISCOUNT: 10.00
+SUBTOTAL: 66.50
 SHIPPING: 5.00
-TAX: 0.00
-TOTAL: 90.00
+TAX_ID: PT123456789
+TAX_PERCENTAGE: 23
+TAX_AMOUNT: 16.45
+TOTAL: 87.95
 CURRENCY: USD
 ```
+
+**Tax Fields** (optional - required in some jurisdictions):
+- `TAX_ID`: Seller's tax identification number (VAT, EIN, etc.)
+- `TAX_PERCENTAGE`: Tax rate as percentage (e.g., 23 for 23%)
+- `TAX_AMOUNT`: Calculated tax amount in currency units
 
 **Payment Information**:
 ```
@@ -867,6 +1162,88 @@ STATUS_HISTORY:
 2025-11-25 15:00_00 | completed | Buyer confirmed receipt
 ```
 
+### Buyer Status Values
+
+Buyer's perspective on order state:
+
+- **`awaiting-confirmation`**: Waiting for seller to confirm order
+- **`awaiting-payment`**: Need to complete payment
+- **`payment-processing`**: Payment submitted, awaiting verification
+- **`order-confirmed`**: Seller confirmed, preparing shipment
+- **`awaiting-shipment`**: Waiting for seller to ship
+- **`in-transit`**: Order shipped, waiting for delivery
+- **`delivered`**: Package delivered
+- **`completed`**: Transaction complete, can review
+- **`refund-requested`**: Requested refund
+- **`refund-processing`**: Refund being processed
+- **`refunded`**: Refund completed
+- **`cancelled`**: Order cancelled
+- **`disputed`**: Dispute in progress
+
+### Seller Status Values
+
+Seller's perspective on order state:
+
+- **`review-order`**: New order received, needs review
+- **`awaiting-payment`**: Waiting for buyer payment
+- **`payment-received`**: Payment confirmed, can proceed
+- **`prepare-shipment`**: Packing order for shipment
+- **`ready-to-ship`**: Order packed, ready to hand to courier
+- **`shipped`**: Order shipped, tracking provided
+- **`in-transit`**: Package with courier
+- **`delivered`**: Delivered to buyer
+- **`completed`**: Transaction complete
+- **`refund-requested`**: Buyer requested refund, needs decision
+- **`processing-refund`**: Processing refund
+- **`refunded`**: Refund completed
+- **`cancelled`**: Order cancelled
+- **`disputed`**: Dispute needs resolution
+
+### Dual Status Synchronization
+
+When overall `STATUS` changes, both `BUYER_STATUS` and `SELLER_STATUS` update appropriately:
+
+| STATUS | BUYER_STATUS | SELLER_STATUS |
+|--------|--------------|---------------|
+| requested | awaiting-confirmation | review-order |
+| confirmed | awaiting-payment | awaiting-payment |
+| paid | order-confirmed | payment-received |
+| processing | awaiting-shipment | prepare-shipment |
+| shipped | in-transit | shipped |
+| delivered | delivered | delivered |
+| completed | completed | completed |
+| refunded | refunded | refunded |
+
+Each party can mark their status independently for internal tracking while the canonical `STATUS` field represents the agreed-upon state.
+
+### Receipt Functionality
+
+When order reaches `completed` status, it serves as a permanent receipt for both parties.
+
+**Receipt Fields** (included in order):
+```
+RECEIPT_NUMBER: order-2025-11-22_abc123
+RECEIPT_DATE: 2025-11-25 15:00_00
+RECEIPT_STATUS: completed
+```
+
+**Receipt View** includes:
+1. Complete itemized list with prices
+2. All applied discounts (promotions, coupons)
+3. Subtotal, shipping, tax breakdown
+4. Total amount paid
+5. Payment method and transaction ID
+6. Delivery confirmation details
+7. Seller tax ID (if provided)
+8. Buyer and seller signatures (NOSTR verification)
+
+**Receipt Export**:
+The order file itself serves as the receipt. For tax purposes, parse order file and extract:
+- Line items: `ITEMS` section
+- Tax calculation: `TAX_ID`, `TAX_PERCENTAGE`, `TAX_AMOUNT`
+- Payment proof: `PAYMENT_TX` or payment reference
+- Date of completion: Last `STATUS_HISTORY` entry with `completed`
+
 ### Payment Status Values
 
 - `pending`: Awaiting payment
@@ -884,21 +1261,34 @@ BUYER_NPUB: npub1buyer123...
 SELLER_CALLSIGN: CR7BBQ
 SELLER_NPUB: npub1seller456...
 CREATED: 2025-11-22 16:30_00
-STATUS: delivered
+STATUS: completed
+BUYER_STATUS: completed
+SELLER_STATUS: completed
 
 ITEMS:
 - item-abc123 | qty: 2 | price: 35.00 | subtotal: 70.00
 - item-def456 | qty: 1 | price: 15.00 | subtotal: 15.00
 
-SUBTOTAL: 85.00
+PROMOTIONS:
+- promo-black-friday-2025 | discount: 10% | savings: 8.50
+
+COUPONS:
+- WELCOME10 | discount: 10.00
+
+ITEMS_SUBTOTAL: 85.00
+PROMOTION_DISCOUNT: 8.50
+COUPON_DISCOUNT: 10.00
+SUBTOTAL: 66.50
 SHIPPING: 5.00
-TAX: 0.00
-TOTAL: 90.00
-CURRENCY: USD
+TAX_ID: PT123456789
+TAX_PERCENTAGE: 23
+TAX_AMOUNT: 16.45
+TOTAL: 87.95
+CURRENCY: EUR
 
 PAYMENT_METHOD: bitcoin
 PAYMENT_ADDRESS: bc1q...
-PAYMENT_AMOUNT: 90.00
+PAYMENT_AMOUNT: 87.95
 PAYMENT_STATUS: completed
 PAYMENT_TX: abc123def456...
 
@@ -913,10 +1303,15 @@ TRACKING_NUMBER: PT123456789
 STATUS_HISTORY:
 2025-11-22 16:30_00 | requested | Order placed by buyer
 2025-11-22 17:00_00 | confirmed | Seller confirmed order
-2025-11-22 18:30_00 | paid | Payment received
+2025-11-22 18:30_00 | paid | Payment received (Bitcoin TX: abc123...)
 2025-11-23 10:00_00 | processing | Items being packed
 2025-11-23 14:00_00 | shipped | Tracking: PT123456789
 2025-11-25 11:30_00 | delivered | Delivered to address
+2025-11-25 15:00_00 | completed | Buyer confirmed receipt
+
+RECEIPT_NUMBER: order-2025-11-22_abc123
+RECEIPT_DATE: 2025-11-25 15:00_00
+RECEIPT_STATUS: completed
 
 BUYER_NOTES:
 Please include extra bubble wrap for fragile items.
@@ -1328,6 +1723,104 @@ TRACKING_UPDATES:
 2025-11-25 11:30_00 | Delivered
 ```
 
+## Tax Integration
+
+### Tax Configuration
+
+In jurisdictions requiring tax collection, sellers can configure tax settings in shop.txt:
+
+```
+TAX_ENABLED: yes
+TAX_ID: PT123456789
+TAX_NAME: VAT
+TAX_PERCENTAGE: 23
+TAX_APPLIES_TO: all
+```
+
+**Tax Fields**:
+- `TAX_ENABLED`: Whether tax is collected (yes/no)
+- `TAX_ID`: Seller's tax identification number (VAT, EIN, GST, etc.)
+- `TAX_NAME`: Type of tax (VAT, Sales Tax, GST, etc.)
+- `TAX_PERCENTAGE`: Default tax rate as percentage
+- `TAX_APPLIES_TO`: Items tax applies to (all, physical, digital, services)
+
+### Tax Calculation in Orders
+
+When `TAX_ENABLED: yes` in shop configuration, orders automatically calculate tax:
+
+```
+ITEMS_SUBTOTAL: 100.00
+PROMOTION_DISCOUNT: 10.00
+COUPON_DISCOUNT: 5.00
+SUBTOTAL: 85.00
+SHIPPING: 5.00
+TAX_ID: PT123456789
+TAX_PERCENTAGE: 23
+TAX_AMOUNT: 20.70
+TOTAL: 110.70
+CURRENCY: EUR
+```
+
+**Tax Calculation Formula**:
+```
+TAX_AMOUNT = (SUBTOTAL + SHIPPING) × (TAX_PERCENTAGE / 100)
+TOTAL = SUBTOTAL + SHIPPING + TAX_AMOUNT
+```
+
+### Tax-Exempt Items
+
+Individual items can be marked as tax-exempt:
+
+```
+ITEM_ID: item-abc123
+...
+TAX_EXEMPT: yes
+TAX_EXEMPT_REASON: Educational material
+```
+
+When calculating order tax, exempt items are excluded from taxable subtotal.
+
+### Tax Receipts
+
+When order is completed, the order file serves as a tax-compliant receipt with:
+
+1. **Seller Tax ID**: `TAX_ID` field
+2. **Tax Rate Applied**: `TAX_PERCENTAGE`
+3. **Tax Amount**: `TAX_AMOUNT`
+4. **Itemized Breakdown**: All items with prices
+5. **Date of Transaction**: `CREATED` and completion timestamp
+6. **Unique Receipt Number**: `ORDER_ID`
+7. **Buyer Information**: Shipping name and address
+8. **Cryptographic Verification**: NOSTR signatures from both parties
+
+### Multi-Jurisdiction Tax
+
+For shops serving multiple regions with different tax rates:
+
+```
+TAX_RATES:
+- country: Portugal | rate: 23 | name: VAT
+- country: Spain | rate: 21 | name: IVA
+- country: France | rate: 20 | name: TVA
+- country: Germany | rate: 19 | name: MwSt
+```
+
+Tax rate applied based on `SHIPPING_COUNTRY` in order.
+
+### Tax Reporting
+
+To generate tax reports, parse all completed orders in date range and extract:
+- Total sales: Sum of all `ITEMS_SUBTOTAL`
+- Total tax collected: Sum of all `TAX_AMOUNT`
+- Number of transactions: Count of completed orders
+- Tax by rate: Group by `TAX_PERCENTAGE`
+
+Example report generation:
+```bash
+# Extract all orders from Q4 2025
+grep -r "TAX_AMOUNT" orders/2025/ > tax_report_q4_2025.txt
+```
+
 ## Status Tracking
 
 ### Shop Status
@@ -1602,9 +2095,11 @@ reviews/
 
 **Hidden Shop** (if shop is banned):
 ```
-market/
+collection_name/
 └── .hidden/
-    └── shop.txt                 # Entire shop hidden
+    ├── shop/                    # Entire shop moved here when banned
+    │   └── shop.txt
+    └── moderation.txt           # Reason for hiding
 ```
 
 ### Moderation Log
@@ -2394,6 +2889,46 @@ Required fields:
 
 ## Change Log
 
+### Version 1.3 (2025-11-22)
+
+**E-Commerce Features**:
+
+- **Shopping Cart System**: Added `carts/` directory at root level for multi-item purchases
+- **Cart to Order Conversion**: Workflow for converting shopping carts to orders
+- **Promotions**: Time-based discounts and bonuses in `shop/promotions/` directory
+- **Coupon Codes**: Redeemable discount codes in `coupons/` directory at root level
+- **Coupon Expiry**: All coupons include `EXPIRES` field for time-limited offers
+- **Tax Integration**: Complete tax support with TAX_ID, TAX_PERCENTAGE, TAX_AMOUNT fields
+- **Multi-Jurisdiction Tax**: Support for different tax rates by country/region
+- **Tax-Exempt Items**: Individual items can be marked as tax-exempt
+- **Dual Status Tracking**: Separate BUYER_STATUS and SELLER_STATUS fields
+- **Receipt Functionality**: Orders serve as tax-compliant receipts when completed
+- **Discount Stacking**: Rules for combining promotions and coupons
+
+**Directory Structure Changes**:
+- Removed `market/` wrapper folder - `shop/`, `carts/`, `coupons/`, and `orders/` now at collection root
+- Added `coupons/` at root level (moved from `shop/coupons/`)
+- Added `carts/` directory for shopping cart files
+- Added `shop/promotions/` for time-based discounts
+
+**Order Enhancements**:
+- Applied promotions and coupons tracked in order files
+- Detailed pricing breakdown (ITEMS_SUBTOTAL, PROMOTION_DISCOUNT, COUPON_DISCOUNT, SUBTOTAL, TAX_AMOUNT, TOTAL)
+- Buyer and seller status values for dual perspective tracking
+- Receipt fields (RECEIPT_NUMBER, RECEIPT_DATE, RECEIPT_STATUS)
+- Tax compliance fields for jurisdictions requiring tax collection
+
+**New File Formats**:
+- Shopping cart format (cart-{BUYER}_{hash}.txt)
+- Promotion format (promo-{name}.txt)
+- Coupon format (coupon-{CODE}.txt)
+
+**Breaking Changes**:
+- Directory structure: collection_name/market/shop/ → collection_name/shop/
+- Directory structure: collection_name/market/orders/ → collection_name/orders/
+- Pricing fields renamed: SUBTOTAL → ITEMS_SUBTOTAL, added PROMOTION_DISCOUNT, COUPON_DISCOUNT
+- Order format now requires BUYER_STATUS and SELLER_STATUS fields
+
 ### Version 1.2 (2025-11-22)
 
 **Simplified Architecture**:
@@ -2456,7 +2991,7 @@ Initial release of Market format specification.
 
 ---
 
-**Document Version**: 1.2
+**Document Version**: 1.3
 **Last Updated**: 2025-11-22
 **Maintained by**: Geogram Contributors
 **License**: Apache 2.0
