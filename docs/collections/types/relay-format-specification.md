@@ -102,10 +102,37 @@ The relay system creates a mesh network where devices can discover each other, e
 A device becomes a relay when it:
 
 1. **Enables Relay Mode**: User activates relay functionality in settings
-2. **Registers Identity**: Creates or imports NOSTR keypair (npub/nsec)
-3. **Joins a Network**: Connects to a root relay or operates as independent root
-4. **Accepts Connections**: Listens for incoming device connections
-5. **Synchronizes Data**: Exchanges collections with connected peers
+2. **Generates Relay Identity**: Creates a new NOSTR keypair (npub/nsec) specifically for the relay
+3. **Assigns Relay Callsign**: Receives a callsign with X3 prefix (e.g., X3LB9K, X3PT01)
+4. **Joins a Network**: Connects to a root relay or operates as independent root
+5. **Accepts Connections**: Listens for incoming device connections
+6. **Synchronizes Data**: Exchanges collections with connected peers
+
+### Callsign Prefixes
+
+Geogram uses callsign prefixes to identify entity types:
+
+| Prefix | Entity Type | Description |
+|--------|-------------|-------------|
+| X1 | User/Operator | Human operators and administrators |
+| X3 | Relay | Relay nodes (both root and node relays) |
+
+**Callsign Format**:
+- Maximum length: 6 characters total (including the 2-character prefix)
+- X1 prefix: 4 characters for the user callsign (e.g., X1CR7B, X1PT4X)
+- X3 prefix: 4 characters derived from the relay's npub key (e.g., X3LB9K, X3RL1P)
+
+**X3 Callsign Generation**:
+When a relay is created, its X3 callsign is automatically generated from the first 4 valid characters of the relay's npub key (after the "npub1" prefix), converted to uppercase alphanumeric format. This ensures:
+- Unique callsigns tied to cryptographic identity
+- Deterministic generation from the public key
+- Easy verification of callsign-to-npub mapping
+
+**Important**: A relay has its own cryptographic identity (npub/nsec) separate from its operator. This allows:
+- Relay identity to persist even if operator changes
+- Clear separation between operator actions and relay actions
+- Relay-to-relay authentication independent of human operators
+- Revocation of relay without affecting operator's personal identity
 
 ## Root Relay vs Node Relay
 
@@ -166,26 +193,26 @@ relay/
 ├── network.json                        # Network membership and root info
 ├── authorities/
 │   ├── root.txt                        # Root relay identity
-│   ├── admins/                         # Network administrators (one file per callsign)
-│   │   ├── CR7BBQ.txt
-│   │   ├── PT4XYZ.txt
-│   │   └── X135AS.txt
+│   ├── admins/                         # Network administrators (one file per X1 callsign)
+│   │   ├── X1CR7B.txt
+│   │   ├── X1PT4X.txt
+│   │   └── X1AD3X.txt
 │   ├── group-admins/
-│   │   ├── reports/                    # Report collection group admins
-│   │   │   ├── FIRE1PT.txt
-│   │   │   └── CITY2PT.txt
+│   │   ├── reports/                    # Report collection group admins (X1 callsigns)
+│   │   │   ├── X1FR1P.txt
+│   │   │   └── X1CT2P.txt
 │   │   ├── places/                     # Places collection group admins
-│   │   │   └── GEO1PT.txt
+│   │   │   └── X1GE1P.txt
 │   │   └── events/                     # Events collection group admins
-│   │       └── EVT1PT.txt
-│   └── moderators/
+│   │       └── X1EV1P.txt
+│   └── moderators/                      # Moderators (X1 callsigns)
 │       ├── reports/                    # Report moderators
-│       │   ├── VOL1PT.txt
-│       │   └── VOL2PT.txt
+│       │   ├── X1VL1P.txt
+│       │   └── X1VL2P.txt
 │       ├── places/                     # Places moderators
-│       │   └── MOD1PT.txt
+│       │   └── X1MD1P.txt
 │       └── events/                     # Events moderators
-│           └── MOD2PT.txt
+│           └── X1MD2P.txt
 ├── policies/
 │   ├── network-policy.json             # Network-wide rules
 │   ├── content-policy.json             # Content guidelines
@@ -214,13 +241,13 @@ relay/
 │       └── ...
 ├── banned/
 │   ├── users/                          # Banned users (one file per callsign)
-│   │   ├── SPAMMER1.txt
+│   │   ├── X1SP1X.txt
 │   │   └── ...
 │   └── content/                        # Banned content hashes
 │       └── {hash}.txt
 ├── reputation/                         # User reputation (one file per callsign)
-│   ├── CR7BBQ.txt
-│   ├── PT4XYZ.txt
+│   ├── X1CR7B.txt
+│   ├── X1PT4X.txt
 │   └── ...
 ├── sync/
 │   ├── topology.json                   # Network topology and node connections
@@ -238,12 +265,14 @@ relay/
 
 ### Relay Identity File (relay.json)
 
-The relay ID is the collection ID, which is automatically generated when creating the relay collection. This ensures unique identification across the network.
+The relay has its own cryptographic identity, separate from the operator who manages it. The relay callsign uses the X3 prefix, while the operator uses their personal X1 callsign.
 
 ```json
 {
   "relay": {
     "id": "a7f3b9e1d2c4f6a8",
+    "callsign": "X3LB9K",
+    "npub": "npub1relay789...",
     "name": "Lisbon Community Relay",
     "description": "Community relay serving the greater Lisbon area",
     "type": "node",
@@ -252,7 +281,7 @@ The relay ID is the collection ID, which is automatically generated when creatin
     "updated": "2025-11-26 10:00_00"
   },
   "operator": {
-    "callsign": "CR7BBQ",
+    "callsign": "X1CR7B",
     "npub": "npub1operator123...",
     "contact": "operator@example.com"
   },
@@ -275,7 +304,11 @@ The relay ID is the collection ID, which is automatically generated when creatin
 }
 ```
 
-**Note**: The `relay.id` field uses the collection's auto-generated ID (typically a hex string). This ID is created when the relay collection is first initialized and remains constant throughout the relay's lifetime.
+**Note**:
+- The `relay.id` field uses the collection's auto-generated ID (typically a hex string). This ID is created when the relay collection is first initialized and remains constant throughout the relay's lifetime.
+- The `relay.callsign` uses the X3 prefix to identify it as a relay device.
+- The `relay.npub` is the relay's own NOSTR public key, generated when the relay is created.
+- The `operator.callsign` uses the X1 prefix to identify a human operator.
 
 ### Network Membership File (network.json)
 
@@ -285,6 +318,7 @@ The relay ID is the collection ID, which is automatically generated when creatin
     "id": "portugal-community-network",
     "name": "Portugal Community Network",
     "description": "Federated relay network for Portuguese communities",
+    "root_callsign": "X3PT1R",
     "root_npub": "npub1root456...",
     "root_url": "wss://root.example.com/relay"
   },
@@ -311,7 +345,10 @@ The relay ID is the collection ID, which is automatically generated when creatin
   "root": {
     "network_id": "portugal-community-network",
     "network_name": "Portugal Community Network",
+    "relay_callsign": "X3PT1R",
+    "relay_npub": "npub1rootrelay...",
     "founded": "2025-11-01 00:00_00",
+    "founder_callsign": "X1FD1X",
     "founder_npub": "npub1founder789..."
   },
   "authority": {
@@ -368,9 +405,14 @@ To become a node relay, the device must:
     "network_id": "portugal-community-network",
     "root_url": "wss://root.example.com/relay"
   },
+  "relay": {
+    "callsign": "X3LD1K",
+    "npub": "npub1relay1...",
+    "nsec": "nsec1relay1secret..."
+  },
   "operator": {
-    "callsign": "RELAY1PT",
-    "npub": "npub1node1...",
+    "callsign": "X1ND1P",
+    "npub": "npub1operator...",
     "contact": "operator@example.com"
   },
   "scope": {
@@ -893,7 +935,7 @@ Each authority (admin, group admin, moderator) has their own individual file nam
 # ROOT: Portugal Community Network
 
 NPUB: npub1founder789...
-CALLSIGN: PT1ROOT
+CALLSIGN: X1ROOT
 CREATED: 2025-11-01 00:00_00
 LAST_ACTIVE: 2025-11-26 15:00_00
 
@@ -906,14 +948,14 @@ Public keys for verification:
 --> signature: root_self_signature_here...
 ```
 
-#### Network Admin (authorities/admins/CR7BBQ.txt)
+#### Network Admin (authorities/admins/X1CR7B.txt)
 
-One file per admin callsign. To remove an admin, simply delete their file.
+One file per admin callsign (X1 prefix for human operators). To remove an admin, simply delete their file.
 
 ```
-# ADMIN: CR7BBQ
+# ADMIN: X1CR7B
 
-CALLSIGN: CR7BBQ
+CALLSIGN: X1CR7B
 NPUB: npub1admin1...
 APPOINTED: 2025-11-05 10:00_00
 APPOINTED_BY: npub1founder789...
@@ -923,15 +965,15 @@ STATUS: active
 Experienced network operator with 5+ years in community networks.
 
 --> appointed_by_npub: npub1founder789...
---> signature: root_signature_for_cr7bbq...
+--> signature: root_signature_for_x1cr7bbq...
 ```
 
-#### Network Admin (authorities/admins/PT4XYZ.txt)
+#### Network Admin (authorities/admins/X1PT4X.txt)
 
 ```
-# ADMIN: PT4XYZ
+# ADMIN: X1PT4X
 
-CALLSIGN: PT4XYZ
+CALLSIGN: X1PT4X
 NPUB: npub1admin2...
 APPOINTED: 2025-11-10 14:00_00
 APPOINTED_BY: npub1founder789...
@@ -941,18 +983,18 @@ STATUS: active
 Manages northern Portugal relay network.
 
 --> appointed_by_npub: npub1founder789...
---> signature: root_signature_for_pt4xyz...
+--> signature: root_signature_for_x1pt4xyz...
 ```
 
-#### Group Admin (authorities/group-admins/reports/FIRE1PT.txt)
+#### Group Admin (authorities/group-admins/reports/X1FR1P.txt)
 
-One file per group admin callsign, organized by collection type.
+One file per group admin callsign (X1 prefix for human operators), organized by collection type.
 
 ```
-# GROUP ADMIN: FIRE1PT
+# GROUP ADMIN: X1FR1P
 # COLLECTION: reports
 
-CALLSIGN: FIRE1PT
+CALLSIGN: X1FR1P
 NPUB: npub1fireadmin...
 APPOINTED: 2025-11-06 10:00_00
 APPOINTED_BY: npub1admin1...
@@ -962,18 +1004,18 @@ STATUS: active
 Fire department liaison for emergency report verification.
 
 --> appointed_by_npub: npub1admin1...
---> signature: admin_signature_for_fire1pt...
+--> signature: admin_signature_for_x1fire1pt...
 ```
 
-#### Moderator (authorities/moderators/reports/VOL1PT.txt)
+#### Moderator (authorities/moderators/reports/X1VL1P.txt)
 
-One file per moderator callsign, organized by collection type.
+One file per moderator callsign (X1 prefix for human operators), organized by collection type.
 
 ```
-# MODERATOR: VOL1PT
+# MODERATOR: X1VL1P
 # COLLECTION: reports
 
-CALLSIGN: VOL1PT
+CALLSIGN: X1VL1P
 NPUB: npub1mod1...
 APPOINTED: 2025-11-08 10:00_00
 APPOINTED_BY: npub1fireadmin...
@@ -994,11 +1036,11 @@ To remove an admin, group admin, or moderator:
 2. Optionally move to a `revoked/` subfolder with revocation reason:
 
 ```
-# authorities/admins/revoked/PT4XYZ.txt
+# authorities/admins/revoked/X1PT4X.txt
 
-# REVOKED ADMIN: PT4XYZ
+# REVOKED ADMIN: X1PT4X
 
-CALLSIGN: PT4XYZ
+CALLSIGN: X1PT4X
 NPUB: npub1admin2...
 ORIGINAL_APPOINTED: 2025-11-10 14:00_00
 REVOKED: 2025-11-26 10:00_00
@@ -1037,7 +1079,7 @@ Revocations take immediate effect and propagate urgently:
 ```
 # REVOCATION: Network Admin
 
-REVOKED: PT4XYZ
+REVOKED: X1PT4X
 --> npub: npub1admin2...
 --> revoked_by: npub1founder789...
 --> revoked_at: 2025-11-26 10:00_00
@@ -1153,7 +1195,7 @@ The root defines which collection types require approval:
 
 COLLECTION_ID: f3d8a2b1c4e5
 TYPE: shops
-OWNER: CR7BBQ
+OWNER: X1CR7B
 OWNER_NPUB: npub1user123...
 SUBMITTED: 2025-11-26 10:00_00
 TITLE: Lisbon Tech Shop
@@ -1172,11 +1214,11 @@ Website: https://example.com
 
 COLLECTION_ID: f3d8a2b1c4e5
 TYPE: shops
-OWNER: CR7BBQ
+OWNER: X1CR7B
 OWNER_NPUB: npub1user123...
 SUBMITTED: 2025-11-26 10:00_00
 APPROVED: 2025-11-26 14:00_00
-APPROVED_BY: PT4XYZ
+APPROVED_BY: X1PT4X
 APPROVED_BY_NPUB: npub1admin2...
 STATUS: active
 
@@ -1197,11 +1239,11 @@ Website: https://example.com
 
 COLLECTION_ID: f3d8a2b1c4e5
 TYPE: shops
-OWNER: CR7BBQ
+OWNER: X1CR7B
 OWNER_NPUB: npub1user123...
 ORIGINAL_APPROVED: 2025-11-26 14:00_00
 SUSPENDED: 2025-11-28 16:00_00
-SUSPENDED_BY: VOL1PT
+SUSPENDED_BY: X1VL1P
 SUSPENDED_BY_NPUB: npub1mod1...
 REASON: Multiple user complaints about inaccurate information
 DURATION: 7 days
@@ -1219,10 +1261,10 @@ TITLE: Lisbon Tech Shop
 
 COLLECTION_ID: f3d8a2b1c4e5
 TYPE: shops
-OWNER: CR7BBQ
+OWNER: X1CR7B
 OWNER_NPUB: npub1user123...
 BANNED: 2025-11-30 10:00_00
-BANNED_BY: PT4XYZ
+BANNED_BY: X1PT4X
 BANNED_BY_NPUB: npub1admin2...
 REASON: Fraudulent business, multiple verified complaints
 PERMANENT: true
@@ -1360,7 +1402,7 @@ public/announcements/
 # ANNOUNCEMENT: Network Maintenance Scheduled
 
 CREATED: 2025-11-26 10:00_00
-AUTHOR: PT1ROOT
+AUTHOR: X1ROOT
 AUTHOR_NPUB: npub1founder789...
 PRIORITY: normal
 EXPIRES: 2025-11-28 00:00_00
@@ -1443,11 +1485,11 @@ User Post → Node A → Signs with user's nsec
       {
         "id": "msg_a7f3b9e1",
         "type": "forum_post",
-        "author": "CR7BBQ",
+        "author": "X1CR7B",
         "author_npub": "npub1user123...",
         "timestamp": "2025-11-26 15:30_00",
         "status": "pending_root_confirmation",
-        "synced_to_nodes": ["RELAY1PT", "RELAY2PT"],
+        "synced_to_nodes": ["X3RL1P", "X3RL2P"],
         "signature": "author_signature..."
       }
     ],
@@ -1498,14 +1540,14 @@ Author Device → Node A → Node B → Subscriber Device
   "user_collection_sync": {
     "collection_id": "f3d8a2b1c4e5",
     "type": "blog",
-    "owner": "CR7BBQ",
+    "owner": "X1CR7B",
     "owner_npub": "npub1user123...",
     "owner_device_id": "device_abc123",
     "sync_mode": "author_source",
     "last_author_sync": "2025-11-26 14:00_00",
     "local_version": 50,
     "items_count": 120,
-    "subscribers": ["RELAY1PT", "RELAY2PT", "device_xyz789"],
+    "subscribers": ["X3RL1P", "X3RL2P", "device_xyz789"],
     "write_access": "author_only"
   }
 }
@@ -1590,8 +1632,8 @@ Root offline for extended period (days/weeks).
     "root_status": "extended_offline",
     "root_last_seen": "2025-11-20 10:00_00",
     "temporary_coordinator": {
-      "callsign": "RELAY1PT",
-      "npub": "npub1node1...",
+      "callsign": "X3RL1P",
+      "npub": "npub1relay1...",
       "elected": "2025-11-21 00:00_00",
       "election_reason": "highest_reliability_score",
       "reliability_score": 98
@@ -1645,25 +1687,25 @@ Some nodes can reach root, others cannot.
 ```
 Node A → Node B: {
   "type": "sync_hello",
-  "node": "RELAY1PT",
-  "npub": "npub1node1...",
+  "node": "X3RL1P",
+  "npub": "npub1relay1...",
   "root_status": "offline",
   "root_last_seen": "2025-11-26 10:00_00",
   "collections": {
     "public_forum": {"version": 100, "pending": 5},
     "public_chat": {"version": 500, "pending": 12},
-    "user_CR7BBQ_blog": {"version": 50, "owner_synced": "2025-11-26 14:00_00"}
+    "user_X1CR7B_blog": {"version": 50, "owner_synced": "2025-11-26 14:00_00"}
   }
 }
 
 Node B → Node A: {
   "type": "sync_hello_ack",
-  "node": "RELAY2PT",
+  "node": "X3RL2P",
   "root_status": "offline",
   "collections": {
     "public_forum": {"version": 98, "pending": 3},
     "public_chat": {"version": 495, "pending": 8},
-    "user_CR7BBQ_blog": {"version": 50, "owner_synced": "2025-11-26 14:00_00"}
+    "user_X1CR7B_blog": {"version": 50, "owner_synced": "2025-11-26 14:00_00"}
   }
 }
 ```
@@ -1677,7 +1719,7 @@ Node A → Node B: {
   "items": [
     {
       "id": "post_123",
-      "author": "CR7BBQ",
+      "author": "X1CR7B",
       "author_npub": "npub1user123...",
       "timestamp": "2025-11-26 15:00_00",
       "content": "...",
@@ -1714,7 +1756,7 @@ When root comes back online:
 ```
 Node → Root: {
   "type": "pending_changes_report",
-  "node": "RELAY1PT",
+  "node": "X3RL1P",
   "offline_duration": "48h",
   "pending_items": {
     "public_forum": [
@@ -1816,9 +1858,9 @@ The topology file represents the current state of the network: which nodes exist
     "updated": "2025-11-26 15:30_00"
   },
   "nodes": {
-    "PT1ROOT": {
-      "callsign": "PT1ROOT",
-      "npub": "npub1founder789...",
+    "X3PT1R": {
+      "callsign": "X3PT1R",
+      "npub": "npub1rootrelay...",
       "relay_id": "a7f3b9e1d2c4f6a8",
       "type": "root",
       "location": {"lat": 38.7223, "lon": -9.1393},
@@ -1826,9 +1868,9 @@ The topology file represents the current state of the network: which nodes exist
       "last_seen": "2025-11-26 15:30_00",
       "channels": ["internet", "wifi_lan", "bluetooth"]
     },
-    "RELAY1PT": {
-      "callsign": "RELAY1PT",
-      "npub": "npub1node1...",
+    "X3RL1P": {
+      "callsign": "X3RL1P",
+      "npub": "npub1relay1...",
       "relay_id": "b8g4c0f2e3d5g7b9",
       "type": "node",
       "location": {"lat": 38.7100, "lon": -9.1500},
@@ -1836,9 +1878,9 @@ The topology file represents the current state of the network: which nodes exist
       "last_seen": "2025-11-26 15:28_00",
       "channels": ["internet", "wifi_lan", "bluetooth", "lora"]
     },
-    "RELAY2PT": {
-      "callsign": "RELAY2PT",
-      "npub": "npub1node2...",
+    "X3RL2P": {
+      "callsign": "X3RL2P",
+      "npub": "npub1relay2...",
       "relay_id": "c9h5d1g3f4e6h8c0",
       "type": "node",
       "location": {"lat": 41.1579, "lon": -8.6291},
@@ -1846,9 +1888,9 @@ The topology file represents the current state of the network: which nodes exist
       "last_seen": "2025-11-26 15:25_00",
       "channels": ["internet", "wifi_halow", "espmesh"]
     },
-    "RELAY3PT": {
-      "callsign": "RELAY3PT",
-      "npub": "npub1node3...",
+    "X3RL3P": {
+      "callsign": "X3RL3P",
+      "npub": "npub1relay3...",
       "relay_id": "d0i6e2h4g5f7i9d1",
       "type": "node",
       "location": {"lat": 37.0194, "lon": -7.9304},
@@ -1859,40 +1901,40 @@ The topology file represents the current state of the network: which nodes exist
   },
   "connections": [
     {
-      "from": "PT1ROOT",
-      "to": "RELAY1PT",
+      "from": "X3PT1R",
+      "to": "X3RL1P",
       "channels": ["internet", "wifi_lan"],
       "quality": "excellent",
       "latency_ms": 15,
       "last_sync": "2025-11-26 15:28_00"
     },
     {
-      "from": "PT1ROOT",
-      "to": "RELAY2PT",
+      "from": "X3PT1R",
+      "to": "X3RL2P",
       "channels": ["internet"],
       "quality": "good",
       "latency_ms": 45,
       "last_sync": "2025-11-26 15:25_00"
     },
     {
-      "from": "RELAY1PT",
-      "to": "RELAY2PT",
+      "from": "X3RL1P",
+      "to": "X3RL2P",
       "channels": ["internet"],
       "quality": "good",
       "latency_ms": 50,
       "last_sync": "2025-11-26 15:20_00"
     },
     {
-      "from": "RELAY1PT",
-      "to": "RELAY3PT",
+      "from": "X3RL1P",
+      "to": "X3RL3P",
       "channels": ["lora"],
       "quality": "fair",
       "latency_ms": 500,
       "last_sync": "2025-11-26 10:00_00"
     },
     {
-      "from": "RELAY2PT",
-      "to": "RELAY3PT",
+      "from": "X3RL2P",
+      "to": "X3RL3P",
       "channels": [],
       "quality": "disconnected",
       "latency_ms": null,
@@ -1956,15 +1998,15 @@ The topology file represents the current state of the network: which nodes exist
 }
 ```
 
-### Per-Node Sync State (sync/nodes/RELAY1PT.json)
+### Per-Node Sync State (sync/nodes/X3RL1P.json)
 
 Individual sync state for each connected node:
 
 ```json
 {
   "node": {
-    "callsign": "RELAY1PT",
-    "npub": "npub1node1...",
+    "callsign": "X3RL1P",
+    "npub": "npub1relay1...",
     "relay_id": "b8g4c0f2e3d5g7b9"
   },
   "sync_state": {
@@ -2054,17 +2096,17 @@ The points system rewards:
 
 Each relay tracks points for connected users:
 
-#### User Points File (points/CR7BBQ.json)
+#### User Points File (points/X1CR7B.json)
 
 ```json
 {
   "user": {
-    "callsign": "CR7BBQ",
+    "callsign": "X1CR7B",
     "npub": "npub1user123..."
   },
   "relay": {
-    "callsign": "RELAY1PT",
-    "npub": "npub1relay..."
+    "callsign": "X3RL1P",
+    "npub": "npub1relay1..."
   },
   "period": {
     "start": "2025-11-01 00:00_00",
@@ -2456,25 +2498,25 @@ Users may connect to multiple relays. Points are aggregated network-wide:
 ```json
 {
   "aggregated_score": {
-    "callsign": "CR7BBQ",
+    "callsign": "X1CR7B",
     "npub": "npub1user123...",
     "total_score": 3250,
     "tier": "veteran",
     "by_relay": [
       {
-        "relay": "RELAY1PT",
+        "relay": "X3RL1P",
         "points": 1725,
         "period": "2025-11",
         "signature": "relay1_signature..."
       },
       {
-        "relay": "RELAY2PT",
+        "relay": "X3RL2P",
         "points": 980,
         "period": "2025-11",
         "signature": "relay2_signature..."
       },
       {
-        "relay": "RELAY3PT",
+        "relay": "X3RL3P",
         "points": 545,
         "period": "2025-11",
         "signature": "relay3_signature..."
@@ -2501,12 +2543,12 @@ Each relay signs the points it awards, enabling verification:
   "points_certificate": {
     "type": "points_award",
     "user": {
-      "callsign": "CR7BBQ",
+      "callsign": "X1CR7B",
       "npub": "npub1user123..."
     },
     "relay": {
-      "callsign": "RELAY1PT",
-      "npub": "npub1relay..."
+      "callsign": "X3RL1P",
+      "npub": "npub1relay1..."
     },
     "period": "2025-11",
     "points_awarded": 1725,
@@ -2656,12 +2698,12 @@ relay/
 
 Each user has their own reputation file named by callsign. Reputation entries are individually signed by the person giving the reputation, creating an auditable trail.
 
-#### Reputation File (reputation/CR7BBQ.txt)
+#### Reputation File (reputation/X1CR7B.txt)
 
 ```
-# REPUTATION: CR7BBQ
+# REPUTATION: X1CR7B
 
-CALLSIGN: CR7BBQ
+CALLSIGN: X1CR7B
 NPUB: npub1user123...
 CURRENT_SCORE: 85
 LEVEL: trusted
@@ -2670,7 +2712,7 @@ UPDATED: 2025-11-26 10:00_00
 ## Reputation Entries
 
 ### Entry 1
-GIVEN_BY: PT1ROOT
+GIVEN_BY: X1ROOT
 GIVEN_BY_NPUB: npub1founder789...
 DATE: 2025-11-01 10:00_00
 VALUE: +20
@@ -2678,7 +2720,7 @@ REASON: Network founding member, initial trust grant
 --> signature: founder_signature_for_entry1...
 
 ### Entry 2
-GIVEN_BY: FIRE1PT
+GIVEN_BY: X1FR1P
 GIVEN_BY_NPUB: npub1fireadmin...
 DATE: 2025-11-10 14:30_00
 VALUE: +15
@@ -2686,7 +2728,7 @@ REASON: Verified 50 accurate emergency reports
 --> signature: fireadmin_signature_for_entry2...
 
 ### Entry 3
-GIVEN_BY: VOL2PT
+GIVEN_BY: X1VL2P
 GIVEN_BY_NPUB: npub1mod2...
 DATE: 2025-11-15 09:00_00
 VALUE: +10
@@ -2694,7 +2736,7 @@ REASON: Consistent high-quality place submissions
 --> signature: mod2_signature_for_entry3...
 
 ### Entry 4
-GIVEN_BY: CITY2PT
+GIVEN_BY: X1CT2P
 GIVEN_BY_NPUB: npub1cityadmin...
 DATE: 2025-11-20 16:00_00
 VALUE: +25
@@ -2702,7 +2744,7 @@ REASON: Helped resolve major infrastructure issue
 --> signature: cityadmin_signature_for_entry4...
 
 ### Entry 5
-GIVEN_BY: MOD1PT
+GIVEN_BY: X1MD1P
 GIVEN_BY_NPUB: npub1mod1...
 DATE: 2025-11-22 11:00_00
 VALUE: +15
@@ -2738,13 +2780,13 @@ Each entry must include:
 
 Node reliability is also tracked per callsign with individual files.
 
-#### Node Reliability File (sync/nodes/RELAY1PT.json)
+#### Node Reliability File (sync/nodes/X3RL1P.json)
 
 ```json
 {
   "node": {
-    "callsign": "RELAY1PT",
-    "npub": "npub1node123...",
+    "callsign": "X3RL1P",
+    "npub": "npub1relay1...",
     "relay_id": "a7f3b9e1d2c4f6a8",
     "name": "Lisbon Downtown Relay"
   },
@@ -2767,7 +2809,7 @@ Node reliability is also tracked per callsign with individual files.
   },
   "reputation_entries": [
     {
-      "given_by": "PT1ROOT",
+      "given_by": "X1ROOT",
       "given_by_npub": "npub1founder789...",
       "date": "2025-11-05 10:00_00",
       "value": 50,
@@ -3064,8 +3106,8 @@ Relays can bridge between different communication channels, allowing devices on 
 {
   "bridges": {
     "enabled": true,
-    "relay_callsign": "RELAY1PT",
-    "relay_npub": "npub1node1..."
+    "relay_callsign": "X3RL1P",
+    "relay_npub": "npub1relay1..."
   },
   "available_channels": [
     {
@@ -3143,8 +3185,8 @@ Each bridge relay advertises its location and capabilities:
 ```json
 {
   "bridge_info": {
-    "callsign": "RELAY1PT",
-    "npub": "npub1node1...",
+    "callsign": "X3RL1P",
+    "npub": "npub1relay1...",
     "name": "Lisbon Hilltop Bridge",
     "description": "Internet-LoRa bridge serving greater Lisbon area"
   },
@@ -3253,7 +3295,7 @@ Each bridge tracks devices connected through each channel:
         "count": 3,
         "devices": [
           {
-            "callsign": "CR7BBQ",
+            "callsign": "X1CR7B",
             "npub": "npub1user1...",
             "device_type": "desktop",
             "connected_since": "2025-11-26 10:00_00",
@@ -3261,7 +3303,7 @@ Each bridge tracks devices connected through each channel:
             "ip": "192.168.1.100"
           },
           {
-            "callsign": "PT4XYZ",
+            "callsign": "X1PT4X",
             "npub": "npub1user2...",
             "device_type": "mobile",
             "connected_since": "2025-11-26 14:00_00",
@@ -3274,7 +3316,7 @@ Each bridge tracks devices connected through each channel:
         "count": 5,
         "devices": [
           {
-            "callsign": "LOCAL1",
+            "callsign": "X1LC1X",
             "npub": "npub1local1...",
             "device_type": "raspberry_pi",
             "connected_since": "2025-11-26 08:00_00",
@@ -3286,7 +3328,7 @@ Each bridge tracks devices connected through each channel:
         "count": 2,
         "devices": [
           {
-            "callsign": "WATCH1",
+            "callsign": "X1WC1X",
             "npub": "npub1watch1...",
             "device_type": "wearable",
             "connected_since": "2025-11-26 12:00_00",
@@ -3298,7 +3340,7 @@ Each bridge tracks devices connected through each channel:
         "count": 2,
         "devices": [
           {
-            "callsign": "SENSOR1",
+            "callsign": "X1SN1X",
             "npub": "npub1sensor1...",
             "device_type": "esp32_lora",
             "last_heard": "2025-11-26 15:25_00",
@@ -3307,7 +3349,7 @@ Each bridge tracks devices connected through each channel:
             "distance_km": 8.5
           },
           {
-            "callsign": "REMOTE1",
+            "callsign": "X3RM1X",
             "npub": "npub1remote1...",
             "device_type": "standalone_relay",
             "last_heard": "2025-11-26 15:20_00",
@@ -3330,8 +3372,8 @@ Bridges advertise their capabilities to the network:
 {
   "bridge_advertisement": {
     "type": "bridge_announce",
-    "callsign": "RELAY1PT",
-    "npub": "npub1node1...",
+    "callsign": "X3RL1P",
+    "npub": "npub1relay1...",
     "timestamp": "2025-11-26 15:30_00",
     "location": {
       "lat": 38.7223,
@@ -3374,7 +3416,7 @@ The network maintains a map of all bridges:
     "updated": "2025-11-26 15:30_00",
     "bridges": [
       {
-        "callsign": "RELAY1PT",
+        "callsign": "X3RL1P",
         "location": {"lat": 38.7223, "lon": -9.1393},
         "channels": ["internet", "wifi_lan", "bluetooth", "lora"],
         "power": "solar_battery",
@@ -3382,7 +3424,7 @@ The network maintains a map of all bridges:
         "connected_devices": 12
       },
       {
-        "callsign": "RELAY2PT",
+        "callsign": "X3RL2P",
         "location": {"lat": 41.1579, "lon": -8.6291},
         "channels": ["internet", "wifi_halow", "espmesh"],
         "power": "grid_ups",
@@ -3390,7 +3432,7 @@ The network maintains a map of all bridges:
         "connected_devices": 25
       },
       {
-        "callsign": "RELAY3PT",
+        "callsign": "X3RL3P",
         "location": {"lat": 37.0194, "lon": -7.9304},
         "channels": ["lora", "radio", "espnow"],
         "power": "solar_battery",
@@ -3402,13 +3444,13 @@ The network maintains a map of all bridges:
     "bridge_routes": [
       {
         "description": "Internet to Algarve off-grid",
-        "path": ["internet", "RELAY1PT:lora", "RELAY3PT"],
+        "path": ["internet", "X3RL1P:lora", "X3RL3P"],
         "hops": 2,
         "latency_ms": 600
       },
       {
         "description": "Porto mesh to Lisbon",
-        "path": ["RELAY2PT:espmesh", "internet", "RELAY1PT:wifi_lan"],
+        "path": ["X3RL2P:espmesh", "internet", "X3RL1P:wifi_lan"],
         "hops": 2,
         "latency_ms": 80
       }
@@ -3644,11 +3686,14 @@ relay.json:
     "name": "Lisbon Mesh Network Root",
     "type": "root",
     "version": "1.0",
-    "created": "2025-11-26 10:00_00"
+    "created": "2025-11-26 10:00_00",
+    "callsign": "X3LB1R",
+    "npub": "npub1rootrelay...",
+    "nsec": "nsec1rootrelaysecret..."
   },
   "operator": {
-    "callsign": "CR7BBQ",
-    "npub": "npub1root789..."
+    "callsign": "X1CR7B",
+    "npub": "npub1operator..."
   },
   "capabilities": {
     "max_connections": 200,
