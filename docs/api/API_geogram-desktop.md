@@ -289,7 +289,7 @@ Relay requests list of available collections.
 ---
 
 #### COLLECTIONS_RESPONSE (Desktop → Relay)
-Desktop responds with list of public/restricted collection names.
+Desktop responds with list of public/restricted collection folder names.
 
 ```json
 {
@@ -299,7 +299,10 @@ Desktop responds with list of public/restricted collection names.
 }
 ```
 
-**Note:** Private collections are automatically filtered out.
+**Notes:**
+- Private collections are automatically filtered out
+- The `collections` array contains **raw folder names** (extracted from storage paths), not display titles
+- This ensures consistent path navigation when browsing collections remotely
 
 ---
 
@@ -330,28 +333,66 @@ Desktop responds with file content.
   "type": "COLLECTION_FILE_RESPONSE",
   "requestId": "uuid-request-id",
   "collectionName": "www",
-  "fileName": "collection.js",
-  "fileContent": "var collection = {...};"
+  "fileName": "tree.json",
+  "fileContent": "[{\"name\":\"subdir\",\"type\":\"folder\",\"children\":[...]}]"
 }
 ```
+
+**tree.json Structure:**
+
+The `tree.json` file provides a hierarchical view of the collection's file structure with nested `children` arrays:
+
+```json
+[
+  {
+    "name": "photos",
+    "type": "folder",
+    "children": [
+      {
+        "name": "vacation",
+        "type": "folder",
+        "children": [
+          {"name": "beach.jpg", "type": "file", "size": 1024000}
+        ]
+      }
+    ]
+  },
+  {
+    "name": "readme.txt",
+    "type": "file",
+    "size": 256
+  }
+]
+```
+
+Entry fields:
+- `name` - File or folder name
+- `type` - Either `"file"` or `"folder"`
+- `size` - File size in bytes (files only)
+- `children` - Array of child entries (folders only)
 
 ---
 
 #### HTTP_REQUEST (Relay → Desktop)
-Relay proxies an HTTP request for www collection files.
+Relay proxies an HTTP request for collection file content. Used for remote file browsing and viewing.
 
 ```json
 {
   "type": "HTTP_REQUEST",
   "requestId": "uuid-request-id",
   "method": "GET",
-  "path": "/collections/www/index.html",
-  "headers": "{\"Accept\": \"text/html\"}",
+  "path": "/collections/documents/reports/summary.txt",
+  "headers": "",
   "body": ""
 }
 ```
 
 **Path Format:** `/collections/{collectionName}/{filePath}`
+
+**Use Cases:**
+- Serving www collection pages to browsers via relay proxy
+- Remote file viewing from relay console (`cat`, `head`, `tail` commands)
+- Retrieving any file from public/restricted collections
 
 ---
 
@@ -408,6 +449,35 @@ UPDATE:X1USER01:blog:/updates
 - `callsign` - Source device callsign
 - `collectionType` - Type of collection (e.g., "blog", "chat")
 - `path` - Updated path
+
+---
+
+### Remote Browsing Support
+
+The desktop application supports remote file browsing from the relay console. When connected to a relay, operators can browse the desktop's public collections using shell-like commands.
+
+#### Supported Operations
+
+| Relay Command | Desktop Response |
+|---------------|------------------|
+| `ls <callsign>` | `COLLECTIONS_RESPONSE` with folder names |
+| `cd <collection>` | `COLLECTION_FILE_RESPONSE` with tree.json |
+| `ls`, `cd <path>` | Navigation within tree.json structure |
+| `cat/head/tail <file>` | `HTTP_RESPONSE` with file content |
+
+#### Privacy Controls
+
+- Only **public** and **restricted** collections are exposed
+- **Private** collections are never included in responses
+- Protected paths (`.git`, `extra/security.json`, etc.) are blocked
+- Collection visibility is controlled by `extra/security.json` in each collection
+
+#### Connection Loss Handling
+
+The desktop gracefully handles connection loss:
+- WebSocket errors are caught and logged
+- Automatic reconnection attempts every 10 seconds
+- No unhandled exceptions on disconnection
 
 ---
 

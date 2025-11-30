@@ -15,8 +15,10 @@ This document describes the HTTP and WebSocket APIs provided by the Geogram Rela
 - [WebSocket Protocol](#websocket-protocol)
   - [Connection](#connection)
   - [Device Messages](#device-messages)
+  - [Remote Device Browsing](#remote-device-browsing)
   - [Relay-to-Relay Messages](#relay-to-relay-messages)
   - [Chat Messages](#chat-messages)
+- [Console Remote Device Browsing](#console-remote-device-browsing)
 - [Admin Dashboard API](#admin-dashboard-api)
 - [Error Handling](#error-handling)
 
@@ -528,6 +530,8 @@ Request list of collections from a device.
 }
 ```
 
+**Note:** The `collections` array contains raw folder names (not display titles) to enable consistent path navigation.
+
 ---
 
 #### COLLECTION_FILE_REQUEST / COLLECTION_FILE_RESPONSE
@@ -539,18 +543,92 @@ Request a specific file from a collection.
   "type": "COLLECTION_FILE_REQUEST",
   "requestId": "uuid",
   "collectionName": "documents",
-  "fileName": "collection"
+  "fileName": "tree"
 }
 ```
+
+**Valid `fileName` values:**
+- `collection` - Returns `collection.js` (collection metadata)
+- `tree` - Returns `extra/tree.json` (hierarchical file structure)
+- `data` - Returns `extra/data.js` (collection data)
 
 **Device → Relay:**
 ```json
 {
   "type": "COLLECTION_FILE_RESPONSE",
   "requestId": "uuid",
-  "fileContent": "..."
+  "collectionName": "documents",
+  "fileName": "tree.json",
+  "fileContent": "[{\"name\":\"subdir\",\"type\":\"folder\",\"children\":[...]}]"
 }
 ```
+
+The `tree.json` file contains a hierarchical structure with nested `children` arrays for directory navigation:
+
+```json
+[
+  {
+    "name": "photos",
+    "type": "folder",
+    "children": [
+      {
+        "name": "vacation",
+        "type": "folder",
+        "children": [
+          {"name": "beach.jpg", "type": "file", "size": 1024000}
+        ]
+      }
+    ]
+  },
+  {
+    "name": "readme.txt",
+    "type": "file",
+    "size": 256
+  }
+]
+```
+
+---
+
+### Remote Device Browsing
+
+The relay supports browsing files on connected WebSocket devices using a combination of messages.
+
+#### Browsing Flow
+
+1. **List Collections** - Send `COLLECTIONS_REQUEST` to get available collection folder names
+2. **Get Tree Structure** - Send `COLLECTION_FILE_REQUEST` with `fileName: "tree"` to get hierarchical file listing
+3. **Retrieve File Content** - Send `HTTP_REQUEST` with path `/collections/{collection}/{filepath}` to get file contents
+
+#### File Content Retrieval via HTTP_REQUEST
+
+To retrieve file content from a remote device, use `HTTP_REQUEST` with the collection path:
+
+**Relay → Device:**
+```json
+{
+  "type": "HTTP_REQUEST",
+  "requestId": "uuid",
+  "method": "GET",
+  "path": "/collections/documents/subfolder/readme.txt",
+  "headers": "",
+  "body": ""
+}
+```
+
+**Device → Relay:**
+```json
+{
+  "type": "HTTP_RESPONSE",
+  "requestId": "uuid",
+  "statusCode": 200,
+  "responseHeaders": "{\"Content-Type\": \"text/plain\"}",
+  "responseBody": "File content here...",
+  "isBase64": false
+}
+```
+
+Binary files (images, etc.) are returned with `isBase64: true` and base64-encoded content.
 
 ---
 
@@ -713,6 +791,107 @@ Request message history for a room.
   "messageTimestamps": [1705320000000, 1705320060000]
 }
 ```
+
+---
+
+## Console Remote Device Browsing
+
+The relay console provides interactive commands for browsing files on connected WebSocket devices.
+
+### Entering a Device Context
+
+```
+ls <callsign>
+```
+
+Lists the available collections on the specified device and enters its browsing context.
+
+**Example:**
+```
+relay> ls X1ABC123
+Fetching collections from device X1ABC123...
+
+Collections on X1ABC123:
+- www
+- documents
+- photos
+
+[X1ABC123:/] relay>
+```
+
+### Navigation Commands
+
+Once inside a device context, use standard shell-like commands:
+
+| Command | Description |
+|---------|-------------|
+| `ls` | List current directory contents |
+| `ls <path>` | List contents of specified path |
+| `cd <path>` | Change to directory |
+| `cd ..` | Go up one directory level |
+| `cd /` | Return to collection root |
+| `pwd` | Show current path |
+
+**Example Session:**
+```
+[X1ABC123:/] relay> ls
+www/
+documents/
+photos/
+
+[X1ABC123:/] relay> cd documents
+[X1ABC123:/documents] relay> ls
+reports/
+notes/
+readme.txt
+
+[X1ABC123:/documents] relay> cd reports
+[X1ABC123:/documents/reports] relay> ls
+2024-q1.pdf
+2024-q2.pdf
+summary.txt
+```
+
+### File Viewing Commands
+
+View file contents using standard commands:
+
+| Command | Description |
+|---------|-------------|
+| `cat <file>` | Display entire file content |
+| `head <file>` | Display first 10 lines |
+| `head -n <N> <file>` | Display first N lines |
+| `tail <file>` | Display last 10 lines |
+| `tail -n <N> <file>` | Display last N lines |
+
+**Example:**
+```
+[X1ABC123:/documents] relay> cat readme.txt
+Welcome to my documents collection.
+This contains various text files and reports.
+
+[X1ABC123:/documents] relay> head -n 5 notes/meeting.txt
+Meeting Notes - January 2024
+============================
+Attendees: Alice, Bob, Charlie
+Topic: Project Planning
+...
+```
+
+### Exiting Device Context
+
+```
+exit
+```
+
+Returns to the main relay console prompt.
+
+### Tab Completion
+
+The console supports tab completion for:
+- Device callsigns when using `ls <callsign>`
+- Directory and file names when navigating (`cd`, `ls`)
+- File names for view commands (`cat`, `head`, `tail`)
 
 ---
 
