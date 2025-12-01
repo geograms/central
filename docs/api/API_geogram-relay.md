@@ -10,6 +10,7 @@ This document describes the HTTP and WebSocket APIs provided by the Geogram Rela
   - [Device Proxy](#device-proxy)
   - [Collections & Search](#collections--search)
   - [Chat API](#chat-api)
+  - [Groups API](#groups-api)
   - [CLI API](#cli-api)
   - [SSL/ACME](#sslacme)
 - [WebSocket Protocol](#websocket-protocol)
@@ -359,6 +360,142 @@ Send a message from the relay as a NOSTR-signed event.
 
 ---
 
+### Groups API
+
+#### GET /api/groups
+List all active groups on the relay.
+
+**Response:**
+```json
+{
+  "relay": "X3RELAY1",
+  "groups": [
+    {
+      "name": "npub1abc123...",
+      "title": "Emergency Response Team",
+      "description": "Local emergency coordination group",
+      "type": "association",
+      "member_count": 15,
+      "created": "2024-01-15 10:30_00"
+    }
+  ],
+  "count": 1
+}
+```
+
+---
+
+#### GET /api/groups/{groupId}
+Get detailed information about a specific group.
+
+**Path Parameters:**
+- `groupId` - Group name (npub identifier)
+
+**Response (200):**
+```json
+{
+  "name": "npub1abc123...",
+  "title": "Emergency Response Team",
+  "description": "Local emergency coordination group",
+  "type": "association",
+  "collection_type": null,
+  "created": "2024-01-15 10:30_00",
+  "updated": "2024-01-15 12:00_00",
+  "status": "active",
+  "member_count": 15,
+  "areas": [
+    {
+      "id": "area_1705320000000",
+      "name": "Downtown Coverage",
+      "radius_km": 25.0,
+      "priority": "high",
+      "center": {
+        "latitude": 40.7128,
+        "longitude": -74.0060
+      }
+    }
+  ]
+}
+```
+
+**Response (404):**
+```json
+{
+  "error": "Group not found"
+}
+```
+
+**Group Types:**
+- `association` - General community association
+- `friends` - Friends/family group
+- `authority_police` - Police department
+- `authority_fire` - Fire department
+- `authority_civil_protection` - Civil protection agency
+- `authority_military` - Military unit
+- `health_hospital` - Hospital
+- `health_clinic` - Medical clinic
+- `health_emergency` - Emergency medical services
+- `admin_townhall` - Town/city hall
+- `admin_regional` - Regional administration
+- `admin_national` - National administration
+- `infrastructure_utilities` - Utilities provider
+- `infrastructure_transport` - Transportation authority
+- `education_school` - School
+- `education_university` - University
+- `collection_moderator` - Collection moderation group
+
+---
+
+#### GET /api/groups/{groupId}/members
+Get members of a specific group.
+
+**Path Parameters:**
+- `groupId` - Group name (npub identifier)
+
+**Response (200):**
+```json
+{
+  "group_id": "npub1abc123...",
+  "group_title": "Emergency Response Team",
+  "members": [
+    {
+      "callsign": "X1ADMIN01",
+      "npub": "npub1xyz789...",
+      "role": "admin",
+      "joined": "2024-01-15 10:30_00"
+    },
+    {
+      "callsign": "X2MOD001",
+      "npub": "npub1def456...",
+      "role": "moderator",
+      "joined": "2024-01-16 14:00_00"
+    },
+    {
+      "callsign": "X3USER01",
+      "npub": "npub1ghi321...",
+      "role": "contributor",
+      "joined": "2024-01-17 09:15_00"
+    }
+  ],
+  "count": 3
+}
+```
+
+**Response (404):**
+```json
+{
+  "error": "Group not found"
+}
+```
+
+**Member Roles:**
+- `admin` - Full control over group settings and members
+- `moderator` - Can moderate content and manage contributors
+- `contributor` - Can post content to the group
+- `guest` - Read-only access with limited posting
+
+---
+
 ### CLI API
 
 #### POST /api/cli
@@ -402,16 +539,73 @@ ACME HTTP-01 challenge endpoint for Let's Encrypt SSL certificate verification.
 
 ### Map Tiles
 
+The relay provides a tile caching proxy that serves map tiles to connected devices. Tiles are fetched once from the internet and cached globally for all devices, reducing bandwidth and improving offline availability.
+
 #### GET /tiles/{callsign}/{z}/{x}/{y}.png
-Serve map tiles (if tile server is enabled).
+Serve map tiles with optional layer type selection.
 
 **Path Parameters:**
-- `callsign` - Device callsign
-- `z` - Zoom level
+- `callsign` - Device callsign (used for logging/tracking, tiles are cached globally)
+- `z` - Zoom level (0-18)
 - `x` - Tile X coordinate
 - `y` - Tile Y coordinate
 
-**Response:** PNG image tile.
+**Query Parameters:**
+- `layer` (optional) - Tile layer type:
+  - `standard` (default) - OpenStreetMap tiles
+  - `satellite` - Esri World Imagery satellite tiles
+
+**Response:** PNG or JPEG image tile (content-type: `image/png`)
+
+**Example Requests:**
+
+```bash
+# Standard (OSM) tile
+curl "http://relay:8080/tiles/X1USER01/5/16/10.png"
+
+# Satellite (Esri) tile
+curl "http://relay:8080/tiles/X1USER01/5/16/10.png?layer=satellite"
+```
+
+**Tile Sources:**
+| Layer | Source | URL Pattern |
+|-------|--------|-------------|
+| `standard` | OpenStreetMap | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
+| `satellite` | Esri World Imagery | `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}` |
+
+**Caching Behavior:**
+- Tiles are cached globally on the relay (not per-device)
+- Cache key format: `{layer}/{z}/{x}/{y}` (e.g., `standard/5/16/10` or `satellite/5/16/10`)
+- Memory cache: configurable size (default: 1000 tiles)
+- Disk cache: persistent storage in `./tiles/` directory
+- Tiles beyond `maxZoomLevel` config are served but not cached
+
+**Error Responses:**
+- `400` - Invalid tile coordinates or zoom level
+- `404` - Tile not found (all sources failed)
+
+**Configuration Options:**
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `enableTileServer` | Enable tile endpoint | `true` |
+| `tileCacheSize` | Memory cache size (tiles) | `1000` |
+| `maxZoomLevel` | Maximum zoom to cache | `18` |
+| `osmFallbackEnabled` | Enable internet tile fetching | `true` |
+| `osmTileUrl` | Custom OSM tile URL template | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
+
+**Desktop Client Usage:**
+
+The geogram-desktop client automatically requests tiles from the relay when connected:
+
+```dart
+// Standard tiles
+String url = 'http://relay:8080/tiles/{callsign}/{z}/{x}/{y}.png';
+
+// Satellite tiles
+String url = 'http://relay:8080/tiles/{callsign}/{z}/{x}/{y}.png?layer=satellite';
+```
+
+The client falls back to direct internet access if the relay is unavailable.
 
 ---
 
