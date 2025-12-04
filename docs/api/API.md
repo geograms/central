@@ -278,9 +278,11 @@ GET /X1USER01/style.css  -> Serves style.css from www collection
 
 ### Blog API
 
-The relay can proxy blog post requests to connected devices, allowing external users to view blog posts from a device's collection.
+The relay provides APIs for accessing blog posts from connected devices. This includes both external HTTP access and device-to-device communication via WebSocket.
 
-#### GET /{nickname}/blog/{filename}.html
+#### External HTTP Access
+
+##### GET /{nickname}/blog/{filename}.html
 Fetch a rendered HTML blog post from a connected device.
 
 **Path Parameters:**
@@ -322,9 +324,113 @@ Returns a complete HTML page with the blog post content rendered from markdown, 
 }
 ```
 
-**WebSocket Protocol:**
+---
 
-The relay communicates with the device using these message types:
+#### Remote Device Blog Access
+
+Connected devices can browse and read blog posts from other connected devices through the relay using WebSocket messages.
+
+##### LIST_BLOG_POSTS (Request blog list from remote device)
+
+**Request (Device A → Relay → Device B):**
+```json
+{
+  "type": "REMOTE_REQUEST",
+  "targetCallsign": "X1TARGET",
+  "requestId": "unique-request-id",
+  "request": {
+    "type": "LIST_BLOG_POSTS",
+    "collectionName": "default",
+    "year": 2025,
+    "limit": 20,
+    "offset": 0
+  }
+}
+```
+
+**Response (Device B → Relay → Device A):**
+```json
+{
+  "type": "REMOTE_RESPONSE",
+  "sourceCallsign": "X1TARGET",
+  "requestId": "unique-request-id",
+  "response": {
+    "type": "BLOG_POST_LIST",
+    "posts": [
+      {
+        "filename": "2025-12-04_hello-everyone.md",
+        "title": "Hello Everyone",
+        "author": "CR7BBQ",
+        "date": "2025-12-04",
+        "status": "published",
+        "tags": ["welcome", "introduction"],
+        "description": "My first blog post"
+      }
+    ],
+    "total": 1,
+    "hasMore": false
+  }
+}
+```
+
+##### GET_BLOG_POST (Request specific blog post from remote device)
+
+**Request (Device A → Relay → Device B):**
+```json
+{
+  "type": "REMOTE_REQUEST",
+  "targetCallsign": "X1TARGET",
+  "requestId": "unique-request-id",
+  "request": {
+    "type": "GET_BLOG_POST",
+    "collectionName": "default",
+    "filename": "2025-12-04_hello-everyone.md",
+    "format": "markdown"
+  }
+}
+```
+
+**Format Options:**
+- `markdown` - Returns raw markdown content
+- `html` - Returns rendered HTML
+- `metadata` - Returns only metadata (no content)
+
+**Response (Device B → Relay → Device A):**
+```json
+{
+  "type": "REMOTE_RESPONSE",
+  "sourceCallsign": "X1TARGET",
+  "requestId": "unique-request-id",
+  "response": {
+    "type": "BLOG_POST",
+    "post": {
+      "filename": "2025-12-04_hello-everyone.md",
+      "title": "Hello Everyone",
+      "author": "CR7BBQ",
+      "date": "2025-12-04",
+      "status": "published",
+      "tags": ["welcome", "introduction"],
+      "description": "My first blog post",
+      "content": "# Hello Everyone\n\nWelcome to my blog...",
+      "npub": "npub1abc123...",
+      "signature": "sig123...",
+      "comments": [
+        {
+          "author": "X135AS",
+          "timestamp": "2025-12-04T10:15:30Z",
+          "content": "Great post!"
+        }
+      ]
+    }
+  }
+}
+```
+
+---
+
+#### Relay-to-Device Protocol
+
+The relay communicates with devices using these internal message types:
 
 **HTTP_REQUEST (Relay → Device):**
 ```json
@@ -344,6 +450,62 @@ The relay communicates with the device using these message types:
   "statusCode": 200,
   "contentType": "text/html",
   "body": "<!DOCTYPE html>..."
+}
+```
+
+---
+
+#### Local Device API Endpoints
+
+When a device runs its local HTTP server, these endpoints are available:
+
+##### GET /api/blog
+List all published blog posts from all collections.
+
+**Response:**
+```json
+{
+  "posts": [
+    {
+      "collection": "default",
+      "filename": "2025-12-04_hello-everyone.md",
+      "title": "Hello Everyone",
+      "author": "CR7BBQ",
+      "date": "2025-12-04",
+      "status": "published",
+      "tags": ["welcome"]
+    }
+  ]
+}
+```
+
+##### GET /api/blog/{collection}
+List blog posts from a specific collection.
+
+**Path Parameters:**
+- `collection` - Collection name
+
+##### GET /api/blog/{collection}/{filename}
+Get a specific blog post.
+
+**Path Parameters:**
+- `collection` - Collection name
+- `filename` - Blog post filename
+
+**Query Parameters:**
+- `format` - Response format: `json` (default), `html`, `markdown`
+
+**Response (JSON format):**
+```json
+{
+  "filename": "2025-12-04_hello-everyone.md",
+  "title": "Hello Everyone",
+  "author": "CR7BBQ",
+  "date": "2025-12-04",
+  "status": "published",
+  "tags": ["welcome"],
+  "content": "# Hello Everyone\n\nWelcome to my blog...",
+  "comments": []
 }
 ```
 

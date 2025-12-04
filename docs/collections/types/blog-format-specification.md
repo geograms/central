@@ -884,7 +884,157 @@ The rendered blog post includes:
 - Rendered markdown content
 - Footer linking to geogram.radio
 
-See [API Documentation](../../api/API.md#blog-api) for technical details.
+## Remote Device Access
+
+Other Geogram devices can access blog posts from remote devices through the relay network using WebSocket messages. This enables device-to-device content sharing without requiring direct connections.
+
+### Listing Remote Blog Posts
+
+To list blog posts from another device:
+
+**Request Message:**
+```json
+{
+  "type": "REMOTE_REQUEST",
+  "targetCallsign": "X1TARGET",
+  "requestId": "unique-id",
+  "request": {
+    "type": "LIST_BLOG_POSTS",
+    "collectionName": "default",
+    "year": 2025,
+    "limit": 20,
+    "offset": 0
+  }
+}
+```
+
+**Response Message:**
+```json
+{
+  "type": "REMOTE_RESPONSE",
+  "sourceCallsign": "X1TARGET",
+  "requestId": "unique-id",
+  "response": {
+    "type": "BLOG_POST_LIST",
+    "posts": [
+      {
+        "filename": "2025-12-04_hello-everyone.md",
+        "title": "Hello Everyone",
+        "author": "CR7BBQ",
+        "date": "2025-12-04",
+        "status": "published",
+        "tags": ["welcome", "introduction"]
+      }
+    ],
+    "total": 1,
+    "hasMore": false
+  }
+}
+```
+
+### Fetching Remote Blog Post
+
+To fetch a specific blog post from another device:
+
+**Request Message:**
+```json
+{
+  "type": "REMOTE_REQUEST",
+  "targetCallsign": "X1TARGET",
+  "requestId": "unique-id",
+  "request": {
+    "type": "GET_BLOG_POST",
+    "collectionName": "default",
+    "filename": "2025-12-04_hello-everyone.md",
+    "format": "markdown"
+  }
+}
+```
+
+**Format Options:**
+- `markdown` - Raw markdown content
+- `html` - Rendered HTML
+- `metadata` - Only metadata (no content)
+
+**Response Message:**
+```json
+{
+  "type": "REMOTE_RESPONSE",
+  "sourceCallsign": "X1TARGET",
+  "requestId": "unique-id",
+  "response": {
+    "type": "BLOG_POST",
+    "post": {
+      "filename": "2025-12-04_hello-everyone.md",
+      "title": "Hello Everyone",
+      "author": "CR7BBQ",
+      "date": "2025-12-04",
+      "status": "published",
+      "tags": ["welcome"],
+      "content": "# Hello Everyone\n\nWelcome to my blog...",
+      "npub": "npub1abc123...",
+      "signature": "sig123...",
+      "comments": []
+    }
+  }
+}
+```
+
+### Access Control
+
+- Only `published` posts are accessible to remote devices
+- Draft posts are not returned in listings
+- The target device must be connected to the same relay
+- Requests timeout after 30 seconds if the target device doesn't respond
+
+## Local API Endpoints
+
+When a device runs its local HTTP server, these endpoints provide blog access:
+
+### GET /api/blog
+List all published blog posts from all collections.
+
+**Response:**
+```json
+{
+  "posts": [
+    {
+      "collection": "default",
+      "filename": "2025-12-04_hello-everyone.md",
+      "title": "Hello Everyone",
+      "author": "CR7BBQ",
+      "date": "2025-12-04",
+      "status": "published",
+      "tags": ["welcome"]
+    }
+  ]
+}
+```
+
+### GET /api/blog/{collection}
+List blog posts from a specific collection.
+
+### GET /api/blog/{collection}/{filename}
+Get a specific blog post.
+
+**Query Parameters:**
+- `format` - Response format: `json` (default), `html`, `markdown`
+
+**Response (JSON):**
+```json
+{
+  "filename": "2025-12-04_hello-everyone.md",
+  "title": "Hello Everyone",
+  "author": "CR7BBQ",
+  "date": "2025-12-04",
+  "status": "published",
+  "tags": ["welcome"],
+  "content": "# Hello Everyone\n\nWelcome to my blog...",
+  "comments": []
+}
+```
+
+See [API Documentation](../../api/API.md#blog-api) for complete technical details.
 
 ## Related Documentation
 
