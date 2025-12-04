@@ -1,7 +1,7 @@
 # Chat Format Specification
 
-**Version**: 1.0
-**Last Updated**: 2025-11-20
+**Version**: 1.1
+**Last Updated**: 2025-12-04
 **Status**: Active
 
 ## Table of Contents
@@ -11,6 +11,7 @@
 - [Message Format](#message-format)
 - [Metadata Field Types](#metadata-field-types)
 - [NOSTR Integration](#nostr-integration)
+- [NOSTR Event Reconstruction](#nostr-event-reconstruction)
 - [Complete Message Examples](#complete-message-examples)
 - [Full File Example](#full-file-example)
 - [Parsing Implementation](#parsing-implementation)
@@ -90,23 +91,25 @@ Another message content.
 
 ### Header Section
 
-**Format**: `# CALLSIGN: Title`
+**Format**: `# ROOM_ID: Title`
 
-- **CALLSIGN**: The owner's callsign (alphanumeric, uppercase recommended)
-- **Title**: Descriptive title for this chat day
+- **ROOM_ID**: The chat room identifier (e.g., `general`, `announcements`)
+- **Title**: Descriptive title for this chat day (typically `Chat from YYYY-MM-DD`)
 - **Required**: Yes (first line of file)
 - **Occurrence**: Once per file
 
+**Important**: The header uses the **room ID**, not the owner's callsign. This is critical because the room ID is included in NOSTR event tags when signing messages. Using the room ID in the header ensures that signatures remain valid even if room metadata changes.
+
 **Examples**:
 ```
-# CR7BBQ: Public chat from 2025-09-07
-# X1A2B3: Team discussion from 2025-11-20
-# ALPHA1: Community announcements from 2025-12-01
+# general: Chat from 2025-09-07
+# announcements: Chat from 2025-11-20
+# team-alpha: Chat from 2025-12-01
 ```
 
 **Validation Rules**:
-- Callsign must be valid according to APRS standards
-- Title is free-form text
+- Room ID should match the directory name containing the chat file
+- Title is free-form text (conventionally `Chat from YYYY-MM-DD`)
 - Line must start with `# ` (hash followed by space)
 
 ### Message Block
@@ -272,31 +275,63 @@ Maybe later
 
 **Purpose**: Cryptographic verification of message authenticity using NOSTR-style signing
 
-**Field**: `signature: hex_signature`
+**Stored Fields** (minimal format):
+- `npub: bech32_public_key` - Author's NOSTR public key
+- `signature: hex_signature` - BIP-340 Schnorr signature
+
+**Calculated Fields** (not stored, reconstructed at runtime):
+- `event_id` - SHA256 hash of serialized NOSTR event (deterministic)
+- `verified` - Boolean result of signature verification
 
 **Optional**: Yes - messages may be signed or unsigned
 
-**Position**: **MUST be the last metadata field** when present
+**Position**: When present, `npub` should be placed immediately before `signature`, and `signature` **MUST be the last metadata field**
+
+**Storage Philosophy**:
+
+The storage format is intentionally minimal. Only two fields are persisted:
+1. **npub**: The author's public key (bech32 encoded, human-readable)
+2. **signature**: The BIP-340 Schnorr signature (hex encoded)
+
+All other NOSTR-related fields can be reconstructed from the stored data:
+- **event_id**: Calculated from SHA256 of `[0, pubkey, created_at, kind, tags, content]`
+- **verified**: Result of signature verification against reconstructed event
+- **pubkey**: Derived from npub using bech32 decoding
+
+This approach ensures:
+- Smaller file sizes
+- No redundant data storage
+- Ability to produce valid NOSTR events on demand
+- Signature validity is always fresh (verified at read time)
 
 **Signing Process**:
 
-1. Construct the message text from the start of the message header through all content and metadata (excluding the signature line itself)
-2. Hash the message text using the author's `nsec` (NOSTR private key)
-3. Generate a hex-encoded signature
-4. Append as the last metadata line
+1. Create a NOSTR event structure with:
+   - `pubkey`: hex-encoded public key (from npub)
+   - `created_at`: Unix timestamp
+   - `kind`: 1 (text note)
+   - `tags`: `[['t', 'chat'], ['room', roomId], ['callsign', callsign]]`
+   - `content`: message text
+2. Calculate event ID: SHA256 of serialized `[0, pubkey, created_at, kind, tags, content]`
+3. Sign the event ID with the author's private key (nsec)
+4. Store only `npub` and `signature` in the chat file
 
 **Verification Process**:
 
-1. Extract the signature value
-2. Reconstruct the signed content (everything before the signature line)
-3. Verify using the author's `npub` (NOSTR public key)
-4. Confirm signature matches the content
+1. Extract `npub` and `signature` from metadata
+2. Reconstruct the NOSTR event using stored data:
+   - Derive `pubkey` from `npub`
+   - Use message timestamp for `created_at`
+   - Use room ID from file header for tags
+   - Use sender callsign from message header
+3. Calculate event ID from reconstructed event
+4. Verify signature using BIP-340 Schnorr verification
+5. Cache verification result for display
 
 **Important Notes**:
 - The signature MUST always be the last metadata field
 - When both `npub` and `signature` are present, `npub` should be placed immediately before `signature`
-- The signature covers everything from `>` up to (but not including) the `--> signature:` line
-- Newline characters are included in the signed content
+- Room ID from the file header is used in NOSTR event tags - changing it would invalidate signatures
 - Authors need both `npub` (public key) and `nsec` (private key) for signing
 - Verifiers only need the author's `npub` (public key)
 
@@ -532,12 +567,125 @@ is_valid = schnorr_verify(hash, signature, npub)
 6. **Check First Message**: Verify author's first signed message carefully
 7. **Man-in-the-Middle**: Be aware someone could intercept and strip signatures
 
+## NOSTR Event Reconstruction
+
+### Overview
+
+The chat storage format stores only the minimal data needed to reconstruct valid NOSTR events. This section describes how to produce NOSTR-compatible JSON from the markdown storage format.
+
+### Storage Format Example
+
+A signed message is stored as:
+
+```
+# general: Chat from 2025-12-04
+
+> 2025-12-04 15:12:23 -- TESTCALL
+Hello from the markdown format!
+--> npub: npub1zv3k2dhzaffqe9xycu0lt0cmfcs3knlr3n2gaevpnq0pwj3dmd9sxzh6w0
+--> signature: f6f6c590b4811056fe8bab66100c4082a6ce5123bba704357354107c9f9a042c56d4d3227d370cab243ecb5936def5250f3f6c535f53e01c5ae380975d284641
+```
+
+### Reconstruction Algorithm
+
+To reconstruct a valid NOSTR event from stored data:
+
+```
+1. Parse the file header to extract roomId: "general"
+2. Parse the message header to extract:
+   - timestamp: 2025-12-04 15:12:23 → Unix timestamp 1733325143
+   - callsign: "TESTCALL"
+3. Parse metadata to extract:
+   - npub: "npub1zv3k2dhzaffqe9xycu0lt0cmfcs3knlr3n2gaevpnq0pwj3dmd9sxzh6w0"
+   - signature: "f6f6c590..."
+4. Derive pubkey from npub using bech32 decoding:
+   - pubkey: "13236536e2ea520c94c4c71ff5bf1b4e211b4fe38cd48ee581981e174a2ddb4b"
+5. Construct the NOSTR event:
+   - pubkey: derived hex pubkey
+   - created_at: Unix timestamp
+   - kind: 1 (text note)
+   - tags: [['t', 'chat'], ['room', 'general'], ['callsign', 'TESTCALL']]
+   - content: "Hello from the markdown format!"
+   - sig: stored signature
+6. Calculate event ID:
+   - Serialize: [0, pubkey, created_at, kind, tags, content]
+   - Hash: SHA256 of JSON-serialized array
+   - Result: "ca24e74d687916ebe65275125119af9a6cdf3e96cd53cd4cba881d80c951084c"
+7. Verify signature using BIP-340 Schnorr verification
+```
+
+### Reconstructed NOSTR Event (JSON)
+
+The resulting valid NOSTR event:
+
+```json
+{
+  "id": "ca24e74d687916ebe65275125119af9a6cdf3e96cd53cd4cba881d80c951084c",
+  "pubkey": "13236536e2ea520c94c4c71ff5bf1b4e211b4fe38cd48ee581981e174a2ddb4b",
+  "created_at": 1733325143,
+  "kind": 1,
+  "tags": [
+    ["t", "chat"],
+    ["room", "general"],
+    ["callsign", "TESTCALL"]
+  ],
+  "content": "Hello from the markdown format!",
+  "sig": "f6f6c590b4811056fe8bab66100c4082a6ce5123bba704357354107c9f9a042c56d4d3227d370cab243ecb5936def5250f3f6c535f53e01c5ae380975d284641"
+}
+```
+
+### Implementation Reference
+
+```dart
+NostrEvent? reconstructNostrEvent({
+  required String? npub,
+  required String content,
+  required String? signature,
+  required String roomId,
+  required String callsign,
+  required DateTime timestamp,
+}) {
+  if (npub == null || npub.isEmpty) return null;
+  if (signature == null || signature.isEmpty) return null;
+
+  // Derive hex pubkey from bech32 npub
+  final pubkey = NostrCrypto.decodeNpub(npub);
+  final createdAt = timestamp.millisecondsSinceEpoch ~/ 1000;
+
+  final event = NostrEvent(
+    pubkey: pubkey,
+    createdAt: createdAt,
+    kind: 1,
+    tags: [['t', 'chat'], ['room', roomId], ['callsign', callsign]],
+    content: content,
+    sig: signature,
+  );
+
+  // Calculate the deterministic event ID
+  event.calculateId();
+
+  return event;
+}
+```
+
+### Key Points
+
+1. **Room ID is Critical**: The room ID from the file header is used in NOSTR event tags. Changing the room ID would produce a different event ID and invalidate all signatures.
+
+2. **Timestamp Precision**: The timestamp is converted to Unix seconds (not milliseconds) for NOSTR compatibility.
+
+3. **Deterministic ID**: The event ID is always the same for the same input data - it's a SHA256 hash of the serialized event structure.
+
+4. **Verification at Read Time**: Signatures are verified when messages are loaded, not stored as a boolean. This ensures verification is always fresh.
+
+5. **NOSTR Compatibility**: The reconstructed events are fully compatible with NOSTR relays and clients that support NIP-01.
+
 ## Complete Message Examples
 
 ### Simple Message
 
 ```
-# CR7BBQ: Public chat from 2025-09-07
+# general: Chat from 2025-09-07
 
 > 2025-09-07 19:10_12 -- X135AS
 Hello there!
@@ -648,13 +796,15 @@ Another signed message with location.
 ## Full File Example
 
 ```
-# CR7BBQ: Public chat from 2025-09-07
+# general: Chat from 2025-09-07
 
 > 2025-09-07 19:10_12 -- X135AS
 Hello there!
 
 > 2025-09-07 19:10_16 -- CR7BBQ
 Hey, what's up! :-)
+--> npub: npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq3z0qwe
+--> signature: 3a4f8c92e1b5d6a7f2e9c4b8d1a6e3f9c2b5e8a1d4f7c0b3e6a9d2f5c8e1b4a7
 
 > 2025-09-07 19:10_12 -- X135AS
 That's nice to hear.
@@ -675,6 +825,8 @@ Maybe later
 > 2025-09-07 19:10_16 -- CR7BBQ
 Come on! Please, please, please vote!
 --> file: please_please.png
+--> npub: npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq3z0qwe
+--> signature: 5e1a9c6f2b8d4a7e3c9f6b2e8a5d1c7f4b9e6a3d0c8e5b2f9a6d3c0e7b4a1d8
 ```
 
 ## Parsing Implementation
@@ -883,6 +1035,20 @@ Messages should be inserted in chronological order, not necessarily appended to 
 - [Module System](../geogram-server/src/main/java/geogram/apps/Module.java) - Chat module architecture
 
 ## Change Log
+
+### Version 1.1 (2025-12-04)
+- **Header format changed**: Now uses room ID instead of callsign
+  - Format: `# {roomId}: Chat from {date}` instead of `# {callsign}: ...`
+  - This ensures signatures remain valid since room ID is part of NOSTR event tags
+- **Minimal storage format**: Only `npub` and `signature` are stored
+  - Removed: `event_id`, `verified`, `pubkey` (all redundant, can be recalculated)
+  - `event_id` is now calculated at runtime via SHA256 hash
+  - `verified` is now determined at runtime via signature verification
+  - `pubkey` is derived from `npub` using bech32 decoding
+- **Added NOSTR Event Reconstruction section**:
+  - Documents how to reconstruct valid NOSTR events from minimal storage
+  - Includes algorithm, JSON example, and implementation reference
+  - Explains why room ID is critical for signature validity
 
 ### Version 1.0 (2025-11-20)
 - Initial specification
