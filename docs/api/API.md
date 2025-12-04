@@ -12,6 +12,7 @@ This document describes the HTTP and WebSocket APIs for the Geogram network, cov
 - [Relay Server API](#relay-server-api)
   - [Status & Information](#status--information)
   - [Device Proxy](#device-proxy)
+  - [Blog API](#blog-api)
   - [Collections & Search](#collections--search)
   - [Groups API](#groups-api)
   - [Map Tiles](#map-tiles)
@@ -271,6 +272,79 @@ Serve files from a device's `www` collection (website hosting).
 ```
 GET /X1USER01/           -> Serves index.html from www collection
 GET /X1USER01/style.css  -> Serves style.css from www collection
+```
+
+---
+
+### Blog API
+
+The relay can proxy blog post requests to connected devices, allowing external users to view blog posts from a device's collection.
+
+#### GET /{nickname}/blog/{filename}.html
+Fetch a rendered HTML blog post from a connected device.
+
+**Path Parameters:**
+- `nickname` - Device nickname or callsign (case-insensitive)
+- `filename` - Blog post filename (e.g., `2025-12-04_hello-everyone`)
+
+**Example:**
+```
+GET /embaixada/blog/2025-12-04_hello-everyone.html
+```
+
+**Request Flow:**
+1. Relay receives HTTP request for blog post
+2. Relay finds connected device by nickname/callsign
+3. Relay sends `HTTP_REQUEST` WebSocket message to device
+4. Device reads blog markdown, converts to HTML
+5. Device sends `HTTP_RESPONSE` back to relay
+6. Relay returns HTML to the client
+
+**Response (200 - Success):**
+Returns a complete HTML page with the blog post content rendered from markdown, including:
+- Styled HTML with dark theme
+- Post title and date metadata
+- Author information
+- Rendered markdown content
+- Footer with geogram.radio link
+
+**Response (404 - Not Found):**
+```json
+{
+  "error": "Blog post not found"
+}
+```
+
+**Response (503 - Device Not Connected):**
+```json
+{
+  "error": "User not found"
+}
+```
+
+**WebSocket Protocol:**
+
+The relay communicates with the device using these message types:
+
+**HTTP_REQUEST (Relay → Device):**
+```json
+{
+  "type": "HTTP_REQUEST",
+  "requestId": "unique-request-id",
+  "method": "GET",
+  "path": "/api/blog/2025-12-04_hello-everyone.html"
+}
+```
+
+**HTTP_RESPONSE (Device → Relay):**
+```json
+{
+  "type": "HTTP_RESPONSE",
+  "requestId": "unique-request-id",
+  "statusCode": 200,
+  "contentType": "text/html",
+  "body": "<!DOCTYPE html>..."
+}
 ```
 
 ---

@@ -1,7 +1,7 @@
 # Blog Format Specification
 
-**Version**: 1.0
-**Last Updated**: 2025-11-21
+**Version**: 1.1
+**Last Updated**: 2025-12-05
 **Status**: Active
 
 ## Table of Contents
@@ -19,6 +19,7 @@
 - [Validation Rules](#validation-rules)
 - [Best Practices](#best-practices)
 - [Security Considerations](#security-considerations)
+- [Web Publishing](#web-publishing)
 - [Related Documentation](#related-documentation)
 - [Change Log](#change-log)
 
@@ -836,6 +837,55 @@ Line N: (blank) - marks end of header
 **Signature Verification**: Detect tampering and impersonation
 **Backup Strategy**: Protect against data loss
 
+## Web Publishing
+
+Blog posts can be accessed externally via the relay's HTTP API. When a device is connected to a relay, external users can view the device's published blog posts through a public URL.
+
+### External URL Format
+
+```
+https://{relay-host}/{nickname}/blog/{filename}.html
+```
+
+**Parameters:**
+- `relay-host` - The relay server domain (e.g., `p2p.radio`)
+- `nickname` - The device's nickname or callsign (case-insensitive)
+- `filename` - The blog post filename without extension (e.g., `2025-12-04_hello-everyone`)
+
+**Examples:**
+```
+https://p2p.radio/embaixada/blog/2025-12-04_hello-everyone.html
+https://p2p.radio/X1ABC123/blog/2025-01-15_my-first-post.html
+```
+
+### How It Works
+
+1. External user requests a blog post URL from the relay
+2. Relay identifies the device by nickname/callsign
+3. Relay sends the request to the connected device via WebSocket
+4. Device reads the blog post from its collection
+5. Device converts markdown to HTML with styling
+6. Device returns rendered HTML to relay
+7. Relay serves the HTML to the external user
+
+### Requirements
+
+- Device must be connected to the relay
+- Blog post must exist in the device's collection
+- Blog post must have `STATUS: published` (drafts are not accessible)
+
+### HTML Output
+
+The rendered blog post includes:
+- Responsive HTML5 structure
+- Dark theme styling
+- Post title and date
+- Author callsign
+- Rendered markdown content
+- Footer linking to geogram.radio
+
+See [API Documentation](../../api/API.md#blog-api) for technical details.
+
 ## Related Documentation
 
 - [Chat Format Specification](../chat/chat-format-specification.md)
@@ -845,6 +895,12 @@ Line N: (blank) - marks end of header
 - [NOSTR Protocol](https://github.com/nostr-protocol/nostr)
 
 ## Change Log
+
+### Version 1.1 (2025-12-05)
+
+- Added Web Publishing section
+- Document external URL access via relay proxy
+- Added API documentation reference
 
 ### Version 1.0 (2025-11-21)
 
