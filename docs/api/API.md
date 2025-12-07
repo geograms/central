@@ -25,6 +25,7 @@ This document describes the HTTP and WebSocket APIs for the Geogram network, cov
   - [File Browser](#file-browser)
 - [Chat API](#chat-api)
   - [HTTP Endpoints](#http-chat-endpoints)
+  - [Chat File Caching](#chat-file-caching)
   - [WebSocket Messages](#websocket-chat-messages)
   - [Chat Storage](#chat-storage)
 - [WebSocket Protocol](#websocket-protocol)
@@ -903,6 +904,87 @@ Send a message from the relay itself (relay-signed NOSTR event).
   "callsign": "X3RELAY1"
 }
 ```
+
+---
+
+### Chat File Caching
+
+These endpoints enable clients to download raw chat files for offline caching. By downloading the original files rather than reconstructing messages, clients preserve all NOSTR verification metadata (signatures, event IDs, public keys).
+
+#### GET /{callsign}/api/chat/rooms/{roomId}/files
+List all available chat files for a room (used for client-side caching).
+
+**Path Parameters:**
+- `callsign` - Owner callsign
+- `roomId` - Chat room ID
+
+**Response:**
+```json
+{
+  "room_id": "general",
+  "relay": "X3RELAY1",
+  "files": [
+    {
+      "year": "2024",
+      "filename": "2024-01-15_chat.txt",
+      "size": 4096,
+      "modified": 1705320000
+    },
+    {
+      "year": "2024",
+      "filename": "2024-01-16_chat.txt",
+      "size": 2048,
+      "modified": 1705406400
+    }
+  ],
+  "count": 2
+}
+```
+
+**Use Case:**
+Clients use this endpoint to discover which chat files are available for a room, then selectively download files they don't have cached locally. This enables efficient offline chat viewing by preserving the original file format with all NOSTR verification metadata.
+
+---
+
+#### GET /{callsign}/api/chat/rooms/{roomId}/file/{year}/{filename}
+Get the raw content of a specific chat file.
+
+**Path Parameters:**
+- `callsign` - Owner callsign
+- `roomId` - Chat room ID
+- `year` - Year folder (e.g., "2024")
+- `filename` - Chat file name (must match pattern `YYYY-MM-DD_chat.txt`)
+
+**Response:**
+Returns the raw text content of the chat file with `Content-Type: text/plain; charset=UTF-8`.
+
+**Example Response:**
+```
+# X3RELAY1:general
+# Chat room: General
+
+> 2024-01-15 12:00:00 -- X1USER01 [npub1abc...]
+Hello, world!
+{sig:abc123..., event_id:def456...}
+
+> 2024-01-15 12:01:30 -- X2USER02 [npub1xyz...]
+Hi there!
+{sig:ghi789..., event_id:jkl012...}
+```
+
+**Error Responses:**
+- `400` - Invalid filename format (path traversal protection)
+- `404` - File not found
+
+**Security:**
+The filename parameter is validated to prevent path traversal attacks. Only files matching the pattern `YYYY-MM-DD_chat.txt` are allowed.
+
+**Use Case:**
+Clients download raw chat files to cache locally for offline viewing. The raw format preserves:
+- NOSTR signature verification data (`{sig:..., event_id:...}`)
+- Public key references (`[npub1...]`)
+- Original timestamps and formatting
+- All messages from the day, not just recent ones
 
 ---
 
