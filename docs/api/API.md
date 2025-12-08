@@ -204,8 +204,6 @@ Returns server statistics.
 #### GET /api/devices
 List all connected devices. This is the primary endpoint for discovering peers connected to the same station.
 
-> **Note:** CLI stations use `/api/devices`, GUI stations use `/api/clients`. Clients should try both endpoints for compatibility.
-
 **Response:**
 ```json
 {
@@ -214,9 +212,13 @@ List all connected devices. This is the primary endpoint for discovering peers c
       "id": "1765181766832",
       "callsign": "X1PPMG",
       "nickname": "john-desktop",
+      "npub": "npub1abc123...",
       "device_type": "desktop",
       "version": "1.5.29",
       "address": "178.202.105.29",
+      "latitude": 38.7223,
+      "longitude": -9.1393,
+      "connection_types": ["internet"],
       "connected_at": "2024-01-15T11:30:00.832268",
       "last_activity": "2024-01-15T11:35:00.917650"
     }
@@ -230,54 +232,15 @@ List all connected devices. This is the primary endpoint for discovering peers c
 | `id` | string | Unique connection identifier |
 | `callsign` | string | Device callsign (e.g., X1PPMG) |
 | `nickname` | string? | Optional friendly name |
+| `npub` | string? | NOSTR public key (bech32 format) |
 | `device_type` | string | Device type: `desktop`, `mobile`, `station` |
 | `version` | string? | Client software version |
 | `address` | string | Remote IP address |
-| `connected_at` | string | ISO 8601 connection timestamp |
-| `last_activity` | string | ISO 8601 last activity timestamp |
-
----
-
-#### GET /api/clients
-Alternative endpoint for listing connected devices (GUI station format).
-
-> **Note:** This endpoint is used by GUI stations. CLI stations use `/api/devices` instead.
-
-**Response:**
-```json
-{
-  "station": "X3WFE4",
-  "count": 2,
-  "clients": [
-    {
-      "callsign": "X1PPMG",
-      "nickname": "john-desktop",
-      "npub": "npub1abc123...",
-      "connection_types": ["internet"],
-      "latitude": 38.7223,
-      "longitude": -9.1393,
-      "connected_at": "2024-01-15T11:30:00Z",
-      "last_activity": "2024-01-15T11:35:00Z",
-      "is_online": true
-    }
-  ]
-}
-```
-
-**Response Fields:**
-| Field | Type | Description |
-|-------|------|-------------|
-| `station` | string | Station callsign serving this response |
-| `count` | number | Number of connected clients |
-| `callsign` | string | Device callsign |
-| `nickname` | string? | Optional friendly name |
-| `npub` | string? | NOSTR public key (bech32 format) |
-| `connection_types` | string[] | Connection methods: `internet`, `wifi`, `bluetooth`, `lora` |
 | `latitude` | number? | Device latitude (if shared) |
 | `longitude` | number? | Device longitude (if shared) |
+| `connection_types` | string[]? | Connection methods: `internet`, `wifi`, `bluetooth`, `lora` |
 | `connected_at` | string | ISO 8601 connection timestamp |
 | `last_activity` | string | ISO 8601 last activity timestamp |
-| `is_online` | boolean | Connection status |
 
 ---
 
