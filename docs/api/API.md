@@ -260,6 +260,11 @@ List connected devices. On a **station**, lists all connected clients. On a **cl
 | `connected_at` | string | ISO 8601 connection timestamp |
 | `last_activity` | string | ISO 8601 last activity timestamp |
 
+**Distance Display:**
+- When latitude/longitude are available, clients can calculate distance using the Haversine formula
+- Devices on the same WiFi (`wifi_local` connection type) display "Same location" instead of distance
+- Coordinates source: provided in HELLO event, or estimated from IP address if not available
+
 ---
 
 ### File Browser
@@ -589,14 +594,26 @@ Initial handshake with NOSTR-signed authentication.
     "created_at": 1705320000,
     "tags": [
       ["callsign", "X1ABC123"],
-      ["npub", "npub1..."]
+      ["nickname", "john-desktop"],
+      ["latitude", "38.7223"],
+      ["longitude", "-9.1393"]
     ],
-    "content": "{\"callsign\":\"X1ABC123\",\"npub\":\"npub1...\"}",
+    "content": "Hello from Geogram Desktop",
     "id": "event_id_hex_64_chars",
     "sig": "schnorr_signature_hex_128_chars"
   }
 }
 ```
+
+**HELLO Tags:**
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `callsign` | Yes | Device callsign (e.g., X1ABC123) |
+| `nickname` | No | Friendly device name |
+| `latitude` | No | Device latitude in decimal degrees |
+| `longitude` | No | Device longitude in decimal degrees |
+
+**Note:** Coordinates allow distance calculation between devices. If not provided, the station may estimate location from the client's IP address.
 
 ---
 
