@@ -5,12 +5,23 @@ import '../data/mesh.dart';
 import '../theme.dart';
 import '../view_controller.dart';
 
-/// The holographic detail panel: floats beside the selected orb, tethered by
-/// a leader line, and re-anchors every frame as the camera moves.
-class HoloPanel extends StatelessWidget {
+/// The holographic detail panel: docked in the upper-right corner so it
+/// never sits on top of the graph, tethered to the selected orb by a leader
+/// line, and closable — the selection survives, only the panel goes away.
+class HoloPanel extends StatefulWidget {
   const HoloPanel({super.key, required this.controller});
 
   final MeshViewController controller;
+
+  @override
+  State<HoloPanel> createState() => _HoloPanelState();
+}
+
+class _HoloPanelState extends State<HoloPanel> {
+  MeshViewController get controller => widget.controller;
+
+  bool _dismissed = false;
+  String? _dismissedKey;
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +36,16 @@ class HoloPanel extends StatelessWidget {
       builder: (context, _) {
         final id = scene.selectedId;
         if (id == null) return const SizedBox.shrink();
+        final key = scene.selectedKey;
+
+        // Closing hides the panel for THIS node; selecting another brings
+        // the panel back.
+        if (_dismissedKey != key) {
+          _dismissed = false;
+          _dismissedKey = key;
+        }
+        if (_dismissed) return const SizedBox.shrink();
+
         final entity = scene.renderNodes[id - 1].data;
 
         return LayoutBuilder(
@@ -38,47 +59,36 @@ class HoloPanel extends StatelessWidget {
             final projected = projector.project(
               scene.poses[id - 1].position,
             );
-            if (projected == null) return const SizedBox.shrink();
-            final anchor =
-                projected.screen + Offset(size.width / 2, size.height / 2);
 
-            const panelWidth = 252.0;
-            const panelHeight = 210.0;
-            // Beside the orb when a side fits; on a narrow portrait screen
-            // neither does for a centred node, so dock at the bottom instead
-            // of covering it.
-            final rightFits = anchor.dx + 40 + panelWidth < size.width - 8;
-            final leftFits = anchor.dx - 40 - panelWidth > 8;
-            final double left;
-            final double top;
-            final Offset tether;
-            if (rightFits || leftFits) {
-              left = rightFits ? anchor.dx + 40 : anchor.dx - 40 - panelWidth;
-              top = (anchor.dy - panelHeight / 2).clamp(
-                8.0,
-                size.height - panelHeight - 8,
-              );
-              tether = Offset(rightFits ? left : left + panelWidth, top + 40);
-            } else {
-              left = ((size.width - panelWidth) / 2).clamp(8.0, size.width);
-              top = size.height - panelHeight - 180;
-              tether = Offset(left + panelWidth / 2, top);
-            }
+            // Docked upper-right, under the breadcrumb/view-toggle row, so
+            // the graph itself stays unobstructed.
+            final panelWidth = size.width < 420 ? 236.0 : 268.0;
+            const top = 78.0; // clear of the breadcrumb/view-toggle row
+            final left = size.width - panelWidth - 10;
 
             return Stack(
               children: <Widget>[
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      painter: _LeaderLinePainter(from: anchor, to: tether),
+                if (projected != null)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: _LeaderLinePainter(
+                          from: projected.screen +
+                              Offset(size.width / 2, size.height / 2),
+                          to: Offset(left + panelWidth / 2, top + 6),
+                        ),
+                      ),
                     ),
                   ),
-                ),
                 Positioned(
                   left: left,
                   top: top,
                   width: panelWidth,
-                  child: _PanelBody(controller: controller, entity: entity),
+                  child: _PanelBody(
+                    controller: controller,
+                    entity: entity,
+                    onClose: () => setState(() => _dismissed = true),
+                  ),
                 ),
               ],
             );
@@ -110,10 +120,15 @@ class _LeaderLinePainter extends CustomPainter {
 }
 
 class _PanelBody extends StatelessWidget {
-  const _PanelBody({required this.controller, required this.entity});
+  const _PanelBody({
+    required this.controller,
+    required this.entity,
+    required this.onClose,
+  });
 
   final MeshViewController controller;
   final MeshEntity entity;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -145,9 +160,24 @@ class _PanelBody extends StatelessWidget {
                 const SizedBox(width: 4),
               ],
               const Spacer(),
-              Text(
-                roleLabel(entity.role),
-                style: kMono.copyWith(fontSize: 10.5, color: kTextDim),
+              Flexible(
+                child: Text(
+                  roleLabel(entity.role),
+                  overflow: TextOverflow.ellipsis,
+                  style: kMono.copyWith(fontSize: 10.5, color: kTextDim),
+                ),
+              ),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: onClose,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: Text(
+                    '✕',
+                    style: kMono.copyWith(fontSize: 14, color: kAccent),
+                  ),
+                ),
               ),
             ],
           ),
