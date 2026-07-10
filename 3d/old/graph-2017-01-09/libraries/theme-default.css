@@ -1,0 +1,437 @@
+html, body {
+	height: 100%;
+}
+
+body {
+	background-color: #000000;
+	margin: 0;
+	font-family: Helvetica, sans-serif;;
+	overflow: hidden;
+	color: #0A9999;
+}
+
+p.author {
+	font-family: Monospace;
+	font-size: 13px;
+	text-align: right;
+	color: white;
+	padding-right: 80px;
+}
+
+a {
+	color: #BDBDBD;
+	z-index: 100 !important;
+}
+
+hr {
+	border-color: #0A9999;
+}
+
+ul {
+	padding: 0;
+	margin: 0;
+}
+
+li {
+	list-style-type: none;
+}
+
+table {
+	width: 100%;
+}
+
+thead {
+	background-color: #0A9999;
+	color: #fff;
+}
+
+#details,
+.box-header {
+	position: relative;
+	/*width: 100%;*/
+	height: 30px;
+	color: black;
+	font-size: 14px;
+	line-height: 30px;
+	background: #0A9999;
+	white-space: nowrap;
+	margin-top: 2px;
+}
+
+#info,
+.box-body {
+	background: rgba(0,0,0,0.6);
+	color: #0A9999;
+	font-family: Monospace;
+	font-size: 13px;
+	/*width: 100%;*/
+	word-wrap: break-word;
+	border: 2px solid #0A9999;
+	z-index: 999;
+	overflow-y: auto;
+	max-height: 320px;
+	padding: 1em;
+	margin-bottom: 2px;
+}
+
+#review {
+	padding: 2px;
+}
+
+#inputSearch {
+	width: 220px;
+	background: transparent;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #0A9999;
+	height: 25px;
+	color: #fff;
+	padding: 0px 4px 0px 8px;
+}
+
+#searchBoxBody {
+	border-bottom: none;
+	margin-bottom: 0;
+}
+
+#searchResultBody {
+	border-top: none;
+	/*padding-top: 1px;*/
+}
+
+#btnSearchHelp {
+	padding: 0px 4px;
+	border: 1px solid;
+	outline: none;
+}
+#searchHelp{
+	position: relative;
+	margin-bottom: 10px;
+}
+#searchHelpText {
+	max-height: 160px;
+	border: 1px solid;
+}
+#btnXCloseSearchHelp {
+	font-size: 16px;
+	color: #0A9999;
+	padding: 0px 4px;
+	border: 1px solid #0A9999;
+	outline: none;
+	right: 24px;
+}
+
+#menu {
+	position: absolute;
+	bottom: 20px;
+	width: 100%;
+	text-align: center;
+}
+
+.btn-x-close,
+.btn-minimize {
+	font-size: 17px;
+	color: #000;
+	position: absolute;
+	top: 5px;
+	right: 5px;
+	height: 22px;
+	width: 22px;
+	text-align: center;
+	padding: 0;
+	outline: none;
+	line-height: 0;
+}
+
+.btn-minimize {
+	right: 28px;
+}
+
+.right-panel {
+	position: absolute;
+	top: 10px;
+	right: 20px;
+	width: 334px;
+	/*max-height: 500px;*/
+}
+
+.element {
+	width: 120px;
+	height: 160px;
+	box-shadow: 0px 0px 12px rgba(0,255,255,0.5);
+	border: 1px solid rgba(127,255,255,0.25);
+	text-align: center;
+	cursor: default;
+}
+
+.element.inactive {
+	background:transparent !important;
+}
+.element.inactive .symbol {
+	font-size: 50px;
+	font-weight: lighter;
+	color: rgb(4,68,68);
+}
+.element.inactive .symbolred {
+	font-size: 50px;
+	font-weight: lighter;
+	color: rgb(4,68,68);
+}
+
+.element:hover {
+	box-shadow: 0px 0px 12px rgba(0,255,255,0.75);
+	border: 1px solid rgba(127,255,255,0.75);
+}
+
+.element .number {
+	position: absolute;
+	top: 20px;
+	left: 20px;
+	font-size: 12px;
+	color: rgba(127,255,255,0.75);
+}
+
+.element .copyright {
+	position: absolute;
+	top: 5px;
+	right: 5px;
+	font-size: 12px;
+	color: rgba(127,255,255,0.75);
+}
+
+.element .symbol {
+	position: absolute;
+	top: 40px;
+	left: 0px;
+	right: 0px;
+	font-size: 60px;
+	font-weight: bold;
+	color: rgba(255,255,255,0.75);
+	text-shadow: 0 0 10px rgba(0,255,255,0.95);
+}
+
+
+.element .symbolred {
+	position: absolute;
+	top: 40px;
+	left: 0px;
+	right: 0px;
+	font-size: 60px;
+	font-weight: bold;
+	color: rgba(255,255,255,0.75);
+	text-shadow: 0 0 10px rgba(236,0,31,0.95);
+}
+
+.element .details {
+	position: absolute;
+	bottom: 15px;
+	left: 0px;
+	right: 0px;
+	font-size: 12px;
+	color: rgba(127,255,255,0.75);
+}
+
+button {
+	color: rgba(127,255,255,0.75);
+	background: transparent;
+	outline: 1px solid rgba(127,255,255,0.75);
+	border: 0px;
+	padding: 5px 10px;
+	cursor: pointer;
+}
+
+button:hover,
+.button-active {
+	color: #000;
+	background-color: rgba(0,255,255,0.5);
+}
+
+button:active {
+	color: #000000;
+	background-color: rgba(0,255,255,0.75);
+}
+
+.reviewState {
+	width: 20px;
+	height: 20px;
+	padding: 1px 4px;
+	border-radius: 24px;
+	outline: none;
+	/*border: 1px solid rgba(127,255,255,0.75);*/
+	margin-right: 0px;
+	font-size: smaller;
+}
+
+.reviewFile {
+	margin: 6px 0;
+}
+
+.reviewFileName {
+	padding: 8px 0 8px 8px;
+}
+
+.reviewFilesTypeHeader {
+	padding: 4px 12px;
+	cursor: pointer;
+	position: relative;
+	color: black;
+	font-size: 14px;
+	background: #0A9999;
+}
+
+.matchesFilesType {
+	margin-bottom: 2px;
+}
+
+.itemsNeedReviewCounter {
+	right: 1px;
+	position: absolute;
+}
+
+.itemsNeedReviewUnknownCounter,
+.itemsNeedReviewAttentionCounter,
+.itemsNeedReviewFailedCounter {
+	border-radius: 2px;
+	display: inline-block;
+	min-width: 18px;
+	text-align: center;
+	margin-right: 3px;
+}
+
+.itemsNeedReviewUnknownCounter {
+	background-color: #ffaa00;
+}
+
+.itemsNeedReviewAttentionCounter {
+	background-color: #ff00cf;
+}
+
+.itemsNeedReviewFailedCounter {
+	background-color: #ff4444;
+}
+
+.reviewMatchesBinHeader,
+.reviewMatchesSourceHeader {
+	margin: 0;
+	padding: 0 0 0 16px;
+}
+
+.reviewMatchesBinSnippet,
+.reviewMatchesSourceSnippet {
+	position: relative;
+	padding-left: 32px;
+}
+
+.btn-review-x-close {
+	font-size: 24px;
+	color: #fff;
+	top: 15px;
+	right: 15px;
+}
+
+.review-match-box {
+	position: absolute;
+	top: 200px;
+	left: 100px;
+	width: 256px;
+}
+
+#reviewFrame {
+	font-size: 13px;
+}
+
+#reviewFrameHeader {
+	margin: 10px;
+}
+
+#reviewFrameHeaderFileName {
+	padding: 5px 24px;
+	background-color: #0A9999;
+	color: #000;
+	font-weight: bold;
+	font-size: 1.4em;
+	word-break: break-all;
+}
+
+#reviewFrameHeaderFilePath {
+	padding: 4px 24px;
+	border: 2px solid #0A9999;
+	word-break: break-all;
+}
+
+#reviewFrameBody {
+/*	height: 100%;
+	border: 2px solid #0A9999;
+	margin: 10px;
+	padding: 6px;
+	word-break: break-all;*/
+}
+
+#reviewFileMatchesBin {
+    border: 2px solid #0A9999;
+    margin: 10px 10px 0 10px;
+}
+
+#viewChangeAnimationBox {
+	position: absolute;
+	width: 0%;
+	height: 0%;
+	top: 50%;
+	left: 50%;
+	z-index: 100;
+	border: 5px solid #0A9999;
+	background-color: #000;
+}
+
+#reviewCoderProfile {
+	position: absolute;
+	width: 256px;
+    right: 0;
+    margin: 10px;
+}
+
+#reviewCoderProfileHeader {
+    font-weight: bold;
+    padding: 0px 16px;
+}
+
+#reviewCoderProfileImage {
+    text-align: center;
+}
+
+.review-coder-profile-image {
+    max-width: 220px;
+}
+
+.review-file-match-source {
+    width: 200px;
+    position: absolute;
+    /*max-height: 256px;*/
+    margin: 10px;
+    top: 65%;
+}
+
+.review-file-match-source-current {
+    top: inherit;
+    width: 320px;
+    max-height: 230px;
+}
+
+.review-box-body {
+    max-height: 140px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

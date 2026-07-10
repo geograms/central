@@ -1,0 +1,30 @@
+name: graph3d
+description: "A native 3D view of a TripleCheck software analysis."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Matrices and quaternions. Ships with Flutter; not a third-party risk.
+  vector_math: ^2.1.4
+
+  # Locates a per-user, per-platform directory for the saved review verdicts.
+  path_provider: ^2.1.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/data/

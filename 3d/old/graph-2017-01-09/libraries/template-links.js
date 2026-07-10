@@ -1,0 +1,1 @@
+				var tableLinks = [#template#			];

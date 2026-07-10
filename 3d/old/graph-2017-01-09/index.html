@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>triplecheck.tech > software view</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+		<link rel="stylesheet" type="text/css" href="libraries/theme-default.css"/>
+	</head>
+	<body>
+		<script src="libraries/three.min.js"></script>
+		<script src="libraries/Projector.js"></script>
+		<script src="libraries/tween.min.js"></script>
+		<script src="libraries/OrbitControls.js"></script>
+		<script src="libraries/CSS3DRenderer.js"></script>
+
+		<script src="data/nodes.js"></script>
+		<script src="data/links.js"></script>
+		<script src="data/project.js"></script>
+		<script src="data/details.js"></script>
+		<script src="data/coders.js"></script>
+
+		<script src="data/plagiarism/page3_originality_details.js"></script>
+		<script src="data/plagiarism/settings.js"></script>
+
+		<div id="graph3d">
+		<div id="container"></div>
+		<div class="right-panel">
+			<div id="details">
+				<span id="infoDetailsHeader" style="margin-left:10px">Details</span>
+				<button id="btnMinimizeInfo" class="btn-minimize">–</button>
+				<button id="btnXCloseInfo" class="btn-x-close">&#10005;</button>
+			</div>
+			<div id="info"></div>
+			<div id="searchBoxHeader" class="box-header" style="display: none;">
+				<span id="searchBoxHeaderText" style="margin-left:10px">Find files</span>
+				<button id="btnMinimizeSearch" class="btn-minimize">–</button>
+				<button id="btnXCloseSearch" class="btn-x-close">&#10005;</button>
+			</div>
+			<div id="searchBoxBody" class="box-body" style="display: none;">
+				<input id="inputSearch" type="search" class="search" placeholder="search ..." maxlength="200" title="Find files using a field:
+license:mit
+
+Find files with a field and extension
+license:mit AND .java
+
+Find files with one license or another
+license:mit OR license:gpl"/>
+				<button id="btnFind">FIND</button>
+				<button id="btnSearchHelp" title="Find files using a field:
+license:mit
+
+Find files with a field and extension
+license:mit AND .java
+
+Find files with one license or another
+license:mit OR license:gpl">?</button>
+			</div>
+			<div id="searchResultBody" class="box-body" style="display: none;">
+				<div id="searchHelp" style="display: none;">
+					<button id="btnXCloseSearchHelp" class="btn-x-close">✖</button>
+					<div id="searchHelpText" class="box-body">
+						<p style="color: #fff">Search options help:</p>
+						<p>Find files using a field:<br>
+						license:mit</p>
+
+						<p>Find files with a field and extension<br>
+						license:mit AND .java</p>
+
+						<p>Find files with one license or another<br>
+						license:mit OR license:gpl</p>
+
+						<p>Exact matches are enclosed with "":<br>
+						license:"MIT"</p>
+
+						<p>Fields that can be used:<br>
+						tag<br>
+						license<br>
+						name<br>
+						copyright<br>
+						tags<br>
+						path<br>
+						sha1</p>
+					</div>
+				</div>
+				<div id="searchResult"> </div>
+			</div>
+			<div id="reviewHeader" class="box-header" style="display: none;">
+				<span id="infoReviewHeader" style="margin-left:10px">Review</span>
+				<button id="btnMinimizeReview" class="btn-minimize">–</button>
+				<button id="btnXCloseReview" class="btn-x-close">&#10005;</button>
+			</div>
+			<div id="review" class="box-body" style="display: none;">
+			</div>
+		</div>
+		<script>
+			document.getElementById('info').innerHTML = '<pre>' + phtml + '</pre>';
+		</script>
+		<div id="menu">
+			<button id="table" class="button-active">TABLE</button>
+			<button id="helix">HELIX</button>
+			<button id="grid">GRID</button>
+			<button id="showlinks" class="button-active">LINKS</button>
+			<button id="projectinfo" class="button-active">INFO</button>
+			<button id="btnSearch">FIND</button>
+			<button id="btnReview">REVIEW</button>
+		</div>
+		</div>
+		<div id="reviewFrame" style="display: none;">
+			<button id="btnXCloseReviewFrame" class="btn-x-close btn-review-x-close">✖</button>
+			<div id="reviewFrameHeader">
+				<div id="reviewFrameHeaderFileName">File name</div>
+				<div id="reviewFrameHeaderFilePath">File path</div>
+			</div>
+			<div id="reviewFrameBody"></div>
+		</div>
+		<div id="viewChangeAnimationBox" style="display: none;">
+		</div>
+
+		<script>
+			var scene, renderer, domEvents;
+			var scene2, renderer2;
+			var controls, controlsDefaultTarget;
+			var camera, cameraDefaultPosition;
+
+			var ballGeo = new THREE.SphereGeometry( 5, 5, 5 );
+			var ballMaterial = new THREE.MeshBasicMaterial( { color: 0x016161 } );
+
+			var objects = [];
+			var targets = { table: [], helix: [], grid: [] };
+			var targetLinks = { table: [], helix: [], grid: []};
+			var mode = 'table';
+			var showlinks = true;
+			var showInfoBox = true;
+			var showSearchBox = false;
+			var showReviewBox = false;
+			var reviewFrameElements = {};
+
+			var node = null;		//selected node
+
+			var currentNodeId;
+			var fields = ['tag', 'license', 'name', 'copyright', 'path', 'sha1']; // Searching Fields and priority order
+			var endpoints = {	// used to found camere position and target center in each view mode
+				table: { top:0, left:0, right:0, bottom:0 },
+				helix: { top:0, left:0, right:0, bottom:0 },
+				grid: { top:0, left:0, right:0, bottom:0 }
+			};
+			var highlightedNodes = {	// contains arrays of highlighted files
+				linked: [],
+				found: []
+			}
+			var mouseOver = {	// Used for highlight and show data. And sets delay between mouse over event and highlight/show data
+				tween: undefined,
+				nodeId: undefined,
+				delay: 500,
+				mouseDown: false
+			}
+			var reviewStatButtons = [
+				['✓', 'Accepted'],
+				['&#x2715;', 'Failed'],
+				['//', 'Ignore'],
+				['?', 'Unknown'],
+				['!!', 'Attention']
+			];
+
+			var jsonArraySize = 9;
+
+			init();
+			initReviewFrame();
+
+			var playAnimation = true;
+			animate();
+
+			// draw a line on the screen
+			function drawLine(p1,p2){
+				var mat = new THREE.LineBasicMaterial({color:0x016161});
+				var geo = new THREE.Geometry();
+				geo.vertices.push( p1 );
+				geo.vertices.push( p2 );
+				var line = new THREE.Line(geo,mat);
+				return line;
+			}
+
+			function formatBytes(bytes,decimals) {
+				if(bytes == 0) return '0 bytes';
+				var k = 1000,
+					dm = decimals + 1 || 3,
+					sizes = ['bytes', 'Kb', 'Mb', 'Gb', 'Tb', 'Pb', 'Eb', 'Zb', 'Yb'],
+					i = Math.floor(Math.log(bytes) / Math.log(k));
+				return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+			}
+
+			// function sortDetails() {
+			// 	var indexArr = [];
+			// 	var sortedIndexArr = [];
+			// 	var newArr = [];
+
+			// 	details.forEach(function (detail) {
+			// 		indexArr.push(detail[0]);
+			// 		sortedIndexArr.push(detail[0]);
+			// 	})
+			// 	sortedIndexArr.sort(function(a, b){return a-b});
+
+			// 	sortedIndexArr.forEach(function (i) {
+			// 		newArr.push(details[indexArr.indexOf(i)])
+			// 	})
+
+			// 	console.log(newArr)
+			// }
+
+			function init() {
+
+				camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 60000 );
+				// initial view, how far are we from the graph?
+				camera.position.z = 8000;
+				cameraDefaultPosition = new THREE.Vector3().copy(camera.position);
+
+				scene = new THREE.Scene();
+				scene2 = new THREE.Scene();
+
+				// table
+
+				// how many data fields has each element on the nodes.js file?
+
+				highlightedNodes.linked = [];
+				for ( var i = 0; i < table.length; i += jsonArraySize ) {
+
+					var element = document.createElement( 'div' );
+					element.id = i/jsonArraySize + 1;
+					element.addEventListener('click', nodeClick);
+					element.addEventListener('mouseover', nodeMouseOver);
+					element.addEventListener('mouseout', nodeMouseOut);
+
+					element.className = 'element';
+
+					// should this file be drawn in red color because of a risky license?
+					if(table[ i + 7 ]){
+						element.style.backgroundColor = 'rgba(236,0,31,' + ( Math.random() * 0.5 + 0.25 ) + ')';
+					}else{
+						element.style.backgroundColor = 'rgba(0,127,127,' + ( Math.random() * 0.5 + 0.25 ) + ')';
+					}
+
+					var number = document.createElement( 'div' );
+					number.className = 'number';
+					number.textContent = table[ i + 6 ];
+					element.appendChild( number );
+
+					var symbol = document.createElement( 'div' );
+					if(table[ i + 7 ])
+						symbol.className = 'symbolred';
+					else
+						symbol.className = 'symbol';
+
+					symbol.textContent = table[ i + 1 ];
+					element.appendChild( symbol );
+
+					// has copyright?
+					if(table[ i + 8 ]){
+						var copyright = document.createElement( 'div' );
+						copyright.className = 'copyright';
+						copyright.textContent = '©';
+						element.appendChild( copyright );
+					}
+
+					var details = document.createElement( 'div' );
+					details.className = 'details';
+					details.innerHTML = table[ i + 2 ] + '<br>' + table[ i + 3 ];
+					element.appendChild( details );
+
+
+
+					var object = new THREE.CSS3DObject( element );
+					object.position.x = Math.random() * 4000 - 2000;
+					object.position.y = Math.random() * 4000 - 2000;
+					object.position.z = Math.random() * 4000 - 2000;
+
+					scene.add( object );
+					
+
+					objects.push( object );
+
+					//	
+				
+					var object = new THREE.Object3D();
+					object.position.x = ( table[ i + 4 ] * 140 ) - 1330;
+					object.position.y = - ( table[ i + 5 ] * 180 ) + 990;
+					setEndpoints('table', object.position);
+
+					targets.table.push( object );
+					highlightedNodes.linked.push(element.id);
+				}
+
+				// helix
+
+				var vector = new THREE.Vector3();
+				var cylindrical = new THREE.Cylindrical();
+
+				for ( var i = 0, l = objects.length; i < l; i ++ ) {
+
+					var theta = i * 0.175 + Math.PI;
+					var y = - ( i * 8 ) + 450;
+
+					var object = new THREE.Object3D();
+
+					cylindrical.set( 900, theta, y );
+
+					object.position.setFromCylindrical( cylindrical );
+
+					setEndpoints('helix', object.position);
+
+					vector.x = object.position.x * 2;
+					vector.y = object.position.y;
+					vector.z = object.position.z * 2;
+
+					object.lookAt( vector );
+
+					targets.helix.push( object );
+
+				}
+
+				// grid
+
+				for ( var i = 0; i < objects.length; i ++ ) {
+
+					var object = new THREE.Object3D();
+					// how big is the grid, default was 5 x 5
+					var gridSize = 9;
+					object.position.x = ( ( i % gridSize ) * 400 ) - 800;
+					object.position.y = ( - ( Math.floor( i / gridSize ) % gridSize ) * 400 ) + 800;
+					object.position.z = ( Math.floor( i / (gridSize*gridSize) ) ) * 1000 - 2000;
+
+					setEndpoints('grid', object.position);
+
+					targets.grid.push( object );
+				}
+
+				//Process links
+				for ( var i = 0; i < tableLinks.length; i ++) {
+					var link = tableLinks[i];
+					var fromInd = link[0];
+					var toInd = link[1];
+					//<!-- //table -->
+					//<!-- var From = targets.table[fromInd - 1].position; -->
+					//<!-- var To = targets.table[toInd - 1].position; -->
+					//<!-- targetLinks.table.push([From, To]); -->
+					//helix
+					var From = targets.helix[fromInd - 1].position;
+					var To = targets.helix[toInd - 1].position;
+					targetLinks.helix.push([From, To]);
+					//grid
+					var From = targets.grid[fromInd - 1].position;
+					var To = targets.grid[toInd - 1].position;
+					targetLinks.grid.push([From, To]);
+				}
+
+				//
+
+				renderer = new THREE.CSS3DRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight, false );
+				renderer.domElement.style.position = 'absolute';
+				renderer.domElement.style.zIndex = 0;
+				renderer.domElement.style.top = 0;
+				document.getElementById( 'container' ).appendChild( renderer.domElement );
+
+				renderer2 = new THREE.WebGLRenderer();
+				//<!-- renderer2.setClearColor( 0xfefefe ); -->
+				renderer2.setSize( window.innerWidth, window.innerHeight, false );
+				renderer2.domElement.style.position = 'absolute';
+				//<!-- renderer2.domElement.style.top = 0; -->
+				renderer2.domElement.style.zIndex = -200;
+				document.getElementById( 'container' ).appendChild( renderer2.domElement );
+
+				// what is used for controlling the view/navigation
+
+				controls = new THREE.OrbitControls( camera, renderer.domElement );
+				controls.rotateSpeed = 0.1;
+				controls.enableDamping = true;
+				controls.dampingFactor = 0.1;
+				controls.minDistance = 5;
+				controls.maxDistance = 60000;
+				controls.enableKeys = false;
+				controlsDefaultTarget = new THREE.Vector3().copy(controls.target);
+
+				// add controls for buttons
+
+				var button = document.getElementById( 'table' );
+				button.addEventListener( 'click', function ( event ) {
+					if(mode == 'table') return;
+					scene2.children = [];
+					mode = 'table';
+					transform( targets.table, 2000 );
+					modeButtonActiveStile(mode);
+					cameraViewCenter(mode);
+				}, false );
+
+				var button = document.getElementById( 'helix' );
+				button.addEventListener( 'click', function ( event ) {
+					if(mode == 'helix') return;
+					scene2.children = [];
+					mode = 'helix';
+					transform( targets.helix, 2000 );
+					modeButtonActiveStile(mode);
+					cameraViewCenter(mode);
+				}, false );
+
+				var btnGrid = document.getElementById( 'grid' );
+				btnGrid.addEventListener( 'click', function ( event ) {
+					if(mode == 'grid') return;
+					scene2.children = [];
+					mode = 'grid';
+					transform( targets.grid, 2000 );
+					modeButtonActiveStile(mode);
+					cameraViewCenter(mode);
+				}, false );
+
+				function modeButtonActiveStile(buttonId) {
+					document.getElementById('table').className = "";
+					document.getElementById('helix').className = "";
+					document.getElementById('grid').className = "";
+					document.getElementById(buttonId).className = "button-active";
+				}
+
+				transform( targets.table, 2000 );
+
+				var btnShowlinks = document.getElementById( 'showlinks' );
+				btnShowlinks.addEventListener( 'click', function ( event ) {
+					showlinks = !showlinks;
+					if(showlinks) {
+						this.className = "button-active";
+						links(node);
+					}
+					else {
+						this.className = "";
+						scene2.children = [];
+						render();
+					}
+				}, false );
+
+
+				document.getElementById('review').innerHTML = showMatchesInReviewBox();
+				findCameraViewCenter('table');
+				camera.position.copy(cameraDefaultPosition);
+				controls.target.copy(controlsDefaultTarget);
+
+				document.getElementById( 'projectinfo' ).addEventListener( 'click', showHideInfoBox, false );
+				document.getElementById( 'btnXCloseInfo' ).addEventListener( 'click', closeInfoBox, false );
+				document.getElementById( 'btnSearch' ).addEventListener( 'click', showHideSearchBox, false );
+				document.getElementById( 'btnXCloseSearch' ).addEventListener( 'click', closeSearchBox, false );
+				document.getElementById( 'btnSearchHelp' ).addEventListener( 'click', function () {
+					var searchHelp = document.getElementById( 'searchHelp' )
+					if (searchHelp.style.display == 'none') {
+						document.getElementById( 'searchHelp' ).style.display = '';
+					} else {
+						document.getElementById( 'searchHelp' ).style.display = 'none';
+					}
+				}, false );
+				document.getElementById( 'btnXCloseSearchHelp' ).addEventListener( 'click', function () {
+					document.getElementById( 'searchHelp' ).style.display = 'none';
+				}, false );
+				document.getElementById( 'btnReview' ).addEventListener( 'click', showHideReviewBox, false );
+				document.getElementById( 'btnXCloseReview' ).addEventListener( 'click', closeReviewBox, false );
+				document.getElementById( 'btnMinimizeInfo' ).addEventListener( 'click', minimizeInfoBox, false );
+				document.getElementById( 'btnMinimizeSearch' ).addEventListener( 'click', minimizeSearchBox, false );
+				document.getElementById( 'btnMinimizeReview' ).addEventListener( 'click', minimizeReviewBox, false );
+
+				renderer.domElement.addEventListener( 'mousedown', function () {
+					mouseOver.mouseDown = true;
+				}, false );
+				renderer.domElement.addEventListener( 'mouseup', function () {
+					mouseOver.mouseDown = false;
+				}, false );
+
+				renderer.domElement.addEventListener('dblclick', function() {
+					highlightAllNodes();
+					document.getElementById('info').innerHTML = '<pre>' + phtml + '</pre>';
+					document.getElementById('infoDetailsHeader').innerHTML = 'Details';
+					node = null;
+					links();
+				},true);
+
+				document.getElementById( 'inputSearch' ).addEventListener( 'keydown', function (event) {
+					if (event.which == 13 || event.keyCode == 13) { findFiles(); }
+				}, false );
+				document.getElementById( 'btnFind' ).addEventListener( 'click', findFiles, false );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+
+			function setEndpoints(viewMode, objectPosition) {
+				if (objectPosition.y > endpoints[viewMode].top) {
+					endpoints[viewMode].top = objectPosition.y;
+				}
+				if (objectPosition.x < endpoints[viewMode].left) {
+					endpoints[viewMode].left = objectPosition.x;
+				}
+				if (objectPosition.x > endpoints[viewMode].right) {
+					endpoints[viewMode].right = objectPosition.x;
+				}
+				if (objectPosition.y < endpoints[viewMode].bottom) {
+					endpoints[viewMode].bottom = objectPosition.y;
+				}
+			}
+
+			function findCameraViewCenter(viewMode) {
+				var x = (endpoints[viewMode].left + endpoints[viewMode].right) / 2;
+				var y = (endpoints[viewMode].top + endpoints[viewMode].bottom) / 2;
+				cameraDefaultPosition.x = x;
+				cameraDefaultPosition.y = y;
+				controlsDefaultTarget.x = x;
+				controlsDefaultTarget.y = y;
+			}
+
+			function cameraViewCenter(viewMode) {
+				findCameraViewCenter(viewMode);
+				cameraMoveAnimation(cameraDefaultPosition, controlsDefaultTarget, 1500);
+			}
+
+
+			function closeInfoBox() {
+				showHideInfoBox(false);
+			}
+
+			function closeSearchBox() {
+				showHideSearchBox(false);
+			}
+
+			function closeReviewBox() {
+				showHideReviewBox(false);
+			}
+
+			function showHideInfoBox(state) {
+				showInfoBox = (typeof state === 'boolean') ? state : !showInfoBox;
+				if(showInfoBox) {
+					document.getElementById('projectinfo').className = "button-active";
+					document.getElementById('details').style.display = '';
+					document.getElementById('info').style.display = '';
+				}
+				else {
+					document.getElementById('projectinfo').className = "";
+					document.getElementById('details').style.display = 'none';
+					document.getElementById('info').style.display = 'none';
+				}
+			}
+
+			function showHideSearchBox(state) {
+				showSearchBox = (typeof state === 'boolean') ? state : !showSearchBox;
+				if (showSearchBox) {
+					document.getElementById('btnSearch').className = "button-active";
+					document.getElementById('searchBoxHeader').style.display = '';
+					document.getElementById('searchBoxBody').style.display = '';
+					document.getElementById('searchResultBody').style.display = '';
+					document.getElementById("inputSearch").focus();
+				}
+				else {
+					document.getElementById('btnSearch').className = "";
+					document.getElementById('searchBoxHeader').style.display = 'none';
+					document.getElementById('searchBoxBody').style.display = 'none';
+					document.getElementById('searchResultBody').style.display = 'none';
+				}
+			}
+
+			function showHideReviewBox(state) {
+				showReviewBox = (typeof state === 'boolean') ? state : !showReviewBox;
+				if (showReviewBox) {
+					document.getElementById('btnReview').className = "button-active";
+					document.getElementById('reviewHeader').style.display = '';
+					document.getElementById('review').style.display = '';
+				}
+				else {
+					document.getElementById('btnReview').className = "";
+					document.getElementById('reviewHeader').style.display = 'none';
+					document.getElementById('review').style.display = 'none';
+				}
+			}
+
+			function minimizeInfoBox() {
+				showInfoBox = !showInfoBox;
+				if(showInfoBox) {
+					document.getElementById('projectinfo').className = "button-active";
+					document.getElementById('info').style.display = '';
+				}
+				else {
+					document.getElementById('projectinfo').className = "";
+					document.getElementById('info').style.display = 'none';
+				}
+			}
+
+			function minimizeSearchBox() {
+				showSearchBox = !showSearchBox;
+				if (showSearchBox) {
+					document.getElementById('btnSearch').className = "button-active";
+					document.getElementById('searchBoxBody').style.display = '';
+					document.getElementById('searchResultBody').style.display = '';
+					document.getElementById("inputSearch").focus();
+				}
+				else {
+					document.getElementById('btnSearch').className = "";
+					document.getElementById('searchBoxBody').style.display = 'none';
+					document.getElementById('searchResultBody').style.display = 'none';
+				}
+			}
+
+			function minimizeReviewBox() {
+				showReviewBox = !showReviewBox;
+				if (showReviewBox) {
+					document.getElementById('btnReview').className = "button-active";
+					document.getElementById('review').style.display = '';
+				}
+				else {
+					document.getElementById('btnReview').className = "";
+					document.getElementById('review').style.display = 'none';
+				}
+			}
+
+			function findFiles() {
+				var searchText = document.getElementById( 'inputSearch' ).value.trim();
+				if (searchText) {
+
+					// use anothe search type when typing "review"
+					if (searchText.indexOf('review') !== -1) {
+						findFilesInReview(searchText);
+						return;
+					}
+
+					searchText = searchText.replace(/:/g, ': ');
+					document.getElementById('searchBoxHeaderText').innerHTML = 'Find files: "' + getShortString(searchText, 24, 0) + '"';
+					var parsedSearchText = parseSearchText(searchText);
+					var resultList = getResultList(parsedSearchText);
+					showSearchResult(resultList)
+				} else {
+					document.getElementById('searchBoxHeaderText').innerHTML = 'Find files';
+					showSearchResult(undefined);
+				}
+			}
+
+			function parseSearchText(searchText) {
+				var parsedSearchText = []; // 0 - word, 1 - operand, 2 - field, 3 - match case
+
+				var searchWords = searchText.split(/[ 	]+/);
+				for (let wordIndex = 0; wordIndex < searchWords.length; wordIndex += 1) {
+					var searchWord = searchWords[wordIndex];
+					var operand = undefined;
+					var searchField = undefined;
+					var matchCase = undefined;
+
+					if (searchWord === 'AND' || searchWord === 'OR') {
+						operand = searchWord;
+						wordIndex += 1;
+						searchWord = searchWords[wordIndex];
+					}
+					for (let field of fields) {
+						if (searchWord === field + ':') {
+							searchField = field;
+							wordIndex += 1;
+							searchWord = searchWords[wordIndex];
+							break;
+						}
+					}
+					if (searchWord && searchWord.indexOf('"') !== -1) {
+						matchCase = true;
+						searchWord = searchWord.split('"');
+						searchWord = searchWord[1];
+					}
+
+					if (searchWord) {
+						parsedSearchText.push([searchWord, operand, searchField, matchCase]);
+					}
+				}
+
+				return parsedSearchText;
+			}
+
+			function getResultList(parsedSearchText) {
+				var resultList = [];	// 0 - file index; 1 - file name; 2 - fields; 3 - full texts;
+				for (var row = 0; row < details.length; row += 1) {
+					var fileName = details[row][6].replace(/^.*[\\\/]/, '');
+					var filePath = details[row][6].replace(/([^\\\/]+)$/, '');
+
+					var foundFields = [];
+					var foundFullTexts = [];
+					for (let wordIndex = 0; wordIndex < parsedSearchText.length; wordIndex += 1) {
+						var searchWord = parsedSearchText[wordIndex][0];
+						var searchField = parsedSearchText[wordIndex][2];
+						var matchCase = parsedSearchText[wordIndex][3];
+
+						var foundField = undefined;
+						var foundFullText = undefined;
+						if ((!searchField || searchField === 'tag') && textMatch(searchWord, table[row * jsonArraySize + 6], matchCase)) {
+							foundField = 'tag';
+							foundFullText = table[row * jsonArraySize + 6];
+						}
+						else if ((!searchField || searchField === 'license') && textMatch(searchWord, details[row][4], matchCase)) {
+							foundField = 'license';
+							foundFullText = details[row][5];
+						}
+						else if ((!searchField || searchField === 'name') && textMatch(searchWord, fileName, matchCase)) {
+							foundField = 'name';
+							foundFullText = fileName;
+						}
+						else if ((!searchField || searchField === 'copyright') && textMatch(searchWord, details[row][5], matchCase)) {
+							foundField = 'copyright';
+							foundFullText = details[row][5];
+						}
+						else if ((!searchField || searchField === 'path') && textMatch(searchWord, filePath, matchCase)) {
+							foundField = 'path';
+							foundFullText = filePath;
+						}
+						else if ((!searchField || searchField === 'sha1') && textMatch(searchWord, details[row][1], matchCase)) {
+							foundField = 'sha1';
+							foundFullText = details[row][1];
+						}
+
+						if (foundFullText) {
+							foundFields.push(foundField);
+							foundFullTexts.push(foundFullText);
+						} else {
+							removeNotConditions(wordIndex, foundFields, foundFullTexts, parsedSearchText);
+							wordIndex = skipNotConditions(wordIndex, parsedSearchText);
+						}
+					}
+					if (foundFullTexts.length > 0) {
+						resultList.push([details[row][0], fileName, foundFields, foundFullTexts]);
+					}
+				}
+				return resultList;
+			}
+
+			function removeNotConditions(wordIndex, foundFields, foundFullTexts, parsedSearchText) {
+				if (wordIndex >= 0) {
+					var operand = parsedSearchText[wordIndex][1];
+					if (operand === 'AND') {
+						foundFields.pop();
+						foundFullTexts.pop();
+						removeNotConditions(wordIndex - 1, foundFields, foundFullTexts, parsedSearchText);
+					}
+				}
+			}
+
+			function skipNotConditions(wordIndex, parsedSearchText) {
+				if (wordIndex < parsedSearchText.length - 1) {
+					var nextOperand = parsedSearchText[wordIndex + 1][1];
+					if (nextOperand === 'AND') {
+						wordIndex = skipNotConditions(wordIndex + 1, parsedSearchText)
+					}
+				}
+				return wordIndex;
+			}
+
+			function textMatch(searchWord, str, matchCase) {
+				if (!matchCase) {
+					searchWord = searchWord.toLowerCase();
+					str = str.toLowerCase();
+				}
+				if (str.indexOf(searchWord) !== -1) { return true; }
+
+				return false;
+			}
+
+			function showSearchResult(filesList) {
+				var searchResult = document.getElementById('searchResult');
+				var highlights = [];
+				if (filesList === undefined) {
+					searchResult.innerHTML = '';
+					highlightFoundNodes([]);
+					return;
+				}
+
+				if (Array.isArray(filesList) && filesList.length > 0) {
+					var resultHTML = {};
+					var totalFilesSize = 0;
+					var totalLOC = 0;
+					for (let field of fields) {
+						resultHTML[field] = '';
+					}
+
+					for (var row = 0; row < filesList.length; row += 1) {
+						resultHTML[filesList[row][2][0]] += '<p><a href="#" onclick="nodeClick(undefined, ' + filesList[row][0] + ')">' + getShortString(filesList[row][1], 30, 8) + '</a> // ' + getJoinedFieldsString(filesList[row][2]) + '</p>';
+						highlights.push(filesList[row][0]);
+						totalFilesSize += details[filesList[row][0]-1][2];
+						totalLOC += details[filesList[row][0]-1][3];
+					}
+
+					if (filesList.length === 1) {
+						changeCurrentNode(filesList[0][0]);
+						nodeClick(undefined, currentNodeId);
+					} else {
+						highlightFoundNodes(highlights);
+						changeCurrentNode(undefined);
+						cameraMoveAnimation(cameraDefaultPosition, controlsDefaultTarget, 1500);
+					}
+
+					if (totalLOC > 0) {
+						totalLOC = ' with ' + totalLOC + ' LOC';
+					} else {
+						totalLOC = '';
+					}
+
+					resultHTML.stats = 'Found '
+						+ filesList.length
+						+ ((filesList.length === 1) ? ' file' : ' files')
+						+ ((totalFilesSize > 0) ? (' (sized in ' + formatBytes(totalFilesSize) + totalLOC + ')') : '')
+						+ '<br><hr>';
+					searchResult.innerHTML = resultHTML.stats || '';
+					for (let field of fields) {
+						searchResult.innerHTML += resultHTML[field] || '';
+					}
+				} else {
+					searchResult.innerHTML = 'No matches found';
+				}
+			}
+
+			function getShortString(str, maxLength, endSimbolsCount) {
+				maxLength = maxLength || 16;
+				endSimbolsCount = (endSimbolsCount !== undefined) ? endSimbolsCount : 5;
+				str = str.trim();
+				if (str.length > maxLength) {
+					return str.substring(0, maxLength - endSimbolsCount - 3) + '...' + str.substring(str.length - endSimbolsCount);
+				} else {
+					return str;
+				}
+			}
+
+			function getJoinedFieldsString(arr) {
+				newArr = []
+				arr.forEach(function (str) {
+					if (newArr.indexOf(str) === -1) {
+						newArr.push(str);
+					}
+				})
+				return newArr.join([', '])
+			}
+
+			function clearFileName(fileName) {
+				if (fileName) {
+					var clearFileName = undefined;
+					var bracketIndex = fileName.indexOf(' (');
+					if (bracketIndex === -1) {
+						return fileName;
+					} else {
+						return fileName.substring(0, bracketIndex);
+					}
+				}
+			}
+
+			function findFilesInReview(searchText) {
+				var userReviewFileNames = [];
+				userSettings.userReviewData.forEach(function (reviewData) {
+					if (reviewData.review) {
+						var fileName = clearFileName(reviewData.filename);
+						if (fileName) {
+							userReviewFileNames.push(fileName);
+						}
+					}
+				})
+
+				var reviewFielsIndexes = [];
+				var reviewFiels = [];
+				details.forEach(function (detail) {
+					if (userReviewFileNames.indexOf(detail[6]) !== -1) {
+						reviewFielsIndexes.push(detail[0]);
+						reviewFiels.push([detail[0], detail[6].replace(/^.*[\\\/]/, ''), ['tag'], detail[6]]);
+					}
+				})
+
+				showSearchResult(reviewFiels)
+				highlightFoundNodes(reviewFielsIndexes);
+			}
+
+
+			function transform( targets, duration ) {
+				TWEEN.removeAll();
+
+				var moveTweens = 0;
+				for ( var i = 0; i < objects.length; i ++ ) {
+
+					var object = objects[ i ];
+					var target = targets[ i ];
+
+					moveTweens += 1;
+					new TWEEN.Tween( object.position )
+						.to( { x: target.position.x, y: target.position.y, z: target.position.z }, Math.random() * duration + duration )
+						.easing( TWEEN.Easing.Exponential.InOut )
+						.onComplete( function() {
+							moveTweens -= 1;
+							if (moveTweens <= 0 && currentNodeId) {
+								nodeClick(undefined, currentNodeId);
+								links(node);
+							}
+						})
+						.start();
+
+					new TWEEN.Tween( object.rotation )
+						.to( { x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }, Math.random() * duration + duration )
+						.easing( TWEEN.Easing.Exponential.InOut )
+						.start();
+
+				}
+			}
+
+			function nodeMouseOver(event) {
+				if (this.id === mouseOver.nodeId || mouseOver.mouseDown) return;
+
+				TWEEN.remove(mouseOver.tween);
+				mouseOver.tween = new TWEEN.Tween( this )
+					.to( {}, mouseOver.delay )
+					.onComplete( function() {
+						mouseOver.nodeId = this.id
+						showFileInfo(mouseOver.nodeId);
+					})
+					.start();
+			}
+
+			function nodeMouseOut(event) {
+				if (mouseOver.nodeId === undefined || mouseOver.mouseDown)  return;
+
+				TWEEN.remove(mouseOver.tween);
+				mouseOver.tween = new TWEEN.Tween( this )
+					.to( {}, mouseOver.delay )
+					.onComplete( function() {
+						mouseOver.nodeId = undefined;
+						if (currentNodeId) {
+							showFileInfo(currentNodeId);
+						} else if (highlightedNodes.found.length > 0) {
+							highlightFoundNodes(highlightedNodes.found);
+						} else {
+							highlightAllNodes();
+						}
+					})
+					.start();
+			}
+
+			function nodeClick(event, clickedId) {
+				var id;
+				if (clickedId !== undefined) {
+					id = clickedId;
+				} else {
+					id = parseInt(this.id);
+				}
+
+				var selectPos = targets[mode][id-1].position;
+				showFileInfo(id);
+
+				changeCurrentNode(id);
+				cameraMove(id, selectPos);
+			}
+
+			function changeCurrentNode(newNodeId) {
+				if (newNodeId) {
+					if (newNodeId != currentNodeId) {
+						var rgbaColor;
+						if (currentNodeId) {
+							rgbaColor = document.getElementById(currentNodeId).style.backgroundColor.split('(')[1].split(')')[0].split(',');
+							document.getElementById(currentNodeId).style.backgroundColor = 'rgba(' + rgbaColor[0] + ',' + rgbaColor[1] + ',' + rgbaColor[2] + ',' + ( Math.random() * 0.5 + 0.25 ) + ')';
+							document.getElementById(currentNodeId).style.zIndex = 'auto';
+							document.getElementById(currentNodeId).className = 'element inactive';
+						}
+
+						rgbaColor = document.getElementById(newNodeId).style.backgroundColor.split('(')[1].split(')')[0].split(',');
+						document.getElementById(newNodeId).style.backgroundColor = 'rgb(' + rgbaColor[0] + ',' + rgbaColor[1] + ',' + rgbaColor[2] + ')';
+						document.getElementById(newNodeId).style.zIndex = '10';
+						currentNodeId = newNodeId;
+					}
+				} else {
+					currentNodeId = undefined;
+				}
+			}
+
+			function showFileInfo(id) {
+				if (!id) return;
+				var highlights = [id];
+				var nodesFrom = [];
+				var nodesTo = [];
+				for (var i = 0; i < tableLinks.length; i ++) {
+					var link = tableLinks[i];
+					var fromInd = link[0];
+					var toInd = link[1];
+					if (fromInd !== toInd) {
+						if(fromInd == id) {
+							highlights.push(toInd);
+							nodesTo.push(toInd);
+						}
+						else if(toInd == id) {
+							highlights.push(fromInd);
+							nodesFrom.push(fromInd);
+						}
+					}
+				}
+				highlightNodes(highlights);
+
+				//file info
+				var file = details[id-1];
+				var finfo = '';
+				if(file[3] != '')
+					finfo += '<p>LOC: ' + file[3] + '</p>';
+				if(file[4] == '')
+					finfo += '<p>License: Not Found</p>';
+				else
+					finfo += '<p>License: ' + file[4] + '</p>';
+				if(file[5] == '')
+					finfo += '<p>Copyright: Not Found</p>';
+				else
+					finfo += '<p>License: ' + file[5] + '</p>';
+				finfo += '<p>Path: ' + file[6] + '</p>';
+
+				finfo += '<p>SHA1: ' + file[1] + '</p>';
+				finfo += '<p>Size: ' + formatBytes(file[2]) + '</p>';
+
+				document.getElementById('infoDetailsHeader').innerHTML = '<b>' + getShortString(file[6].replace(/^.*[\\\/]/, ''), 24, 8) + '</b>';
+
+				document.getElementById('info').innerHTML = finfo;
+				//related links
+				node = {'node': id, 'from': nodesFrom, 'to': nodesTo};
+				links(node);
+
+
+				var sumNodes = nodesFrom.length + nodesTo.length;
+				if (sumNodes > 0) {
+					var linkedFilesList = '';
+					// fix the output message
+					if(sumNodes > 1){
+						linkedFilesList += '<p>'
+						+ sumNodes
+						+' files linked:</p>';
+					}else{
+						linkedFilesList += '<p>1 file linked:</p>';
+					}
+
+					var filename = '';
+					for (var nodeFromIndex = 0; nodeFromIndex < nodesFrom.length; nodeFromIndex += 1) {
+						filename = details[nodesFrom[nodeFromIndex]-1][6];
+						filename = filename.replace(/^.*[\\\/]/, '');
+
+						// show the licensing information if available
+						var licenseText = '';
+						if(details[nodesFrom[nodeFromIndex]-1][4]){
+							licenseText = ' // ' + details[nodesFrom[nodeFromIndex]-1][4];
+						}
+
+						linkedFilesList += '<p style="padding-left: 1em;"><a href="#" onclick="nodeClick(undefined, ' + nodesFrom[nodeFromIndex] + ')">'
+						+ filename + '</a>'
+						+ licenseText
+						+'</p>';
+					}
+
+					for (var nodeToIndex = 0; nodeToIndex < nodesTo.length; nodeToIndex += 1) {
+						filename = details[nodesTo[nodeToIndex]-1][6];
+						filename = filename.replace(/^.*[\\\/]/, '');
+
+						// show the licensing information if available
+						var licenseText = '';
+						if(details[nodesTo[nodeToIndex]-1][4]){
+							licenseText = ' // ' + details[nodesTo[nodeToIndex]-1][4];
+						}
+
+						linkedFilesList += '<p style="padding-left: 1em;">\t<a href="#" onclick="nodeClick(undefined, ' + nodesTo[nodeToIndex] + ')">'
+						+ filename + '</a>'
+						+ licenseText
+						+'</p>';
+					}
+
+					document.getElementById('info').innerHTML += linkedFilesList;
+				}
+			}
+
+			function highlightNodes(nodeList) {
+				if (Array.isArray(nodeList)) {
+					inactivateNodes(highlightedNodes.linked);
+
+					nodeList.forEach(function (nodeIndex) {
+						document.getElementById(nodeIndex).className = 'element';
+					});
+					highlightedNodes.linked = nodeList;
+
+					highlightedNodes.found.forEach(function (nodeIndex) {
+						document.getElementById(nodeIndex).className = 'element';
+					});
+				}
+			}
+
+			function highlightFoundNodes(nodeList) {
+				if (Array.isArray(nodeList)) {
+					inactivateNodes(highlightedNodes.linked);
+					inactivateNodes(highlightedNodes.found);
+
+					nodeList.forEach(function (nodeIndex) {
+						document.getElementById(nodeIndex).className = 'element';
+					});
+					highlightedNodes.found = nodeList;
+				}
+			}
+
+			function inactivateNodes(nodeList) {
+				if (Array.isArray(nodeList)) {
+					nodeList.forEach(function (nodeIndex) {
+						document.getElementById(nodeIndex).className = 'element inactive';
+					});
+				}
+			}
+
+			function highlightAllNodes() {
+				changeCurrentNode(undefined);
+				highlightedNodes.linked = [];
+				for (var i = 0, count = table.length / jsonArraySize; i < count; i ++) {
+						document.getElementById(i + 1).className = 'element';
+						highlightedNodes.linked.push(i + 1);
+				}
+			}
+
+			// Move file to position towards selected file object
+			function cameraMove(id, position) {
+				var distance = 990;	// Distance between camera and selected file object
+				var moveSpeed = 3000; // Speed for moving animation
+				var positionOffset = 0.1; // Small camera position offset for clear artifacts in Mozilla browsers
+
+				var selectRot = targets[mode][id-1].rotation;
+
+				var newCameraPosition = new THREE.Vector3();
+				if (selectRot.x != 0 || selectRot.y != 0 || selectRot.z != 0) {
+					var cameraVector = new THREE.Vector3();
+					cameraVector.x = Math.sin(selectRot.y);
+
+					if (selectRot.z == 0) {
+						cameraVector.z = Math.cos(selectRot.y);
+					} else {
+						cameraVector.z = -Math.cos(selectRot.y);
+					}
+
+					cameraVector.multiplyScalar(distance);
+					newCameraPosition.set(position.x + cameraVector.x, position.y, position.z + cameraVector.z);
+				} else {
+					newCameraPosition.set(position.x + positionOffset, position.y + positionOffset, position.z + distance);
+				}
+
+				cameraMoveAnimation(newCameraPosition, position, moveSpeed);
+			}
+
+			function cameraMoveAnimation(newPosition, newTarget, moveSpeed) {
+				var position = new THREE.Vector3().copy(newPosition);;
+				new window.TWEEN.Tween(camera.position).
+					to(position, moveSpeed).
+					easing(window.TWEEN.Easing.Exponential.InOut).
+					start();
+
+				var target = new THREE.Vector3().copy(newTarget);
+				new window.TWEEN.Tween(controls.target).
+					to(target, moveSpeed).
+					easing(window.TWEEN.Easing.Exponential.InOut).
+					start();
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer2.setSize( window.innerWidth, window.innerHeight );
+				render();
+			}
+
+			function animate() {
+				requestAnimationFrame( animate );
+				TWEEN.update();
+				if (controls.enabled) {
+					controls.update();
+				}
+				if (playAnimation) {
+					render();
+				}
+			}
+
+			function render() {
+				renderer.render( scene, camera );
+				renderer2.render( scene2, camera );
+			}
+
+			function links(select) {
+				if(!showlinks || mode == 'table') return;
+				scene2.children = [];
+				// TWEEN.removeAll();
+				var links = targetLinks[mode];
+				if(select) {
+					var nodeId = select['node'];
+					var selectPos = targets[mode][nodeId-1].position;
+					for(var i = 0; i < select['from'].length; i ++) {
+						var fromInd = select['from'][i];
+						var From = targets[mode][fromInd-1].position;
+						if(selectPos == From) continue;
+						//link
+						var line = drawLine(From,selectPos);
+						scene2.add(line);
+						//ball
+						var sphere = new THREE.Mesh( ballGeo, ballMaterial );
+						sphere.position.copy(From);
+						scene2.add(sphere);
+						new TWEEN.Tween( sphere.position )
+							.to( { x: selectPos.x, y: selectPos.y, z: selectPos.z }, Math.random() * 2000 + 9000 )
+							.easing( TWEEN.Easing.Linear.None )
+							.repeat(Infinity)
+							.start();
+					}
+					for(var i = 0; i < select['to'].length; i ++) {
+						var toInd = select['to'][i];
+						var To = targets[mode][toInd-1].position;
+						if(selectPos == To) continue;
+						//link
+						var line = drawLine(selectPos,To);
+						scene2.add(line);
+						//ball
+						var sphere = new THREE.Mesh( ballGeo, ballMaterial );
+						sphere.position.copy(selectPos);
+						scene2.add(sphere);
+						new TWEEN.Tween( sphere.position )
+							.to( { x: To.x, y: To.y, z: To.z }, Math.random() * 2000 + 9000 )
+							.easing( TWEEN.Easing.Linear.None )
+							.repeat(Infinity)
+							.start();
+					}
+				}
+				else {
+					for ( var i = 0; i < links.length; i ++) {
+						var From = links[i][0];
+						var To = links[i][1];
+						if(From == To) continue;
+						//link
+						var line = drawLine(From,To);
+						scene2.add(line);
+						//ball
+						var sphere = new THREE.Mesh( ballGeo, ballMaterial );
+						sphere.position.copy(From);
+						scene2.add(sphere);
+
+						new TWEEN.Tween( sphere.position )
+							.to( { x: To.x, y: To.y, z: To.z }, Math.random() * 2000 + 9000 )
+							.easing( TWEEN.Easing.Linear.None )
+							.repeat(Infinity)
+							.start();
+					}
+				}
+			}
+
+			function showMatchesInReviewBox() {
+				if (Array.isArray(matches) && matches.length > 0) {
+					var htmlString = '<ul>';
+					matches.forEach(function (matchesFilesType, typeIndex) {
+						if (Array.isArray(matchesFilesType.files) && matchesFilesType.files.length > 0) {
+							htmlString += '<li class="matchesFilesType">' +htmlReviewFileTypeList(matchesFilesType, typeIndex) + '</li>';
+						}
+					})
+					htmlString += '</ul>';
+				}
+				return htmlString;
+			}
+
+			function htmlReviewFileTypeList(filesList, typeIndex) {
+				var htmlString = '';
+				var reviewFileTypeHeader = '';
+				var sortedHtmlString = { "Unknown": '', "Failed": '', "Attention": '', "Accepted": '', "Ignore": '' };
+				var filesCountByType = { "Unknown": 0, "Failed": 0, "Attention": 0, "Accepted": 0, "Ignore": 0  }
+				if (filesList) {
+					htmlString += '<ul id="filesList_' + filesList.type + '" style="display:none;">';
+					filesList.files.forEach(function (match, fileIndex) {
+						var fileId = typeIndex + '_' + fileIndex;
+						var reviewFile = htmlReviewFile(match.filename, fileId);
+						sortedHtmlString[reviewFile.reivewState] += '<li class="reviewFile">'
+							+ reviewFile.htmlString
+							+ htmlMatches(match) + '</li>';
+						filesCountByType[reviewFile.reivewState] += 1;
+					})
+					if (sortedHtmlString.Unknown) { htmlString += sortedHtmlString.Unknown; }
+					if (sortedHtmlString.Failed) { htmlString += sortedHtmlString.Failed; }
+					if (sortedHtmlString.Attention) { htmlString += sortedHtmlString.Attention; }
+					if (sortedHtmlString.Accepted) { htmlString += sortedHtmlString.Accepted; }
+					if (sortedHtmlString.Ignore) { htmlString += sortedHtmlString.Ignore; }
+					htmlString += '</ul>';
+
+					var reviewFileTypeHeader = htmlReviewFileTypeHeader(filesList.type, filesList.files.length, filesCountByType);
+				}
+				return reviewFileTypeHeader + htmlString;
+			}
+
+			function htmlReviewFileTypeHeader(fileType, totalFilesCount, filesCountByType) {
+				var htmlString = '';
+				if (fileType) {
+					htmlString += '<div id="reviewFilesTypeHeader_'
+						+ fileType + '" class="reviewFilesTypeHeader" onclick="expandFileList(\''
+						+ fileType + '\')"><span id="reviewFilesTypeHeaderArrow_'
+						+ fileType + '">&#9658;</span> '
+						+ fileType
+						+ ' (' + totalFilesCount + ')'
+						+ '<span class="itemsNeedReviewCounter">' + htmlItemsNeedReviewCounter(filesCountByType) + '</span>'
+						+ '</div>';
+				}
+				return htmlString;
+			}
+
+			function htmlItemsNeedReviewCounter(filesCountByType) {
+				var htmlString = '';
+				if (filesCountByType) {
+					if (filesCountByType.Unknown) {
+						htmlString += '<span class="itemsNeedReviewUnknownCounter" title="Unknown">' + filesCountByType.Unknown + '</span>';
+					}
+					if (filesCountByType.Attention)
+						{ htmlString += '<span class="itemsNeedReviewAttentionCounter" title="Attention">' + filesCountByType.Attention + '</span>';
+					}
+					if (filesCountByType.Failed) {
+						htmlString += '<span class="itemsNeedReviewFailedCounter" title="Failed">' + filesCountByType.Failed + '</span>';
+					}
+				}
+				return htmlString;
+			}
+
+			function htmlReviewFile(fileName, fileId) {
+				var htmlString = '';
+				if (fileName) {
+					var clearedFilName = clearFileName(fileName);
+					var fileReviewState = getFileReviewState(clearedFilName);
+					htmlString += htmlReviewFileButtons(fileReviewState, fileId);
+					var linkId = 'reviewFile_' + fileId;
+					htmlString += '<span class="reviewFileName"><a id="'
+						+ linkId + '" + onclick="showFileReviewDetails(\''	// showFileInGraph
+						+ fileId + '\')" href="#" title="'
+						+ fileName + '">'
+						+ getShortString(clearedFilName.replace(/^.*[\\\/]/, ''), 22, 8) + '</a></span>';
+				}
+				return { reivewState: fileReviewState || 'Unknown', htmlString: htmlString};
+			}
+
+			function htmlReviewFileButtons(activeButton, fileId) {
+				var htmlString = '';
+				// var htmlString = '<span><button id="reviewFileButton_%id%" onclick="changeFileReviewState(\'%id%\')" class="%class%" title="%title%"></button>%button%</span>';
+				htmlString += '<span>';
+				reviewStatButtons.forEach(function (button) {
+					var buttonId = fileId + '_' + button[1];
+					htmlString += '<button id="reviewFileButton_'
+						 + buttonId + '" onclick="changeFileReviewState(\''
+						 + buttonId + '\')"';
+					if (button[1] == activeButton) {
+						htmlString += ' class="reviewState button-active" ';
+					} else {
+						htmlString += ' class="reviewState" ';
+					}
+					htmlString += 'title="' + button[1] + '">' + button[0] + '</button>';
+				})
+				htmlString += '</span>';
+				return htmlString;
+			}
+
+			function expandFileList(fileType) {
+				if (fileType) {
+					var fileTypeElement = document.getElementById('filesList_' + fileType);
+					var fileTypeHeader = document.getElementById('reviewFilesTypeHeaderArrow_' + fileType);
+					if (fileTypeElement.style.display === 'none') {
+						fileTypeElement.style.display = '';
+						fileTypeHeader.innerHTML = '&#9660;';
+					} else {
+						fileTypeElement.style.display = 'none';
+						fileTypeHeader.innerHTML = '&#9658;';
+					}
+				}
+			}
+
+			function getFileReviewState(fileName) {
+				if (userSettings.userReviewData) {
+					var reviewState;
+					userSettings.userReviewData.some(function (file) {
+						if (file.filename.indexOf(fileName) !== -1) {
+							reviewState = file.review;
+							return true;
+						}
+					})
+					return reviewState;
+				}
+			}
+
+			function htmlMatches(match) {
+				var htmlString = '';
+				if (match) {
+					if (Array.isArray(match.matches_bin) && match.matches_bin.length > 0) {
+						htmlString += '<p class="reviewMatchesBinHeader">Matches bin</p>';
+						htmlString += '<ul>';
+						match.matches_bin.forEach(function (matchBin) {
+							htmlString += htmlMatchBin(matchBin);
+						})
+						htmlString += '</ul>';
+					}
+					if (Array.isArray(match.matches_source) && match.matches_source.length > 0) {
+						htmlString += '<p class="reviewMatchesSourceHeader">Matches source</p>';
+						htmlString += '<ul>';
+						match.matches_source.forEach(function (matchSource) {
+							htmlString += htmlMatchSource(matchSource);
+						})
+						htmlString += '</ul>';
+					}
+				}
+				return htmlString;
+			}
+
+			function htmlMatchBin(matchBin) {
+				var htmlString = '';
+				if (matchBin) {
+					htmlString += '<li class="reviewMatchesBinSnippet">'
+						+ matchBin[0] + ' '	// Hash type
+						+ matchBin[1] + '% '	// Similarity in percents
+						//+ getShortString(matchBin[2]) + ' '	// Link to source file
+						+ htmlReviewSnippetButtons()
+						+ '</li>';
+				}
+				return htmlString;
+			}
+
+			function htmlMatchSource(matchSource) {
+				var htmlString = '';
+				if (matchSource) {
+					htmlString += '<li>';
+					// htmlString += '<p>' + matchSource.lines + '</p>';
+					// htmlString += '<p>' + matchSource.code + '</p>';
+					if (Array.isArray(matchSource.similarity) && matchSource.similarity.length > 0) {
+						htmlString += '<ul>';
+						matchSource.similarity.forEach(function (similarity) {
+							htmlString += htmlMatchSourceSimilarity(similarity);
+						})
+						htmlString += '</ul>';
+					}
+					htmlString += '</li>';
+				}
+				return htmlString;
+			}
+
+			function htmlMatchSourceSimilarity(similarity) {
+				var htmlString = '';
+				if (similarity) {
+					htmlString += '<li class="reviewMatchesSourceSnippet">'
+						+ '<span title="Percentage of similarity">' + similarity.percent + '% </span>'
+						+ '<span title="Similar lines">Lines ' + similarity.lines + ' </span>'
+						// + similarity.reference + ' '
+						+ htmlReviewSnippetButtons()
+						+ '</li>';
+				}
+				return htmlString;
+			}
+
+			function htmlReviewSnippetButtons(activeButton, snippetId) {
+				var htmlString = '';
+				// var htmlString = '<span><button id="reviewFileButton_%id%" onclick="changeFileReviewState(\'%id%\')" class="%class%" title="%title%"></button>%button%</span>';
+				htmlString += '<span style="position: absolute; right: 0px;">';
+				reviewStatButtons.forEach(function (button) {
+					var buttonId = snippetId + '_' + button[1];
+					htmlString += '<button id="reviewSnippetButton_'
+						 + buttonId + '" onclick="changeSnippetReviewState(\''
+						 + buttonId + '\')"';
+					if (button[1] == activeButton) {
+						htmlString += ' class="reviewState button-active" ';
+					} else {
+						htmlString += ' class="reviewState" ';
+					}
+					htmlString += 'title="' + button[1] + '">' + button[0] + '</button>';
+				})
+				htmlString += '</span>';
+				return htmlString;
+			}
+
+			function showFileInGraph(id) {
+				if (id) {
+					id = id.split('_');
+					var fileIdInGraph;
+					var fileName = clearFileName(matches[id[0]].files[id[1]].filename);
+					details.some(function (detail) {
+						if (detail[6] === fileName) {
+							fileIdInGraph = detail[0];
+							nodeClick(undefined, fileIdInGraph);
+							return true;
+						}
+					})
+				}
+			}
+
+			function changeFileReviewState(id) {
+				if (id) {
+					id = id.split('_');
+					var fileName = matches[id[0]].files[id[1]].filename;
+
+					var fileFound = userSettings.userReviewData.some(function (file) {
+						if (file.filename === fileName) {
+							file.review = id[2];
+							return true;
+						}
+					})
+					if (!fileFound) {
+						userSettings.userReviewData.push({ "filename":fileName, "review":id[2] })
+					}
+
+					reviewStatButtons.forEach(function (button) {
+						document.getElementById('reviewFileButton_' + id[0] + '_' + id[1] + '_' + button[1]).className = 'reviewState';
+					})
+					document.getElementById('reviewFileButton_' + id[0] + '_' + id[1] + '_' + id[2]).className = 'reviewState button-active';
+				}
+			}
+
+			function initReviewFrame() {
+				document.getElementById('btnXCloseReviewFrame').addEventListener( 'click', closeReviewFrame );
+			}
+
+			function showFileReviewDetails(id) {
+				if (id) {
+					var viewChangeAnimationBox = document.getElementById('viewChangeAnimationBox').style;
+					viewChangeAnimationBox.display = '';
+					new TWEEN.Tween({ top: 50, left: 50, width: 0, height: 0 })
+					    .to({ top: 0, left: 0, width: 100, height: 100 }, 500)
+						.easing( TWEEN.Easing.Exponential.In )
+					    .onUpdate(function() {
+					        viewChangeAnimationBox.top = this.top + '%';
+					        viewChangeAnimationBox.left = this.left + '%';
+					        viewChangeAnimationBox.width = this.width + '%';
+					        viewChangeAnimationBox.height = this.height + '%';
+					    })
+					    .onComplete( function() {
+					    	viewChangeAnimationBox.display = 'none';
+
+							playAnimation = false;
+							document.getElementById('graph3d').style.display = 'none';
+							document.getElementById('reviewFrame').style.display = '';
+
+							addReviewMatchFileHeader(id);
+							addReviewMatchFilematchesBin(id);
+							addReviewMatchBox(id);
+							showReviewCoderProfile(0);
+						})
+				    	.start();
+				}
+			}
+
+			function closeReviewFrame() {
+				playAnimation = true;
+				document.getElementById('graph3d').style.display = '';
+				document.getElementById('reviewFrame').style.display = 'none';
+
+				var viewChangeAnimationBox = document.getElementById('viewChangeAnimationBox').style;
+				viewChangeAnimationBox.display = '';
+				new TWEEN.Tween({ top: 0, left: 0, width: 100, height: 100 })
+				    .to({ top: 50, left: 50, width: 0, height: 0 }, 500)
+					.easing( TWEEN.Easing.Exponential.In )
+				    .onUpdate(function() {
+				        viewChangeAnimationBox.top = this.top + '%';
+				        viewChangeAnimationBox.left = this.left + '%';
+				        viewChangeAnimationBox.width = this.width + '%';
+				        viewChangeAnimationBox.height = this.height + '%';
+				    })
+				    .onComplete( function() {
+				    	viewChangeAnimationBox.display = 'none';
+						document.getElementById('reviewFrameBody').innerHTML = '';
+						reviewFrameElements = {};
+					})
+				    .start();
+			}
+
+			function addReviewMatchFileHeader(id) {
+				var splittedId = id.split('_');
+				var file = matches[splittedId[0]].files[splittedId[1]]
+				var fileName = file.filename.replace(/^.*[\\\/]/, '');
+				var filePath = file.filename.replace(/([^\\\/]+)$/, '');
+				document.getElementById('reviewFrameHeaderFileName').innerHTML = 'File: ' + fileName;
+				document.getElementById('reviewFrameHeaderFilePath').innerHTML = 'Path: ' + filePath;
+			}
+
+			function addReviewMatchFilematchesBin(id) {
+				var splittedId = id.split('_');
+				var matchesBin = matches[splittedId[0]].files[splittedId[1]].matches_bin;
+
+				if (Array.isArray(matchesBin) && matchesBin.length > 0) {
+					var htmlString = '';
+					matchesBin.forEach(function (matchBin) {
+						htmlString += '<tr><td>' + matchBin[0] + '</td><td>' + matchBin[1] + '%</td><td>' + matchBin[2] + ' ' + '</td></tr>';
+					});
+					reviewFrameElements.matchesBin = document.createElement('div');
+					reviewFrameElements.matchesBin.id = 'reviewFileMatchesBin';
+					reviewFrameElements.matchesBin.innerHTML = '<table><caption>Matches Bin</caption><thead><tr><th>Similarity</th><th>Hash</th><th>Reference</th></tr></thead><tbody>'
+						+ htmlString + '</tbody></table>';
+					document.getElementById('reviewFrameBody').appendChild(reviewFrameElements.matchesBin);
+				}
+			}
+
+			function addReviewMatchBox(id) {
+				var splittedId = id.split('_');
+				var mathcesSurce = matches[splittedId[0]].files[splittedId[1]].matches_source;
+
+				reviewFrameElements.mathcesSurce = [];
+
+				if (Array.isArray(mathcesSurce) && mathcesSurce.length > 0) {
+					mathcesSurce.forEach(function (mathcSurce, index) {
+						var htmlString = '<div class="box-header">'
+							+ mathcSurce.lines + '</div><div class="box-body review-box-body">'
+							+ mathcSurce.code + '</div>';
+
+						var mathceSurce = document.createElement('div');
+						mathceSurce.id = 'reviewFileMatchSource_' + index;
+						if (index === 0) {
+							mathceSurce.className = 'review-file-match-source review-file-match-source-current';
+						} else {
+							mathceSurce.className = 'review-file-match-source';
+							mathceSurce.style.left = (index - 1) * 210 + 'px';
+						}
+						mathceSurce.innerHTML = htmlString;
+
+						reviewFrameElements.mathcesSurce.push(mathceSurce)
+						document.getElementById('reviewFrameBody').appendChild(mathceSurce);
+					})
+				}
+
+				// var reviewMatchBox = document.createElement('div');
+				// reviewMatchBox.id = 'reviewMatchBox';
+				// reviewMatchBox.className = 'review-match-box';
+
+				// var reviewMatchBoxHeader = document.createElement('div');
+				// reviewMatchBoxHeader.id = 'reviewMatchBoxHeader';
+				// reviewMatchBoxHeader.className = 'box-header';
+				// var text = document.createTextNode(matches[splittedId[0]].files[splittedId[1]].filename);
+				// reviewMatchBoxHeader.appendChild(text);
+				// reviewMatchBox.appendChild(reviewMatchBoxHeader);
+
+				// var reviewMatchBoxBody = document.createElement('div');
+				// reviewMatchBoxBody.id = 'reviewMatchBoxBody';
+				// reviewMatchBoxBody.className = 'box-body';
+				// text = document.createTextNode(matches[splittedId[0]].files[splittedId[1]]);
+				// reviewMatchBoxBody.appendChild(text);
+				// reviewMatchBox.appendChild(reviewMatchBoxBody);
+			}
+
+			function showReviewCoderProfile(id) {
+				if (id !== undefined && coders[id]) {
+					var imageSrc = coders[id].imageSrc || 'images/noavatar.png';
+					var name;
+					if (!coders[id].name && !coders[id].lastName) {
+						name = 'No-name';
+					} else {
+						name = (coders[id].name || '') + ' ' + (coders[id].lastName || '');
+					}
+
+					reviewFrameElements.coderProfile = document.createElement('div');
+					reviewFrameElements.coderProfile.id = 'reviewCoderProfile';
+					reviewFrameElements.coderProfile.innerHTML = '<div id="reviewCoderProfileHeader" class="box-header">'
+						+ name + '</div><div id="reviewCoderProfileImage" class="box-body"><img src="'
+						+ imageSrc + '" class="review-coder-profile-image" alt=""></div>';
+
+					document.getElementById('reviewFrameBody').appendChild(reviewFrameElements.coderProfile);
+				}
+			}
+
+
+		</script>
+	</body>
+</html>
