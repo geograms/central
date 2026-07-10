@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../data/models.dart';
+import '../graph_controller.dart' show kProfileScene;
 import '../scene/pose.dart';
 import '../scene/projection.dart';
 import '../theme.dart';
@@ -35,10 +36,25 @@ class LinkPainter extends CustomPainter {
   /// lockstep.
   final List<double> periods;
 
+  static final Stopwatch _paintWatch = Stopwatch();
+  static int _paintCalls = 0;
+
   @override
   void paint(Canvas canvas, Size size) {
     if (links.isEmpty) return;
+    _paintWatch.start();
+    _paintLinks(canvas, size);
+    _paintWatch.stop();
+    if (kProfileScene && ++_paintCalls % 60 == 0) {
+      debugPrint(
+        'LINKPAINT avg=${(_paintWatch.elapsedMicroseconds / 60 / 1000).toStringAsFixed(2)}ms/frame '
+        '(${links.length} links)',
+      );
+      _paintWatch.reset();
+    }
+  }
 
+  void _paintLinks(Canvas canvas, Size size) {
     final centre = Offset(size.width / 2, size.height / 2);
     final line = Paint()
       ..color = GraphColors.link

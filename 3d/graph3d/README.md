@@ -43,31 +43,37 @@ cards crossed by 315 lines is a cat's cradle.
 
 ## Rendering
 
-Flutter has no depth buffer for widgets, so `Css3dStack` sorts the cards by
-camera-space depth and paints them back to front. Three constraints, all
-measured on an Oukitel C61 (Android 15, arm64) with the full 426 cards:
+The crowd of 426 cards is **baked, not widget-built**. At startup `CardBakery`
+rasterizes every card once into a GPU-resident image; each frame
+`CardCrowdPainter` culls, depth-sorts and draws them as textured quads through
+one `canvas.transform` per card (Canvas takes a full 4x4, perspective
+included). Only the selected and hovered cards render as live widgets, so they
+stay crisp at any zoom and carry the glow. Hit-testing is done in the same
+math: project the card's four corners, point-in-quad, nearest first
+(`pickCard`).
 
-1. **Key the Stack's direct children.** The depth sort permutes them every
-   frame; unkeyed, Flutter rematches by index and rebuilds every subtree.
-   Keying dropped build time from 107ms to 24ms.
+Why not a Stack of `Transform`ed widgets — the obvious port of CSS3D? Measured
+on an Oukitel C61 (Android 15, arm64, 90Hz):
 
-2. **Per-card blurs are unaffordable.** Flutter disables the raster cache under
-   a perspective transform, so `RepaintBoundary` does not cache them and every
-   blur recomputes each frame — about 0.74ms per card. The cyan glow is
-   therefore reserved for the selected and hovered cards; everything else that
-   is merely linked or found gets a brighter border.
+1. Flutter's raster cache is disabled under a perspective transform, and
+   Android has no partial repaint, so every animated frame re-drew every glyph
+   of every card: 21-30ms of raster, a hard ceiling near 35fps, and per-card
+   `RepaintBoundary`s could not change that (they cannot cache what the cache
+   refuses to hold).
+2. Per-card blurs cost ~0.74ms each per frame for the same reason.
+3. `Transform.filterQuality` looks like a fix and draws nothing: it snapshots
+   through `ImageFilter.matrix`, which cannot express perspective.
 
-3. **`Transform.filterQuality` cannot be used.** It snapshots the child through
-   `ImageFilter.matrix`, which cannot express a perspective matrix, so most
-   cards silently fail to draw. It benchmarks twenty times faster because it is
-   rendering nothing.
+With the baked crowd, same phone, worst case (grid, all 315 links animating,
+dragging):
 
-Measured on that phone in the heaviest view — grid layout, all 315 links
-animating, dragging so the whole stack rebuilds every frame — build 13ms,
-raster 26ms, about 38fps. To check it yourself:
+    widgets:  build 13-39ms   raster 26-30ms   ~25-38fps
+    baked:    build  3-7ms    raster  8-14ms   72-91fps (90Hz cap in table)
+
+The texture bill is ~74MB (426 cards at 1.5x, 180x240 RGBA). To re-measure:
 
     flutter build apk --release --dart-define=GRAPH3D_FRAME_STATS=true
-    adb logcat | grep FRAMES
+    adb logcat | grep -E 'FRAMES|CROWDPAINT|LINKPAINT|ADVANCE'
 
 Note also that `Quaternion.rotated` in `vector_math` applies the *inverse*
 rotation, while `asRotationMatrix`, `Matrix4.compose` and

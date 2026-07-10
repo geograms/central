@@ -21,6 +21,10 @@ const Duration kMaxTransition = Duration(milliseconds: 2400);
 /// How long the pointer must rest on a card before its details are shown.
 const Duration kHoverDelay = Duration(milliseconds: 500);
 
+/// `--dart-define=GRAPH3D_FRAME_STATS=true` also turns on per-subsystem
+/// timing prints, so a slow frame can be attributed rather than guessed at.
+const bool kProfileScene = bool.fromEnvironment('GRAPH3D_FRAME_STATS');
+
 /// A free-running millisecond clock, so the crawling balls advance without
 /// forcing the 426-card stack to rebuild.
 class LinkClock extends ChangeNotifier {
@@ -223,6 +227,7 @@ class GraphController extends ChangeNotifier {
     _start = List<Pose>.of(_current);
     _geometry = buildLayout(layout, data.nodes);
     _randomizeDurations(_durationRandom);
+    _lastAdvanceValue = -1;
     transition.forward(from: 0);
     reframe();
     _updateClock();
@@ -241,10 +246,30 @@ class GraphController extends ChangeNotifier {
     );
   }
 
-  /// Advances every card towards its target at its own pace. Called once per
-  /// frame from the render layer, before the poses are read.
+  static final Stopwatch _advanceWatch = Stopwatch();
+  static int _advanceCalls = 0;
+  double _lastAdvanceValue = -1;
+  bool _posesSettled = false;
+
+  /// Advances every card towards its target at its own pace. Both painters
+  /// call this before reading the poses; the guard makes the second call in a
+  /// frame free, so neither has to know about the other.
   void advancePoses() {
-    if (transition.isCompleted) return;
+    if (transition.isCompleted) {
+      // The last animated frame lands slightly short of t=1, and a dropped
+      // frame can skip the end entirely. Snap once, so the poses the picker
+      // and painters share are exactly the layout's.
+      if (_posesSettled) return;
+      for (var i = 0; i < _current.length; i++) {
+        _current[i] = _geometry.poses[i];
+      }
+      _posesSettled = true;
+      return;
+    }
+    _posesSettled = false;
+    if (transition.value == _lastAdvanceValue) return;
+    _lastAdvanceValue = transition.value;
+    _advanceWatch.start();
     final elapsedMs = transition.value * kMaxTransition.inMilliseconds;
     for (var i = 0; i < _current.length; i++) {
       final t = (elapsedMs / _durationsMs[i]).clamp(0.0, 1.0);
@@ -253,6 +278,13 @@ class GraphController extends ChangeNotifier {
         _geometry.poses[i],
         exponentialInOut(t),
       );
+    }
+    _advanceWatch.stop();
+    if (kProfileScene && ++_advanceCalls % 60 == 0) {
+      debugPrint(
+        'ADVANCE avg=${(_advanceWatch.elapsedMicroseconds / 60 / 1000).toStringAsFixed(2)}ms/frame',
+      );
+      _advanceWatch.reset();
     }
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -35,10 +37,15 @@ void _reportFrameTimes() {
       build.add(timing.buildDuration.inMicroseconds / 1000);
       raster.add(timing.rasterDuration.inMicroseconds / 1000);
     }
-    if (raster.length < 120) return;
+  });
+
+  // Wall-clock windows, printed even when nothing rendered: "n=0" is the
+  // proof that an idle view is actually idle, which per-N-frames reporting
+  // cannot distinguish from stale frames left over from the last gesture.
+  Timer.periodic(const Duration(seconds: 2), (_) {
     // ignore: avoid_print — this output is the point of the flag.
     print(
-      'FRAMES n=${raster.length} '
+      'FRAMES n=${raster.length.toString().padLeft(3)} '
       'build p50=${percentile(build, 0.5).toStringAsFixed(1)}ms '
       'p95=${percentile(build, 0.95).toStringAsFixed(1)}ms  '
       'raster p50=${percentile(raster, 0.5).toStringAsFixed(1)}ms '

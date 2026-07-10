@@ -7,7 +7,8 @@ import 'package:flutter/services.dart';
 import 'data/models.dart';
 import 'graph_controller.dart';
 import 'review/review_store.dart';
-import 'scene/css3d_stack.dart';
+import 'scene/card_bakery.dart';
+import 'scene/crowd_painter.dart';
 import 'scene/layouts.dart';
 import 'scene/projection.dart';
 import 'widgets/info_panel.dart';
@@ -35,10 +36,13 @@ class GraphPage extends StatefulWidget {
 class _GraphPageState extends State<GraphPage> with TickerProviderStateMixin {
   late final GraphController _controller;
   late final AnimationController _frameReveal;
+  late final CardBakery _bakery;
 
   MatchFile? _reviewFile;
   double _viewportHeight = 1;
   double _lastScale = 1;
+  Size _sceneSize = const Size(1, 1);
+  int? _lastHoverId;
 
   /// The controller frames the graph before it knows the window's shape. Once
   /// the first layout pass has, re-frame so the whole table actually fits.
@@ -52,6 +56,10 @@ class _GraphPageState extends State<GraphPage> with TickerProviderStateMixin {
       reviewStore: widget.reviewStore,
       vsync: this,
     );
+    _bakery = CardBakery.bake(
+      widget.data.nodes,
+      List<double>.generate(widget.data.nodeCount, _controller.alphaOf),
+    );
     _frameReveal = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 320),
@@ -61,6 +69,7 @@ class _GraphPageState extends State<GraphPage> with TickerProviderStateMixin {
   @override
   void dispose() {
     _frameReveal.dispose();
+    _bakery.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -204,95 +213,176 @@ class _GraphPageState extends State<GraphPage> with TickerProviderStateMixin {
     );
   }
 
+  Projector get _projector => Projector(
+    view: _controller.camera.viewMatrix,
+    perspective: perspectiveFor(_sceneSize.height),
+  );
+
+  /// Ids rendered as live widgets above the baked crowd, back to front. They
+  /// are also the ones a pick must test first.
+  List<int> get _liveIds => <int>[
+    if (_controller.hoveredId != null &&
+        _controller.hoveredId != _controller.selectedId)
+      _controller.hoveredId!,
+    if (_controller.selectedId != null) _controller.selectedId!,
+  ];
+
+  int? _pickAt(Offset position) {
+    _controller.advancePoses();
+    return pickCard(
+      poses: _controller.poses,
+      projector: _projector,
+      size: _sceneSize,
+      position: position,
+      onTop: _liveIds.reversed,
+    );
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    final id = _pickAt(details.localPosition);
+    if (id != null) _controller.tapNode(id);
+  }
+
+  void _updateHover(Offset? position) {
+    final id = position == null ? null : _pickAt(position);
+    if (id == _lastHoverId) return;
+    if (_lastHoverId != null) _controller.hoverNode(_lastHoverId!, false);
+    if (id != null) _controller.hoverNode(id, true);
+    _lastHoverId = id;
+  }
+
   Widget _buildScene() {
     return Listener(
       onPointerSignal: _onPointerSignal,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onScaleStart: _onScaleStart,
-        onScaleUpdate: _onScaleUpdate,
-        onScaleEnd: _onScaleEnd,
-        onDoubleTap: _controller.clearSelection,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            _viewportHeight = constraints.maxHeight;
-            final perspective = perspectiveFor(constraints.maxHeight);
-            _controller.camera.aspect =
-                constraints.maxWidth / constraints.maxHeight;
+      child: MouseRegion(
+        onHover: (event) => _updateHover(event.localPosition),
+        onExit: (_) => _updateHover(null),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onScaleStart: _onScaleStart,
+          onScaleUpdate: _onScaleUpdate,
+          onScaleEnd: _onScaleEnd,
+          onTapUp: _onTapUp,
+          onDoubleTap: _controller.clearSelection,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              _sceneSize = Size(constraints.maxWidth, constraints.maxHeight);
+              _viewportHeight = constraints.maxHeight;
+              final perspective = perspectiveFor(constraints.maxHeight);
+              _controller.camera.aspect =
+                  constraints.maxWidth / constraints.maxHeight;
 
-            if (!_framed) {
-              _framed = true;
-              WidgetsBinding.instance.addPostFrameCallback(
-                (_) => _controller.reframe(immediate: true),
-              );
-            }
+              if (!_framed) {
+                _framed = true;
+                WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => _controller.reframe(immediate: true),
+                );
+              }
 
-            return Stack(
-              fit: StackFit.expand,
-              children: <Widget>[
-                // Behind the cards, as the original's second renderer was.
-                RepaintBoundary(
-                  child: AnimatedBuilder(
-                    animation: Listenable.merge(<Listenable>[
-                      _controller,
-                      _controller.camera,
-                      _controller.transition,
-                      _controller.clock,
-                    ]),
-                    builder: (context, _) {
-                      final visible = _controller.visibleLinks;
-                      return CustomPaint(
-                        painter: LinkPainter(
-                          links: visible.links,
-                          periods: visible.periods,
-                          poses: _controller.poses,
-                          projector: Projector(
-                            view: _controller.camera.viewMatrix,
-                            perspective: perspective,
+              final sceneListenable = Listenable.merge(<Listenable>[
+                _controller,
+                _controller.camera,
+                _controller.transition,
+              ]);
+
+              return Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  // Behind the cards, as the original's second renderer was.
+                  RepaintBoundary(
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge(<Listenable>[
+                        sceneListenable,
+                        _controller.clock,
+                      ]),
+                      builder: (context, _) {
+                        _controller.advancePoses();
+                        final visible = _controller.visibleLinks;
+                        return CustomPaint(
+                          painter: LinkPainter(
+                            links: visible.links,
+                            periods: visible.periods,
+                            poses: _controller.poses,
+                            projector: Projector(
+                              view: _controller.camera.viewMatrix,
+                              perspective: perspective,
+                            ),
+                            clockMs: _controller.clock.ms,
+                            repaint: _controller.clock,
                           ),
-                          clockMs: _controller.clock.ms,
-                          repaint: _controller.clock,
-                        ),
+                        );
+                      },
+                    ),
+                  ),
+                  // The crowd: every card as one baked, textured quad.
+                  RepaintBoundary(
+                    child: AnimatedBuilder(
+                      animation: sceneListenable,
+                      builder: (context, _) {
+                        _controller.advancePoses();
+                        return CustomPaint(
+                          isComplex: true,
+                          painter: CardCrowdPainter(
+                            poses: _controller.poses,
+                            images: _bakery.images,
+                            projector: Projector(
+                              view: _controller.camera.viewMatrix,
+                              perspective: perspective,
+                            ),
+                            emphasisOf: _controller.emphasisOf,
+                            skip: _liveIds.toSet(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  // The one or two cards that matter render live: crisp at any
+                  // zoom, and free to carry the glow.
+                  AnimatedBuilder(
+                    animation: sceneListenable,
+                    builder: (context, _) {
+                      _controller.advancePoses();
+                      final projector = Projector(
+                        view: _controller.camera.viewMatrix,
+                        perspective: perspective,
+                      );
+                      return Stack(
+                        fit: StackFit.expand,
+                        clipBehavior: Clip.none,
+                        children: <Widget>[
+                          for (final id in _liveIds)
+                            if (projector.depthOf(
+                                  _controller.poses[id - 1].position,
+                                ) <=
+                                -1)
+                              Center(
+                                key: ValueKey<int>(id),
+                                child: Transform(
+                                  transform: projector.cardMatrix(
+                                    _controller.poses[id - 1].matrix,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: IgnorePointer(
+                                    child: NodeCard(
+                                      node: widget.data.nodes[id - 1],
+                                      alpha: _controller.alphaOf(id - 1),
+                                      emphasis: _controller.emphasisOf(id),
+                                      glow: _controller.glowFor(id),
+                                      hovered: _controller.hoveredId == id,
+                                      onTap: () {},
+                                      onHover: (_) {},
+                                    ),
+                                  ),
+                                ),
+                              ),
+                        ],
                       );
                     },
                   ),
-                ),
-                AnimatedBuilder(
-                  animation: Listenable.merge(<Listenable>[
-                    _controller,
-                    _controller.camera,
-                    _controller.transition,
-                  ]),
-                  builder: (context, _) {
-                    _controller.advancePoses();
-                    return Css3dStack(
-                      poses: _controller.poses,
-                      projector: Projector(
-                        view: _controller.camera.viewMatrix,
-                        perspective: perspective,
-                      ),
-                      foregroundIndex: _controller.selectedId == null
-                          ? null
-                          : _controller.selectedId! - 1,
-                      cardBuilder: (index) {
-                        final node = widget.data.nodes[index];
-                        return NodeCard(
-                          node: node,
-                          alpha: _controller.alphaOf(index),
-                          emphasis: _controller.emphasisOf(node.id),
-                          glow: _controller.glowFor(node.id),
-                          hovered: _controller.hoveredId == node.id,
-                          onTap: () => _controller.tapNode(node.id),
-                          onHover: (entered) =>
-                              _controller.hoverNode(node.id, entered),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
