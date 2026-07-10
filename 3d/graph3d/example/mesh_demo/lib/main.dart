@@ -126,7 +126,9 @@ class _MeshPageState extends State<MeshPage> with TickerProviderStateMixin {
                     ),
                     initialReframe: false,
                     onNodeTap: _controller.tapNode,
-                    onBackgroundDoubleTap: _controller.back,
+                    // Double-tap keeps the Google-Earth default: dive toward
+                    // the tapped point. Backing out lives on the breadcrumb
+                    // and Esc.
                   ),
                 ),
                 HoloPanel(controller: _controller),
@@ -191,10 +193,14 @@ class _TopBar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
-                child: Text(
-                  controller.breadcrumb,
-                  style: kMono.copyWith(color: kTextDim, fontSize: 12),
-                  overflow: TextOverflow.ellipsis,
+                child: GestureDetector(
+                  onTap: controller.back,
+                  behavior: HitTestBehavior.opaque,
+                  child: Text(
+                    '‹ ${controller.breadcrumb}',
+                    style: kMono.copyWith(color: kTextDim, fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               _ViewToggle(controller: controller),

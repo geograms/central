@@ -64,6 +64,14 @@ class OrbitCamera extends ChangeNotifier {
   double _phiDelta = 0;
   Vector3 _panDelta = Vector3.zero();
 
+  /// Coasting angular velocity from a fling, radians per second.
+  double _thetaVelocity = 0;
+  double _phiVelocity = 0;
+
+  /// A fling's velocity halves roughly every [flingHalfLife] seconds — the
+  /// Google-Earth coast, not a dead stop at finger-up.
+  double flingHalfLife = 0.6;
+
   /// Where the layout sits, and how far the target may stray from it. Without
   /// the tether the user can push the graph into empty space and lose all sense
   /// of where it went.
@@ -246,6 +254,14 @@ class OrbitCamera extends ChangeNotifier {
       return;
     }
 
+    // The Google-Earth swoop: a flight across the scene climbs before it
+    // descends, so the journey reads as travel rather than a teleport.
+    final travel = (target - _target).length;
+    final overview = math.max(_distance, distance);
+    final swoop = travel > overview * 0.6
+        ? math.min(travel * 0.5, maxDistance - overview)
+        : 0.0;
+
     _flight = _Flight(
       fromTarget: _target.clone(),
       toTarget: target.clone(),
@@ -256,6 +272,7 @@ class OrbitCamera extends ChangeNotifier {
       fromPhi: _phi,
       toPhi: phi.clamp(_polarLimit, math.pi - _polarLimit),
       durationMs: durationMs.toDouble(),
+      swoop: swoop,
     );
     _wake();
   }
@@ -266,6 +283,8 @@ class OrbitCamera extends ChangeNotifier {
     _flight = null;
     _thetaDelta = 0;
     _phiDelta = 0;
+    _thetaVelocity = 0;
+    _phiVelocity = 0;
     _panDelta.setZero();
     _sleep();
   }
@@ -278,6 +297,75 @@ class OrbitCamera extends ChangeNotifier {
     _thetaDelta -= 2 * math.pi * dx / viewportHeight * rotateSpeed;
     _phiDelta -= 2 * math.pi * dy / viewportHeight * rotateSpeed;
     _wake();
+  }
+
+  /// Hands the camera the pointer velocity left over at the end of a drag
+  /// (logical px/s): the scene keeps turning and eases out instead of
+  /// stopping dead under the finger.
+  void fling(double vx, double vy, double viewportHeight) {
+    if (viewportHeight <= 0) return;
+    _thetaVelocity = -2 * math.pi * vx / viewportHeight * rotateSpeed;
+    _phiVelocity = -2 * math.pi * vy / viewportHeight * rotateSpeed;
+    // Ignore the twitch at the end of a deliberate stop.
+    if (_thetaVelocity.abs() < 0.15 && _phiVelocity.abs() < 0.15) {
+      _thetaVelocity = 0;
+      _phiVelocity = 0;
+      return;
+    }
+    _wake();
+  }
+
+  /// The world point under a screen position (offset from the viewport
+  /// centre, y down), taken on the plane through the current target
+  /// perpendicular to the view axis — the reference surface zooming and
+  /// double-taps anchor to.
+  Vector3 worldAtScreen(double dx, double dy, double viewportHeight) {
+    final tangent = math.tan(kFovRadians / 2);
+    final perspective = 0.5 / tangent * viewportHeight;
+    final scale = perspective / _distance; // px per world unit at the target
+    final (right, up) = _screenAxes;
+    return _target + right * (dx / scale) - up * (dy / scale);
+  }
+
+  /// Zooms by [factor] keeping [about] fixed on screen: the eye moves along
+  /// the eye→[about] line, which is what makes pinch feel anchored to the
+  /// fingers instead of sliding toward the centre.
+  void zoomAbout(double factor, Vector3 about) {
+    final next = (_distance * factor).clamp(minDistance, maxDistance);
+    final actual = next / _distance;
+    if (actual == 1) return;
+    _flight = null;
+    _target = about + (_target - about) * actual;
+    _distance = next;
+    notifyListeners();
+  }
+
+  /// The double-tap step: a short animated dive toward [about].
+  void zoomTowards(Vector3 about, {double factor = 0.55, int durationMs = 450}) {
+    final next = (_distance * factor).clamp(minDistance, maxDistance);
+    final actual = next / _distance;
+    _flyTo(
+      target: about + (_target - about) * actual,
+      distance: next,
+      theta: _theta,
+      phi: _phi,
+      durationMs: durationMs,
+    );
+  }
+
+  /// Tilts the horizon: two-finger vertical drag, Google-Earth style.
+  void tilt(double dy, double viewportHeight) {
+    if (viewportHeight <= 0) return;
+    _flight = null;
+    _phiDelta -= 2 * math.pi * dy / viewportHeight * 0.35;
+    _wake();
+  }
+
+  /// Twist gesture: rotate the azimuth directly by [radians].
+  void twist(double radians) {
+    _flight = null;
+    _theta += radians;
+    notifyListeners();
   }
 
   /// Slides the target in the camera's screen plane, tracking the pointer.
@@ -327,7 +415,9 @@ class OrbitCamera extends ChangeNotifier {
       final e = exponentialInOut(t);
       _target = flight.fromTarget + (flight.toTarget - flight.fromTarget) * e;
       _distance =
-          flight.fromDistance + (flight.toDistance - flight.fromDistance) * e;
+          flight.fromDistance +
+          (flight.toDistance - flight.fromDistance) * e +
+          flight.swoop * math.sin(math.pi * e);
       _theta = flight.fromTheta + (flight.toTheta - flight.fromTheta) * e;
       _phi = flight.fromPhi + (flight.toPhi - flight.fromPhi) * e;
       if (t >= 1) {
@@ -361,7 +451,22 @@ class OrbitCamera extends ChangeNotifier {
       _theta += _idleDriftSpeed * dtMs / 1000;
     }
 
+    if (_thetaVelocity != 0 || _phiVelocity != 0) {
+      final dt = dtMs / 1000;
+      _theta += _thetaVelocity * dt;
+      _phi = (_phi + _phiVelocity * dt).clamp(_polarLimit, math.pi - _polarLimit);
+      final decay = math.pow(0.5, dt / flingHalfLife).toDouble();
+      _thetaVelocity *= decay;
+      _phiVelocity *= decay;
+      if (_thetaVelocity.abs() < 0.02 && _phiVelocity.abs() < 0.02) {
+        _thetaVelocity = 0;
+        _phiVelocity = 0;
+      }
+    }
+
     if (_idleDriftSpeed == 0 &&
+        _thetaVelocity == 0 &&
+        _phiVelocity == 0 &&
         _thetaDelta.abs() < _epsilon &&
         _phiDelta.abs() < _epsilon &&
         _panDelta.length < _epsilon) {
@@ -391,6 +496,7 @@ class _Flight {
     required this.fromPhi,
     required this.toPhi,
     required this.durationMs,
+    this.swoop = 0,
   });
 
   final Vector3 fromTarget;
@@ -402,5 +508,8 @@ class _Flight {
   final double fromPhi;
   final double toPhi;
   final double durationMs;
+
+  /// Extra altitude at the flight's midpoint.
+  final double swoop;
   double elapsedMs = 0;
 }

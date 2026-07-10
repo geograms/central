@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
+import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 import 'link_layer.dart';
 import 'model.dart';
@@ -91,7 +92,8 @@ class Graph3DView<T> extends StatefulWidget {
   /// toggle; apps override it for richer semantics (expanding a cluster).
   final void Function(int id)? onNodeTap;
 
-  /// Defaults to clearing the selection.
+  /// Defaults to the Google-Earth move: an animated zoom step toward the
+  /// tapped point. Override to repurpose the gesture.
   final VoidCallback? onBackgroundDoubleTap;
 
   /// Whether the view re-frames the scene once it learns the viewport's
@@ -109,6 +111,9 @@ class _Graph3DViewState<T> extends State<Graph3DView<T>> {
 
   double _viewportHeight = 1;
   double _lastScale = 1;
+  double _lastTwist = 0;
+  int _gesturePointers = 1;
+  Offset _lastTapDown = Offset.zero;
   Size _sceneSize = const Size(1, 1);
   int? _lastHoverId;
 
@@ -168,26 +173,48 @@ class _Graph3DViewState<T> extends State<Graph3DView<T>> {
 
   void _onPointerSignal(PointerSignalEvent event) {
     if (event is PointerScrollEvent) {
-      _controller.camera.zoomBy(math.exp(event.scrollDelta.dy * 0.001));
+      // Wheel zoom anchors to the cursor, like the pinch does to the fingers.
+      _controller.camera.zoomAbout(
+        math.exp(event.scrollDelta.dy * 0.001),
+        _worldUnder(event.localPosition),
+      );
     }
   }
 
   void _onScaleStart(ScaleStartDetails details) {
     _lastScale = 1;
+    _lastTwist = 0;
+    _gesturePointers = details.pointerCount;
     _controller.dragging = true;
     _controller.camera.stop();
   }
 
+  Vector3 _worldUnder(Offset local) {
+    final centre = Offset(_sceneSize.width / 2, _sceneSize.height / 2);
+    return _controller.camera.worldAtScreen(
+      local.dx - centre.dx,
+      local.dy - centre.dy,
+      _viewportHeight,
+    );
+  }
+
   void _onScaleUpdate(ScaleUpdateDetails details) {
+    _gesturePointers = details.pointerCount;
     if (details.pointerCount >= 2) {
+      final camera = _controller.camera;
+      // The Google-Earth two-finger vocabulary, all at once: pinch zooms
+      // about the point between the fingers, twisting rotates, dragging
+      // vertically tilts the horizon, dragging sideways pans.
       final step = details.scale / _lastScale;
       _lastScale = details.scale;
-      if (step > 0) _controller.camera.zoomBy(1 / step);
-      _controller.camera.pan(
-        details.focalPointDelta.dx,
-        details.focalPointDelta.dy,
-        _viewportHeight,
-      );
+      if (step > 0 && step != 1) {
+        camera.zoomAbout(1 / step, _worldUnder(details.localFocalPoint));
+      }
+      final twist = details.rotation - _lastTwist;
+      _lastTwist = details.rotation;
+      camera.twist(twist);
+      camera.tilt(details.focalPointDelta.dy, _viewportHeight);
+      camera.pan(details.focalPointDelta.dx, 0, _viewportHeight);
     } else {
       _controller.camera.rotate(
         details.focalPointDelta.dx,
@@ -197,7 +224,26 @@ class _Graph3DViewState<T> extends State<Graph3DView<T>> {
     }
   }
 
-  void _onScaleEnd(ScaleEndDetails details) => _controller.dragging = false;
+  void _onScaleEnd(ScaleEndDetails details) {
+    _controller.dragging = false;
+    // A one-finger flick keeps the world turning past finger-up.
+    if (_gesturePointers == 1) {
+      _controller.camera.fling(
+        details.velocity.pixelsPerSecond.dx,
+        details.velocity.pixelsPerSecond.dy,
+        _viewportHeight,
+      );
+    }
+  }
+
+  void _onDoubleTap() {
+    final custom = widget.onBackgroundDoubleTap;
+    if (custom != null) {
+      custom();
+      return;
+    }
+    _controller.camera.zoomTowards(_worldUnder(_lastTapDown));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -212,8 +258,8 @@ class _Graph3DViewState<T> extends State<Graph3DView<T>> {
           onScaleUpdate: _onScaleUpdate,
           onScaleEnd: _onScaleEnd,
           onTapUp: _onTapUp,
-          onDoubleTap:
-              widget.onBackgroundDoubleTap ?? _controller.clearSelection,
+          onDoubleTapDown: (details) => _lastTapDown = details.localPosition,
+          onDoubleTap: _onDoubleTap,
           child: LayoutBuilder(
             builder: (context, constraints) {
               _sceneSize = Size(constraints.maxWidth, constraints.maxHeight);
