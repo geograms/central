@@ -61,7 +61,9 @@ class LinkPainter extends CustomPainter {
   void _paintEdges(Canvas canvas, Size size) {
     final centre = Offset(size.width / 2, size.height / 2);
     final line = Paint()..isAntiAlias = true;
+    final under = Paint()..isAntiAlias = true;
     final ball = Paint();
+    final ballHalo = Paint();
 
     for (var i = 0; i < edges.length; i++) {
       final edge = edges[i];
@@ -76,14 +78,39 @@ class LinkPainter extends CustomPainter {
       // a line across the screen that does not exist.
       if (a == null || b == null) continue;
 
-      line
-        ..color = edge.style.color
-        ..strokeWidth = edge.style.width;
-      canvas.drawLine(centre + a.screen, centre + b.screen, line);
+      final start = centre + a.screen;
+      final end = centre + b.screen;
+      final style = edge.style;
 
-      final label = edge.style.label;
+      if (style.glow) {
+        // Layered strokes read as bloom without any per-frame blur.
+        under
+          ..color = style.color.withValues(alpha: style.color.a * 0.18)
+          ..strokeWidth = style.width * 4 + 3
+          ..strokeCap = StrokeCap.round;
+        if (style.dashed) {
+          _drawDashed(canvas, start, end, under);
+        } else {
+          canvas.drawLine(start, end, under);
+        }
+      }
+
+      line
+        ..color = style.color
+        ..strokeWidth = style.width;
+      if (style.dashed) {
+        _drawDashed(canvas, start, end, line);
+      } else {
+        canvas.drawLine(start, end, line);
+      }
+
+      if (style.ticks > 0) {
+        _drawTicks(canvas, start, end, style, line);
+      }
+
+      final label = style.label;
       if (label != null) {
-        final painter = _labelFor(label, edge.style.color);
+        final painter = _labelFor(label, style.color);
         final mid = centre + (a.screen + b.screen) / 2;
         painter.paint(
           canvas,
@@ -91,19 +118,63 @@ class LinkPainter extends CustomPainter {
         );
       }
 
-      if (edge.style.crawler) {
+      if (style.crawler) {
         final period = periods[i];
-        final phase = (clockMs % period) / period;
-        final crawler = projector.project(from + (to - from) * phase);
-        if (crawler == null) continue;
+        for (var pulse = 0; pulse < style.pulseCount; pulse++) {
+          final phase =
+              ((clockMs / period) + pulse / style.pulseCount) % 1.0;
+          final crawler = projector.project(from + (to - from) * phase);
+          if (crawler == null) continue;
 
-        ball.color = edge.style.color;
-        canvas.drawCircle(
-          centre + crawler.screen,
-          (_kBallRadius * crawler.scale).clamp(1.0, 10.0),
-          ball,
-        );
+          final radius = (_kBallRadius * crawler.scale).clamp(1.0, 10.0);
+          if (style.glow) {
+            ballHalo.color = style.color.withValues(alpha: 0.3);
+            canvas.drawCircle(centre + crawler.screen, radius * 2.4, ballHalo);
+          }
+          ball.color = style.color;
+          canvas.drawCircle(centre + crawler.screen, radius, ball);
+        }
       }
+    }
+  }
+
+  /// Screen-space dashes by direct segment math — no Path allocation.
+  static void _drawDashed(Canvas canvas, Offset a, Offset b, Paint paint) {
+    const dash = 10.0;
+    const gap = 7.0;
+    final delta = b - a;
+    final length = delta.distance;
+    if (length < 1) return;
+    final direction = delta / length;
+    var travelled = 0.0;
+    while (travelled < length) {
+      final segmentEnd = (travelled + dash).clamp(0.0, length);
+      canvas.drawLine(
+        a + direction * travelled,
+        a + direction * segmentEnd,
+        paint,
+      );
+      travelled += dash + gap;
+    }
+  }
+
+  /// One small perpendicular mark per unknowable intermediate hop, evenly
+  /// spaced along the edge.
+  static void _drawTicks(
+    Canvas canvas,
+    Offset a,
+    Offset b,
+    EdgeStyle style,
+    Paint paint,
+  ) {
+    final delta = b - a;
+    final length = delta.distance;
+    if (length < 1) return;
+    final direction = delta / length;
+    final normal = Offset(-direction.dy, direction.dx);
+    for (var t = 1; t <= style.ticks; t++) {
+      final at = a + direction * (length * t / (style.ticks + 1));
+      canvas.drawLine(at - normal * 5, at + normal * 5, paint);
     }
   }
 

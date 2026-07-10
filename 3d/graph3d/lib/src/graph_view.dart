@@ -9,6 +9,8 @@ import 'model.dart';
 import 'scene/card_bakery.dart';
 import 'scene/crowd_painter.dart';
 import 'scene/projection.dart';
+import 'scene/sprite.dart';
+import 'scene/sprite_crowd_painter.dart';
 import 'scene_controller.dart';
 
 /// What a live card needs to know to draw itself.
@@ -32,24 +34,53 @@ class CardState {
 /// This is only the scene — panels, menus and keyboard shortcuts belong to
 /// the app around it.
 class Graph3DView<T> extends StatefulWidget {
+  /// The card pipeline: nodes are baked 120x160 textures drawn as perspective
+  /// quads; the selected and hovered cards render as live widgets.
   const Graph3DView({
     super.key,
     required this.controller,
-    required this.bakery,
+    required CardBakery<T> this.bakery,
     required this.liveCardBuilder,
     this.visibleEdgesOf,
     this.onNodeTap,
     this.onBackgroundDoubleTap,
     this.initialReframe = true,
-  });
+  }) : spriteOf = null,
+       fog = const FogStyle(enabled: false);
+
+  /// The sprite pipeline: nodes are screen-facing glow orbs described by
+  /// [spriteOf], with depth fog. No live-widget overlay exists — an orb's
+  /// glow is a gradient, so nothing needs the widget escape hatch; detail
+  /// panels are the app's business.
+  const Graph3DView.sprites({
+    super.key,
+    required this.controller,
+    required NodeSprite Function(SceneNode<T> node) this.spriteOf,
+    this.fog = const FogStyle(),
+    this.visibleEdgesOf,
+    this.onNodeTap,
+    this.onBackgroundDoubleTap,
+    this.initialReframe = true,
+  }) : bakery = null,
+       liveCardBuilder = null;
 
   final GraphSceneController<T> controller;
-  final CardBakery<T> bakery;
+  final CardBakery<T>? bakery;
 
   /// Builds the widget for a card rendered live (selected or hovered). It is
   /// drawn under the card's perspective transform at 120x160 logical size.
-  final Widget Function(BuildContext context, SceneNode<T> node, CardState state)
+  final Widget Function(
+    BuildContext context,
+    SceneNode<T> node,
+    CardState state,
+  )?
   liveCardBuilder;
+
+  /// Sprite-mode descriptor; null in card mode.
+  final NodeSprite Function(SceneNode<T> node)? spriteOf;
+
+  /// Sprite-mode depth fog.
+  final FogStyle fog;
 
   /// Filters which edges draw this frame. Defaults to all of the scene's
   /// edges; apps use this to show, say, only the focused node's links.
@@ -101,6 +132,17 @@ class _Graph3DViewState<T> extends State<Graph3DView<T>> {
 
   int? _pickAt(Offset position) {
     _controller.advancePoses();
+    final spriteOf = widget.spriteOf;
+    if (spriteOf != null) {
+      return pickSprite(
+        poses: _controller.poses,
+        radiusOf: (index) => spriteOf(_controller.renderNodes[index]).radius,
+        projector: _projector(perspectiveFor(_sceneSize.height)),
+        size: _sceneSize,
+        position: position,
+        onTop: _liveIds.reversed,
+      );
+    }
     return pickCard(
       poses: _controller.poses,
       projector: _projector(perspectiveFor(_sceneSize.height)),
@@ -230,16 +272,37 @@ class _Graph3DViewState<T> extends State<Graph3DView<T>> {
                       },
                     ),
                   ),
-                  // The crowd: every card as one baked, textured quad.
+                  // The crowd: baked card quads, or glow-orb sprites.
                   RepaintBoundary(
                     child: AnimatedBuilder(
                       animation: sceneListenable,
                       builder: (context, _) {
                         _controller.advancePoses();
+                        final spriteOf = widget.spriteOf;
+                        if (spriteOf != null) {
+                          // Fog band: the depth range the framed scene spans.
+                          final distance = _controller.camera.distance;
+                          final radius = _controller.geometry.radius;
+                          return CustomPaint(
+                            isComplex: true,
+                            painter: SpriteCrowdPainter<T>(
+                              poses: _controller.poses,
+                              nodes: _controller.renderNodes,
+                              spriteOf: spriteOf,
+                              projector: _projector(perspective),
+                              emphasisOf: _controller.emphasisOf,
+                              fadeOf: _controller.fadeOf,
+                              fog: widget.fog,
+                              fogNear: -(distance - radius * 0.4),
+                              fogFar: -(distance + radius),
+                              style: _controller.style,
+                            ),
+                          );
+                        }
                         final nodes = _controller.renderNodes;
                         final images = List<ui.Image>.generate(
                           nodes.length,
-                          (i) => widget.bakery.imageFor(
+                          (i) => widget.bakery!.imageFor(
                             nodes[i],
                             _controller.alphaOf(i),
                           ),
@@ -259,49 +322,51 @@ class _Graph3DViewState<T> extends State<Graph3DView<T>> {
                       },
                     ),
                   ),
-                  // The one or two cards that matter render live: crisp at
-                  // any zoom, and free to carry the glow.
-                  AnimatedBuilder(
-                    animation: sceneListenable,
-                    builder: (context, _) {
-                      _controller.advancePoses();
-                      final projector = _projector(perspective);
-                      return Stack(
-                        fit: StackFit.expand,
-                        clipBehavior: Clip.none,
-                        children: <Widget>[
-                          for (final id in _liveIds)
-                            if (projector.depthOf(
-                                  _controller.poses[id - 1].position,
-                                ) <=
-                                -1)
-                              Center(
-                                key: ValueKey<String>(
-                                  _controller.renderNodes[id - 1].key,
-                                ),
-                                child: Transform(
-                                  transform: projector.cardMatrix(
-                                    _controller.poses[id - 1].matrix,
+                  // Card mode only: the one or two cards that matter render
+                  // live — crisp at any zoom, free to carry the glow.
+                  if (widget.liveCardBuilder != null)
+                    AnimatedBuilder(
+                      animation: sceneListenable,
+                      builder: (context, _) {
+                        _controller.advancePoses();
+                        final projector = _projector(perspective);
+                        return Stack(
+                          fit: StackFit.expand,
+                          clipBehavior: Clip.none,
+                          children: <Widget>[
+                            for (final id in _liveIds)
+                              if (projector.depthOf(
+                                    _controller.poses[id - 1].position,
+                                  ) <=
+                                  -1)
+                                Center(
+                                  key: ValueKey<String>(
+                                    _controller.renderNodes[id - 1].key,
                                   ),
-                                  alignment: Alignment.center,
-                                  child: IgnorePointer(
-                                    child: widget.liveCardBuilder(
-                                      context,
-                                      _controller.renderNodes[id - 1],
-                                      CardState(
-                                        alpha: _controller.alphaOf(id - 1),
-                                        emphasis: _controller.emphasisOf(id),
-                                        glow: _controller.glowFor(id),
-                                        hovered: _controller.hoveredId == id,
+                                  child: Transform(
+                                    transform: projector.cardMatrix(
+                                      _controller.poses[id - 1].matrix,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: IgnorePointer(
+                                      child: widget.liveCardBuilder!(
+                                        context,
+                                        _controller.renderNodes[id - 1],
+                                        CardState(
+                                          alpha: _controller.alphaOf(id - 1),
+                                          emphasis: _controller.emphasisOf(id),
+                                          glow: _controller.glowFor(id),
+                                          hovered:
+                                              _controller.hoveredId == id,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                        ],
-                      );
-                    },
-                  ),
+                          ],
+                        );
+                      },
+                    ),
                 ],
               );
             },

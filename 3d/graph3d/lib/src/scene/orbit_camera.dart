@@ -37,6 +37,17 @@ class OrbitCamera extends ChangeNotifier {
   Vector3 _target = Vector3.zero();
   double _distance = 8000;
 
+  /// Cinematic idle drift, radians of azimuth per second. Zero disables. The
+  /// caller arms and disarms it (the camera cannot see taps); note that a
+  /// nonzero drift keeps the whole scene re-rastering every frame.
+  double _idleDriftSpeed = 0;
+  double get idleDriftSpeed => _idleDriftSpeed;
+  set idleDriftSpeed(double value) {
+    if (_idleDriftSpeed == value) return;
+    _idleDriftSpeed = value;
+    if (value != 0) _wake();
+  }
+
   /// Azimuth about +y, measured from +z towards +x.
   double _theta = 0;
 
@@ -163,6 +174,23 @@ class OrbitCamera extends ChangeNotifier {
       distance: distance,
       theta: math.atan2(offset.x, offset.z),
       phi: math.acos((offset.y / distance).clamp(-1.0, 1.0)),
+      durationMs: durationMs,
+    );
+  }
+
+  /// Flies the focus to [target] keeping the current viewing angles — the
+  /// right move for billboarded sprites, which have no meaningful "face" to
+  /// approach. [distance] defaults to holding the current distance.
+  void flyToPoint(
+    Vector3 target, {
+    double? distance,
+    int durationMs = 1600,
+  }) {
+    _flyTo(
+      target: target,
+      distance: (distance ?? _distance).clamp(minDistance, maxDistance),
+      theta: _theta,
+      phi: _phi,
       durationMs: durationMs,
     );
   }
@@ -323,7 +351,12 @@ class OrbitCamera extends ChangeNotifier {
     _phiDelta *= 1 - dampingFactor;
     _panDelta *= 1 - dampingFactor;
 
-    if (_thetaDelta.abs() < _epsilon &&
+    if (_idleDriftSpeed != 0) {
+      _theta += _idleDriftSpeed * dtMs / 1000;
+    }
+
+    if (_idleDriftSpeed == 0 &&
+        _thetaDelta.abs() < _epsilon &&
         _phiDelta.abs() < _epsilon &&
         _panDelta.length < _epsilon) {
       _thetaDelta = 0;

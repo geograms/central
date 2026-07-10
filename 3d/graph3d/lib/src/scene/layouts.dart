@@ -166,6 +166,40 @@ Pose _ringPose(
   return Pose(position, lookAtQuaternion(position, target));
 }
 
+/// [count] poses scattered over a spherical patch: azimuths sweep
+/// [thetaStart, thetaStart + thetaSweep], elevations sit in a band of
+/// [phiSpread] around [phiCenter], all at [radius] from [center].
+///
+/// The scatter is a golden-ratio low-discrepancy sequence: deterministic,
+/// even-looking, no physics. Azimuth 0 points along +z, growing towards +x —
+/// the same convention as [ringPoses]. Poses face outward from [center].
+List<Pose> sectorShellPoses(
+  int count, {
+  required double radius,
+  required double thetaStart,
+  required double thetaSweep,
+  double phiCenter = math.pi / 2,
+  double phiSpread = math.pi / 3,
+  Vector3? center,
+}) {
+  const golden = 0.6180339887498949;
+  final middle = center ?? Vector3.zero();
+  final poses = <Pose>[];
+  for (var i = 0; i < count; i++) {
+    final theta = thetaStart + (i + 0.5) / count * thetaSweep;
+    final phi =
+        phiCenter + (((i * golden) % 1.0) - 0.5) * phiSpread;
+    final position = Vector3(
+      middle.x + radius * math.sin(phi) * math.sin(theta),
+      middle.y + radius * math.cos(phi),
+      middle.z + radius * math.sin(phi) * math.cos(theta),
+    );
+    final outward = position + (position - middle);
+    poses.add(Pose(position, lookAtQuaternion(position, outward)));
+  }
+  return poses;
+}
+
 /// [count] poses on a sunflower (Vogel spiral) disc: evenly dense, no rings or
 /// spokes, deterministic. The disc lies in the plane of [plane] — its cards
 /// share that pose's orientation — centred on its position.

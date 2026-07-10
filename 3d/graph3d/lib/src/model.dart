@@ -24,6 +24,10 @@ class EdgeStyle {
     this.width = 1,
     this.label,
     this.crawler = true,
+    this.glow = false,
+    this.dashed = false,
+    this.ticks = 0,
+    this.pulseCount = 1,
   });
 
   final Color color;
@@ -32,8 +36,21 @@ class EdgeStyle {
   /// Drawn at the projected midpoint of the edge, e.g. an interface name.
   final String? label;
 
-  /// Whether a ball crawls from [SceneEdge.from] to [SceneEdge.to].
+  /// Whether pulses crawl from [SceneEdge.from] to [SceneEdge.to].
   final bool crawler;
+
+  /// A wide, faint under-stroke beneath the bright line: cheap bloom.
+  final bool glow;
+
+  /// Ghost style, for path segments whose middle is unknowable.
+  final bool dashed;
+
+  /// Small perpendicular marks along the edge — one per unknown intermediate
+  /// hop on a ghost segment.
+  final int ticks;
+
+  /// How many phase-offset pulses crawl the edge when [crawler] is on.
+  final int pulseCount;
 }
 
 /// A directed edge between two nodes of the current scene.

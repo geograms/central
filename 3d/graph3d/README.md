@@ -50,11 +50,13 @@ cluster-style expand/collapse a single call.
 
 ## Examples
 
-- **example/mesh_demo** — a Reticulum-style mesh network: internet hubs on a
-  ring with interface-labeled backbone links (BLE/LAN/TCP/UDP), each hub an
-  aggregate card for hundreds of leaf devices. Tapping a hub expands its
-  cluster (and collapses any other), so thousands of devices browse at a
-  bounded render cost. Dummy data, deterministic generator.
+- **example/mesh_demo** — a cinematic Reticulum mesh visualization: glowing
+  orbs colored by interface (BLE, LAN, WiFi-Direct, TCP, UDP, LoRa, radio),
+  an ego view of what one node honestly knows (hop-distance shells, ghost
+  segments for unknowable path middles, edge bridges), a backbone aggregate
+  view, cluster expand/collapse, path walking with holographic detail
+  panels. Dummy data, deterministic. Design rationale, before/after
+  screenshots and on-device measurements: `example/mesh_demo/ANALYSIS.md`.
 - **example/triplecheck** — the original TripleCheck software view this
   engine was extracted from: 426 files, search query language, review flow.
 

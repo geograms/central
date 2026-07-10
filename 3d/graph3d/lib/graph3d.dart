@@ -14,4 +14,6 @@ export 'src/scene/layouts.dart';
 export 'src/scene/orbit_camera.dart';
 export 'src/scene/pose.dart';
 export 'src/scene/projection.dart';
+export 'src/scene/sprite.dart';
+export 'src/scene/sprite_crowd_painter.dart' show SpriteCrowdPainter, pickSprite;
 export 'src/scene_controller.dart';

@@ -5,10 +5,18 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:graph3d/graph3d.dart';
 
-import 'cards.dart';
-import 'cluster_controller.dart';
 import 'data/fake_network.dart';
-import 'mesh_node.dart';
+import 'data/mesh.dart';
+import 'theme.dart';
+import 'view_controller.dart';
+import 'widgets/backdrop.dart';
+import 'widgets/holo_panel.dart';
+
+/// Azimuth drift while the scene is left alone, radians per second.
+/// `--dart-define=MESH_NO_DRIFT=true` pins the camera for scripted testing.
+const double kIdleDrift =
+    bool.fromEnvironment('MESH_NO_DRIFT') ? 0 : 0.05;
+const Duration kIdleDelay = Duration(seconds: 30);
 
 void main() {
   if (kProfileScene) {
@@ -40,8 +48,8 @@ class MeshPage extends StatefulWidget {
 }
 
 class _MeshPageState extends State<MeshPage> with TickerProviderStateMixin {
-  late MeshClusterController _cluster;
-  late CardBakery<MeshNode> _bakery;
+  late MeshViewController _controller;
+  Timer? _idleTimer;
   int _seed = 42;
 
   @override
@@ -51,124 +59,114 @@ class _MeshPageState extends State<MeshPage> with TickerProviderStateMixin {
   }
 
   void _create() {
-    _cluster = MeshClusterController(
+    _controller = MeshViewController(
       network: FakeNetwork.generate(seed: _seed),
       vsync: this,
     );
-    _bakery = CardBakery<MeshNode>(
-      paint: paintMeshNode,
-      // Hubs are few and get looked at; leaves are a crowd. 1x halves the
-      // leaves' texture bill.
-      scaleOf: (node) => node is HubNode ? 1.5 : 1.0,
-      maxEntries: 700,
-    );
-    // The vantage depends on the viewport's aspect ratio, which the camera
-    // only learns during the first layout pass.
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _cluster.resetView(immediate: true),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _controller.resetView(immediate: true);
+      _armIdle();
+    });
   }
 
   void _reseed() {
-    final oldCluster = _cluster;
-    final oldBakery = _bakery;
+    final old = _controller;
     setState(() {
       _seed += 1;
       _create();
     });
-    oldCluster.dispose();
-    oldBakery.dispose();
+    old.dispose();
+  }
+
+  /// Any touch stops the cinematic drift; stillness brings it back.
+  void _wakeFromIdle() {
+    _controller.scene.camera.idleDriftSpeed = 0;
+    _armIdle();
+  }
+
+  void _armIdle() {
+    _idleTimer?.cancel();
+    _idleTimer = Timer(kIdleDelay, () {
+      if (mounted) _controller.scene.camera.idleDriftSpeed = kIdleDrift;
+    });
   }
 
   @override
   void dispose() {
-    _cluster.dispose();
-    _bakery.dispose();
+    _idleTimer?.cancel();
+    _controller.dispose();
     super.dispose();
-  }
-
-  Widget _buttons() {
-    return AnimatedBuilder(
-      animation: _cluster,
-      builder: (context, _) => Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        alignment: WrapAlignment.center,
-        children: <Widget>[
-          if (_cluster.expandedHubHash != null)
-            _Button('COLLAPSE', onPressed: _cluster.collapse),
-          _Button('RESET VIEW', onPressed: _cluster.resetView),
-          _Button('RESEED', onPressed: _reseed),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 700;
-
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.escape): () {
-          _cluster.scene.clearSelection();
-        },
+        const SingleActivator(LogicalKeyboardKey.escape): _controller.back,
       },
       child: Focus(
         autofocus: true,
         child: Scaffold(
           backgroundColor: Colors.black,
-          body: Stack(
-            children: <Widget>[
-              Positioned.fill(
-                child: AnimatedBuilder(
-                  animation: _cluster,
-                  builder: (context, _) => Graph3DView<MeshNode>(
+          body: Listener(
+            onPointerDown: (_) => _wakeFromIdle(),
+            behavior: HitTestBehavior.translucent,
+            child: Stack(
+              children: <Widget>[
+                const Positioned.fill(child: Backdrop()),
+                Positioned.fill(
+                  child: Graph3DView<MeshEntity>.sprites(
                     key: ValueKey<int>(_seed),
-                    controller: _cluster.scene,
-                    bakery: _bakery,
+                    controller: _controller.scene,
+                    spriteOf: (node) => spriteOfEntity(
+                      node,
+                      hubScale:
+                          _controller.view == MeshView.god ? 2.6 : 1.0,
+                    ),
                     initialReframe: false,
-                    onNodeTap: _cluster.tapNode,
-                    liveCardBuilder: (context, node, state) =>
-                        LiveMeshCard(node: node, state: state),
+                    onNodeTap: _controller.tapNode,
+                    onBackgroundDoubleTap: _controller.back,
                   ),
+                ),
+                HoloPanel(controller: _controller),
+                _TopBar(controller: _controller),
+                _BottomBar(
+                  controller: _controller,
+                  onReseed: _reseed,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar({required this.controller});
+
+  final MeshViewController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) => Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  controller.breadcrumb,
+                  style: kMono.copyWith(color: kTextDim, fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (wide) ...<Widget>[
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  width: 320,
-                  child: _InfoPanel(cluster: _cluster),
-                ),
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: SafeArea(top: false, child: _buttons()),
-                  ),
-                ),
-              ] else
-                // Portrait: panel and buttons share the bottom, stacked so
-                // they can never overlap.
-                Positioned(
-                  left: 8,
-                  right: 8,
-                  bottom: 0,
-                  child: SafeArea(
-                    top: false,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        _InfoPanel(cluster: _cluster),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8, bottom: 12),
-                          child: _buttons(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              _ViewToggle(controller: controller),
             ],
           ),
         ),
@@ -177,8 +175,132 @@ class _MeshPageState extends State<MeshPage> with TickerProviderStateMixin {
   }
 }
 
-class _Button extends StatelessWidget {
-  const _Button(this.label, {required this.onPressed});
+class _ViewToggle extends StatelessWidget {
+  const _ViewToggle({required this.controller});
+
+  final MeshViewController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget option(MeshView view, String label) {
+      final active = controller.view == view;
+      return GestureDetector(
+        onTap: () => controller.setView(view),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(
+            color: active ? kAccent.withValues(alpha: 0.18) : null,
+            border: Border.all(
+              color: kAccent.withValues(alpha: active ? 0.9 : 0.3),
+            ),
+          ),
+          child: Text(
+            label,
+            style: kMono.copyWith(
+              fontSize: 11,
+              color: active ? kAccent : kTextDim,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: <Widget>[
+        option(MeshView.ego, 'MY NODE'),
+        const SizedBox(width: 4),
+        option(MeshView.god, 'BACKBONE'),
+      ],
+    );
+  }
+}
+
+class _BottomBar extends StatelessWidget {
+  const _BottomBar({required this.controller, required this.onReseed});
+
+  final MeshViewController controller;
+  final VoidCallback onReseed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: SafeArea(
+        top: false,
+        child: AnimatedBuilder(
+          animation: controller,
+          builder: (context, _) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const _Legend(),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  alignment: WrapAlignment.center,
+                  children: <Widget>[
+                    if (controller.expandedHash != null)
+                      _BarButton('COLLAPSE', onPressed: controller.collapse),
+                    _BarButton('RESET VIEW', onPressed: controller.resetView),
+                    _BarButton('RESEED', onPressed: onReseed),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Legend extends StatelessWidget {
+  const _Legend();
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 4,
+      alignment: WrapAlignment.center,
+      children: <Widget>[
+        for (final iface in Iface.values)
+          Opacity(
+            opacity: iface.forwardLooking ? 0.55 : 1,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: iface.color,
+                    shape: BoxShape.circle,
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(
+                        color: iface.color.withValues(alpha: 0.7),
+                        blurRadius: 5,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  iface.forwardLooking ? '${iface.label}*' : iface.label,
+                  style: kMono.copyWith(fontSize: 10.5, color: kTextDim),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _BarButton extends StatelessWidget {
+  const _BarButton(this.label, {required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
@@ -188,124 +310,17 @@ class _Button extends StatelessWidget {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF80DEEA),
-        side: const BorderSide(color: Color(0x8080DEEA)),
+        foregroundColor: kAccent,
+        side: BorderSide(color: kAccent.withValues(alpha: 0.45)),
         shape: const RoundedRectangleBorder(),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        minimumSize: const Size(0, 34),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
-      child: Text(label, style: const TextStyle(fontSize: 12, letterSpacing: 1)),
-    );
-  }
-}
-
-class _InfoPanel extends StatelessWidget {
-  const _InfoPanel({required this.cluster});
-
-  final MeshClusterController cluster;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge(<Listenable>[cluster, cluster.scene]),
-      builder: (context, _) {
-        final scene = cluster.scene;
-        final focusId = scene.focusId;
-        final network = cluster.network;
-
-        String title;
-        List<(String, String)> rows;
-        String? hint;
-
-        if (focusId == null) {
-          title = 'Reticulum mesh';
-          rows = <(String, String)>[
-            ('Hubs', '${network.hubs.length}'),
-            ('Devices', '${network.deviceCount}'),
-            ('Backbone links', '${network.links.length}'),
-            if (cluster.expandedHub case final hub?)
-              ('Expanded', '${hub.name} (${hub.devices.length})'),
-          ];
-          hint = 'tap a hub to open its cluster';
-        } else {
-          switch (scene.renderNodes[focusId - 1].data) {
-            case HubNode(:final hub):
-              title = hub.name;
-              rows = <(String, String)>[
-                ('Devices', '${hub.devices.length}'),
-                ('Region', hub.region),
-                ('Dest hash', hub.hash),
-              ];
-              hint = cluster.expandedHubHash == hub.hash
-                  ? 'tap again to collapse'
-                  : 'tap to expand';
-            case DeviceNode(:final device, :final hubHash):
-              final hub =
-                  network.hubs.firstWhere((h) => h.hash == hubHash);
-              title = device.name;
-              rows = <(String, String)>[
-                ('Dest hash', device.destHash),
-                ('Interface', device.iface.label),
-                ('Hops', '${device.hops}'),
-                ('Next hop', '${hub.name} (${device.nextHop.substring(0, 8)})'),
-              ];
-          }
-        }
-
-        return Container(
-          decoration: BoxDecoration(
-            color: const Color(0xEE000000),
-            border: Border.all(color: const Color(0xFF00838F), width: 2),
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Color(0xFF80DEEA),
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              for (final (label, value) in rows)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text.rich(
-                    TextSpan(
-                      children: <InlineSpan>[
-                        TextSpan(
-                          text: '$label: ',
-                          style: const TextStyle(
-                            color: Color(0x9980DEEA),
-                          ),
-                        ),
-                        TextSpan(text: value),
-                      ],
-                    ),
-                    style: const TextStyle(
-                      color: Color(0xFFB2EBF2),
-                      fontSize: 12.5,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ),
-              if (hint != null) ...<Widget>[
-                const SizedBox(height: 4),
-                Text(
-                  hint,
-                  style: const TextStyle(
-                    color: Color(0x8080DEEA),
-                    fontSize: 11,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 11.5, letterSpacing: 1.1),
+      ),
     );
   }
 }
