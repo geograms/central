@@ -49,7 +49,11 @@ Audited against reticulum-dart (`lib/src/services/reticulum/`):
 - Implemented interfaces: TCP (rank 2; WiFi-Direct 4), TCP-server (what makes
   a hub), UDP (2), LAN (3), BLE (1, `edge`). LoRa/RNode and packet radio
   exist in the wider RNS world but not yet in the Dart stack — shown
-  forward-looking, marked `*` in the legend.
+  forward-looking, marked `*` in the legend. The visualization groups these
+  the way a person thinks about them: LAN and WiFi are one local network,
+  TCP and UDP are both just "Internet" — five categories, five far-apart
+  colours (BLE blue, LAN/WiFi green, Internet yellow, LoRa purple, Radio
+  red).
 - Scale expectations: path LRU 2048, max 128 hops, passive-shed at 50
   announces/s. A visualization must assume thousands of destinations and
   render a bounded subset.

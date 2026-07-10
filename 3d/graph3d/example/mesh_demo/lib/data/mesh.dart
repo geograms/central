@@ -1,20 +1,20 @@
 import 'dart:ui';
 
-/// The transport an announce arrived over. Reticulum bridges them all; the
-/// palette is the visualization's primary code, so every type gets a colour
-/// that survives a dark background.
+/// The network a device is reached over, grouped the way a person thinks
+/// about them rather than by wire protocol: LAN and WiFi are one local
+/// network, TCP and UDP are both just "the internet". The palette is the
+/// visualization's primary code — blue, green, yellow, purple and red, far
+/// apart on a dark background.
 ///
-/// BLE, LAN, WiFi-Direct, TCP and UDP are implemented in reticulum-dart
-/// today; LoRa and packet radio exist in the wider RNS world and are included
-/// forward-looking.
+/// BLE, LAN/WiFi and internet transports are implemented in reticulum-dart
+/// today; LoRa and packet radio exist in the wider RNS world and are
+/// included forward-looking.
 enum Iface {
   ble('BLE', Color(0xFF4FC3F7), speedRank: 1),
-  lan('LAN', Color(0xFF35D0BA), speedRank: 3),
-  wifiDirect('WiFi-D', Color(0xFF9CCC65), speedRank: 4),
-  tcp('TCP', Color(0xFFE0A458), speedRank: 2),
-  udp('UDP', Color(0xFFB07BAC), speedRank: 2),
-  lora('LoRa', Color(0xFFF06292), speedRank: 1, forwardLooking: true),
-  radio('Radio', Color(0xFFFFD54F), speedRank: 1, forwardLooking: true);
+  lanWifi('LAN/WiFi', Color(0xFF66BB6A), speedRank: 3),
+  internet('Internet', Color(0xFFFFD54F), speedRank: 2),
+  lora('LoRa', Color(0xFFB388FF), speedRank: 1, forwardLooking: true),
+  radio('Radio', Color(0xFFFF5252), speedRank: 1, forwardLooking: true);
 
   const Iface(
     this.label,

@@ -43,7 +43,7 @@ class FakeNetwork {
         hash: selfHash,
         name: 'this-node',
         role: MeshRole.self,
-        ifaces: const <Iface>[Iface.ble, Iface.lan, Iface.tcp],
+        ifaces: const <Iface>[Iface.ble, Iface.lanWifi, Iface.internet],
         hops: 0,
       ),
     );
@@ -98,7 +98,7 @@ class FakeNetwork {
         name: _deviceName(random, _hex(random, 2)),
         role: MeshRole.peer,
         ifaces: dualHomed
-            ? const <Iface>[Iface.ble, Iface.lan]
+            ? const <Iface>[Iface.ble, Iface.lanWifi]
             : const <Iface>[Iface.ble],
       );
     }
@@ -107,34 +107,27 @@ class FakeNetwork {
     final bridge = direct(
       name: 'bridge-phone',
       role: MeshRole.bridge,
-      ifaces: const <Iface>[Iface.ble, Iface.tcp],
+      ifaces: const <Iface>[Iface.ble, Iface.internet],
     );
     for (var i = 0; i < 2; i++) {
       dest(via: bridge.hash, iface: Iface.ble, hops: 2);
     }
 
-    // --- LAN -----------------------------------------------------------------
-    for (var i = 0; i < 6; i++) {
+    // --- LAN / WiFi ----------------------------------------------------------
+    for (var i = 0; i < 7; i++) {
       direct(
         name: _deviceName(random, _hex(random, 2)),
         role: MeshRole.peer,
-        ifaces: const <Iface>[Iface.lan],
+        ifaces: const <Iface>[Iface.lanWifi],
       );
     }
-
-    // --- WiFi-Direct pair ---------------------------------------------------
-    direct(
-      name: 'wfd-peer',
-      role: MeshRole.peer,
-      ifaces: const <Iface>[Iface.wifiDirect],
-    );
 
     // --- Internet hubs: transport nodes with big aggregated clusters ---------
     final hubs = <MeshEntity>[];
     for (var i = 0; i < 4; i++) {
       final hash = _hex(random, 16);
       final city = _cities[i * 3 % _cities.length];
-      final iface = i == 3 ? Iface.udp : Iface.tcp;
+      const iface = Iface.internet;
       final count = 80 + random.nextInt(421); // 80..500
       final hub = MeshEntity(
         hash: hash,
@@ -179,7 +172,7 @@ class FakeNetwork {
     final lora = direct(
       name: 'lora-gw',
       role: MeshRole.gateway,
-      ifaces: const <Iface>[Iface.lora, Iface.lan],
+      ifaces: const <Iface>[Iface.lora, Iface.lanWifi],
       deviceCount: 24,
     );
     clusterLeaves[lora.hash] = <MeshEntity>[
@@ -209,8 +202,8 @@ class FakeNetwork {
     // --- God-view backbone (aggregated knowledge, not ego-visible) ----------
     final hubLinks = <HubLink>[
       for (var i = 0; i < hubs.length; i++)
-        HubLink(i, (i + 1) % hubs.length, i.isEven ? Iface.tcp : Iface.udp),
-      HubLink(0, 2, Iface.tcp),
+        HubLink(i, (i + 1) % hubs.length, Iface.internet),
+      HubLink(0, 2, Iface.internet),
     ];
 
     return MeshNetwork(

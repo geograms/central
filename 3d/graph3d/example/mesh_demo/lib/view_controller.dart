@@ -312,15 +312,16 @@ class MeshViewController extends ChangeNotifier {
             pulseCount: 2,
           ),
         ),
-      // The LoRa gateway hangs off the first hub's LAN in this aggregate.
+      // The LoRa gateway hangs off the first hub's local network in this
+      // aggregate.
       SceneEdge(
         1,
         hubs.length,
         style: EdgeStyle(
-          color: Iface.lan.color.withValues(alpha: 0.55),
+          color: Iface.lanWifi.color.withValues(alpha: 0.55),
           width: 1.2,
           glow: true,
-          label: Iface.lan.label,
+          label: Iface.lanWifi.label,
         ),
       ),
     ];
