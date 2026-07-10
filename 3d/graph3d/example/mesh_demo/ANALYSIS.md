@@ -90,9 +90,10 @@ ring with interface-labeled glowing links. Shared node keys mean toggling
 teleporting them.
 
 **Navigation is walkable.** Tap any orb: the camera flies to it, its whole
-path back to self lights up, and a holographic panel (leader-lined to the
-orb, bottom-docked on narrow screens) shows hash, interface chips, role,
-hops with the unknown count, and the via-relay. `‹ ›` buttons walk the
+path back to self lights up, and a holographic panel — docked in the
+upper-right corner so it never covers the graph, tethered to the orb by a
+leader line, closable with the selection surviving — shows hash, interface
+chips, role, hops with the unknown count, and the via-relay. `‹ ›` buttons walk the
 camera stop-by-stop along the lit path. Aggregates expand in place — the
 leaves burst out of their hub, any other open cluster folds home, one
 cluster max, in either view. A breadcrumb tracks where you are; double-tap
@@ -143,9 +144,11 @@ holds no textures at all — down from 42MB in the card version). Total PSS
 Ego overview — sectors by network type, ghost paths, the mesh at a glance:
 ![ego overview](doc/img/after-ego-overview.png)
 
-A packet-radio destination selected: its chain lights, the panel reports
-`6 hops · 4 unknown · via lora-gw`, and `‹ ›` walk the path:
+A packet-radio destination selected: its chain lights, the corner panel
+reports `6 hops · 4 unknown · via lora-gw`, and `‹ ›` walk the path; closing
+the panel keeps the selection and the lit chain:
 ![path selected](doc/img/after-path-selected.png)
+![panel closed, selection kept](doc/img/after-panel-closed.png)
 ![walked to the gateway](doc/img/after-path-walk.png)
 
 The LoRa gateway's cluster expanded, hop shells in profile:
