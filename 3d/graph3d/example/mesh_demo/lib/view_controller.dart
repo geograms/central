@@ -29,6 +29,11 @@ const double _kHopSpacing = 340;
 class MeshViewController extends ChangeNotifier {
   MeshViewController({required this.network, required TickerProvider vsync})
     : scene = GraphSceneController<MeshEntity>(vsync: vsync) {
+    // OrbitControls defaults read sluggish under a thumb; a mesh you fling
+    // around should feel eager.
+    scene.camera
+      ..rotateSpeed = 0.24
+      ..dampingFactor = 0.18;
     scene.addListener(_onSceneChanged);
     _apply(initial: true);
   }
@@ -424,7 +429,7 @@ class MeshViewController extends ChangeNotifier {
       ),
       halfExtent: Vector3(radius, radius * 0.62, radius * 0.9),
       sceneRadius: radius,
-      durationMs: immediate ? 0 : 1800,
+      durationMs: immediate ? 0 : 1200,
     );
   }
 
@@ -446,7 +451,7 @@ class MeshViewController extends ChangeNotifier {
         Pose(centre, lookAtQuaternion(centre, centre + outward)),
         halfExtent: Vector3(extent, extent * 0.8, extent),
         sceneRadius: extent + 400,
-        durationMs: immediate ? 0 : 2000,
+        durationMs: immediate ? 0 : 1400,
       );
       return;
     }
@@ -466,7 +471,7 @@ class MeshViewController extends ChangeNotifier {
         _kHopSpacing * 2.0,
       ),
       sceneRadius: _kHopSpacing * 6,
-      durationMs: immediate ? 0 : 2000,
+      durationMs: immediate ? 0 : 1400,
     );
   }
 
@@ -496,6 +501,7 @@ class MeshViewController extends ChangeNotifier {
     scene.camera.flyToPoint(
       scene.geometry.poses[id - 1].position,
       distance: 1500,
+      durationMs: 1100,
     );
   }
 
@@ -525,7 +531,7 @@ class MeshViewController extends ChangeNotifier {
     scene.camera.flyToPoint(
       scene.geometry.poses[id].position,
       distance: 1300,
-      durationMs: 1400,
+      durationMs: 1000,
     );
     notifyListeners();
   }

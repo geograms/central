@@ -130,14 +130,45 @@ class _MeshPageState extends State<MeshPage> with TickerProviderStateMixin {
                   ),
                 ),
                 HoloPanel(controller: _controller),
-                _TopBar(controller: _controller),
-                _BottomBar(
-                  controller: _controller,
-                  onReseed: _reseed,
+                _HudFade(
+                  scene: _controller.scene,
+                  child: _TopBar(controller: _controller),
+                ),
+                _HudFade(
+                  scene: _controller.scene,
+                  child: _BottomBar(
+                    controller: _controller,
+                    onReseed: _reseed,
+                  ),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The HUD steps aside while the user flies the camera: chrome fades to a
+/// whisper and stops eating touches, so a drag that starts over the legend
+/// still moves the world.
+class _HudFade extends StatelessWidget {
+  const _HudFade({required this.scene, required this.child});
+
+  final GraphSceneController<MeshEntity> scene;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: scene,
+      builder: (context, _) => IgnorePointer(
+        ignoring: scene.isDragging,
+        child: AnimatedOpacity(
+          opacity: scene.isDragging ? 0.08 : 1,
+          duration: const Duration(milliseconds: 220),
+          child: child,
         ),
       ),
     );

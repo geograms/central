@@ -96,7 +96,11 @@ hops with the unknown count, and the via-relay. `‹ ›` buttons walk the
 camera stop-by-stop along the lit path. Aggregates expand in place — the
 leaves burst out of their hub, any other open cluster folds home, one
 cluster max, in either view. A breadcrumb tracks where you are; double-tap
-and Esc unwind selection → cluster → framing.
+and Esc unwind selection → cluster → framing. While a drag is in flight the
+whole HUD — legend, buttons, breadcrumb — fades to a whisper and stops
+eating touches, so the chrome never stands between a thumb and the world;
+the camera itself runs hotter than stock OrbitControls (rotate 0.24 vs 0.1,
+damping 0.18 vs 0.1) because thumb-flying wants eagerness, not reverence.
 
 ## 4. Engine work (library `graph3d`)
 

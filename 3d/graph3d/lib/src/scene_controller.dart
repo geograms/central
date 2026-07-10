@@ -446,6 +446,10 @@ class GraphSceneController<T> extends ChangeNotifier {
     }
   }
 
+  /// Whether a camera gesture is in flight — apps use it to get their HUD
+  /// out of the way.
+  bool get isDragging => _dragging;
+
   /// A drag suppresses hover, so focus does not flicker through every card
   /// the pointer sweeps across.
   set dragging(bool value) {
@@ -453,12 +457,10 @@ class GraphSceneController<T> extends ChangeNotifier {
     _dragging = value;
     if (value) {
       _hoverTimer?.cancel();
-      if (_hoveredKey != null || _focusHoverKey != null) {
-        _hoveredKey = null;
-        _focusHoverKey = null;
-        notifyListeners();
-      }
+      _hoveredKey = null;
+      _focusHoverKey = null;
     }
+    notifyListeners();
   }
 
   @override

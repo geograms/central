@@ -23,8 +23,14 @@ class OrbitCamera extends ChangeNotifier {
 
   late final Ticker _ticker;
 
-  static const double rotateSpeed = 0.1;
-  static const double dampingFactor = 0.1;
+  /// Radians of azimuth per full-viewport drag. OrbitControls ships 0.1,
+  /// which reads deliberate on a desktop and sluggish under a thumb — touch
+  /// apps want 0.2-0.3.
+  double rotateSpeed = 0.1;
+
+  /// Fraction of the pending drag consumed per frame. Higher = snappier,
+  /// lower = floatier.
+  double dampingFactor = 0.1;
   static const double minDistance = 200;
   static const double maxDistance = 60000;
 
