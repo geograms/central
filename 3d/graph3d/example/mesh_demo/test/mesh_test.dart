@@ -101,6 +101,99 @@ void main() {
     });
   });
 
+  group('BLE distances', () {
+    test('every BLE link reports metres, mesh members from their relay', () {
+      final network = FakeNetwork.generate(seed: 42);
+
+      for (final entity in network.entities) {
+        if (entity.role == MeshRole.self) continue;
+        if (entity.hops == 1 && entity.ifaces.contains(Iface.ble)) {
+          expect(entity.distanceM, isNotNull, reason: entity.name);
+          expect(entity.distanceM, inInclusiveRange(1, 50));
+        }
+      }
+
+      // The BLE bridge aggregates a mesh: count badge + per-member reports.
+      final bridge = network.entities.firstWhere(
+        (e) => e.role == MeshRole.bridge,
+      );
+      expect(bridge.isAggregate, isTrue);
+      final mesh = network.clusterLeaves[bridge.hash]!;
+      expect(mesh, hasLength(bridge.deviceCount));
+      for (final member in mesh) {
+        expect(member.nextHop, bridge.hash);
+        expect(member.distanceM, isNotNull);
+      }
+    });
+
+    testWidgets('BLE positions and edge labels encode the metres', (
+      tester,
+    ) async {
+      final controller = MeshViewController(
+        network: FakeNetwork.generate(seed: 5),
+        vsync: _TestVSync(),
+      );
+      addTearDown(controller.dispose);
+      Future<void> settle() async {
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 3));
+        controller.scene.advancePoses();
+        await tester.pump();
+        await tester.pump();
+        controller.scene.camera.stop();
+        controller.scene.clock.run(false);
+        await tester.pump();
+      }
+
+      await settle();
+      final scene = controller.scene;
+
+      // Direct BLE peers: radius grows with metres.
+      final blePeers = <(double, double)>[]; // (metres, radius)
+      for (var i = 0; i < scene.liveCount; i++) {
+        final entity = scene.renderNodes[i].data;
+        if (entity.hops == 1 &&
+            entity.role == MeshRole.peer &&
+            entity.iface == Iface.ble) {
+          blePeers.add((
+            entity.distanceM!,
+            scene.poses[i].position.length,
+          ));
+        }
+      }
+      expect(blePeers.length, greaterThanOrEqualTo(3));
+      blePeers.sort((a, b) => a.$1.compareTo(b.$1));
+      for (var i = 1; i < blePeers.length; i++) {
+        expect(
+          blePeers[i].$2,
+          greaterThanOrEqualTo(blePeers[i - 1].$2),
+          reason: 'farther in metres = farther from self',
+        );
+      }
+
+      // Their edges carry the metre label.
+      final labelled = scene.edges.where(
+        (e) => e.style.label != null && e.style.label!.endsWith('m'),
+      );
+      expect(labelled.length, greaterThanOrEqualTo(blePeers.length));
+
+      // Expanding the bridge materializes its mesh, with labelled edges.
+      final bridge = controller.network.entities.firstWhere(
+        (e) => e.role == MeshRole.bridge,
+      );
+      controller.expand(bridge.hash);
+      await settle();
+      final meshEdges = scene.edges.where(
+        (e) =>
+            e.style.label != null &&
+            e.style.label!.endsWith('m') &&
+            scene.renderNodes[e.from - 1].data.hash == bridge.hash,
+      );
+      expect(meshEdges.length, bridge.deviceCount);
+      await settle();
+    });
+  });
+
   group('MeshViewController', () {
     late MeshViewController controller;
 
@@ -134,16 +227,31 @@ void main() {
           case 0:
             expect(radius, 0);
           case 1:
-            expect(
-              radius,
-              anyOf(closeTo(620, 1), closeTo(1300, 1)),
-              reason: 'direct neighbours sit on the two inner shells',
-            );
+            if (entity.distanceM != null &&
+                entity.role == MeshRole.peer) {
+              // BLE peers sit at their measured range.
+              expect(
+                radius,
+                closeTo(
+                  (330 + entity.distanceM! * 22).clamp(330.0, 1150.0),
+                  1,
+                ),
+                reason: 'radius encodes the metres estimate',
+              );
+            } else {
+              expect(
+                radius,
+                anyOf(closeTo(620, 1), closeTo(1300, 1)),
+                reason: 'direct neighbours sit on the two inner shells',
+              );
+            }
           default:
             expect(
               radius,
-              closeTo(1300 + 340.0 * (entity.hops - 1), 1),
-              reason: 'destination radius encodes its hop count',
+              entity.distanceM != null
+                  ? closeTo(1300 + 200 + entity.distanceM! * 18, 1)
+                  : closeTo(1300 + 340.0 * (entity.hops - 1), 1),
+              reason: 'destination radius encodes hops, or metres when known',
             );
         }
       }

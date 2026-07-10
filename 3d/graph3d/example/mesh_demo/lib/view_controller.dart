@@ -116,6 +116,10 @@ class MeshViewController extends ChangeNotifier {
             all.any((e) => e.nextHop == entity.hash);
         for (var lane = 0; lane < entity.ifaces.length; lane++) {
           final iface = entity.ifaces[lane];
+          // BLE links carry their RSSI-derived distance estimate.
+          final metres = iface == Iface.ble && entity.distanceM != null
+              ? '${entity.distanceM!.round()}m'
+              : null;
           edges.add(
             SceneEdge(
               idOf[network.selfHash]!,
@@ -124,6 +128,7 @@ class MeshViewController extends ChangeNotifier {
                 color: iface.color.withValues(alpha: lane == 0 ? 0.75 : 0.65),
                 width: relay ? 1.6 : 1.0,
                 glow: true,
+                label: metres,
                 crawler: relay && lane == 0,
                 pulseCount: relay ? 2 : 1,
                 offsetPx:
@@ -145,8 +150,14 @@ class MeshViewController extends ChangeNotifier {
             i + 1,
             style: expanded
                 ? EdgeStyle(
-                    color: entity.iface.color.withValues(alpha: 0.16),
+                    color: entity.iface.color.withValues(
+                      alpha: entity.distanceM != null ? 0.45 : 0.16,
+                    ),
                     width: 0.8,
+                    label: entity.iface == Iface.ble &&
+                            entity.distanceM != null
+                        ? '${entity.distanceM!.round()}m'
+                        : null,
                     crawler: false,
                   )
                 : EdgeStyle(
@@ -228,7 +239,15 @@ class MeshViewController extends ChangeNotifier {
         phiSpread: math.pi / 2.4,
       );
       for (var j = 0; j < indices.length; j++) {
-        positions[indices[j]] = poses[j].position;
+        var position = poses[j].position;
+        // A BLE link knows how far away it is: radial distance from self
+        // encodes the estimated metres, so nearby devices sit close.
+        final metres = all[indices[j]].distanceM;
+        if (metres != null) {
+          position = position.normalized() *
+              (330 + metres * 22).clamp(330.0, 1150.0);
+        }
+        positions[indices[j]] = position;
         azimuthOf[all[indices[j]].hash] =
             start + sweep * 0.08 + (j + 0.5) / indices.length * sweep * 0.84;
       }
@@ -273,7 +292,11 @@ class MeshViewController extends ChangeNotifier {
           ((ordinal + 0.5) / siblings - 0.5) * 2 * spreadHalf;
       final phi = math.pi / 2 +
           (((ordinal * golden) % 1.0) - 0.5) * (siblings > 40 ? 0.9 : 0.45);
-      final radius = _kRelayShell + _kHopSpacing * (entity.hops - 1);
+      // BLE mesh members carry a per-hop distance report from their relay;
+      // everyone else falls back to hop shells.
+      final radius = entity.distanceM != null
+          ? _kRelayShell + 200 + entity.distanceM! * 18
+          : _kRelayShell + _kHopSpacing * (entity.hops - 1);
       positions[i] = Vector3(
         radius * math.sin(phi) * math.sin(theta),
         radius * math.cos(phi),

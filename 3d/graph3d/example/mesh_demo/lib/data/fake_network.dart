@@ -54,6 +54,7 @@ class FakeNetwork {
       required List<Iface> ifaces,
       int deviceCount = 0,
       String? region,
+      double? distanceM,
     }) {
       final hash = _hex(random, 16);
       final entity = MeshEntity(
@@ -64,6 +65,7 @@ class FakeNetwork {
         hops: 1,
         deviceCount: deviceCount,
         region: region,
+        distanceM: distanceM,
       );
       entities.add(entity);
       return entity;
@@ -90,6 +92,7 @@ class FakeNetwork {
     }
 
     // --- BLE neighbourhood: a local mesh around this device ---------------
+    // Every BLE link carries an RSSI-derived distance estimate in metres.
     for (var i = 0; i < 9; i++) {
       // A few of these devices are also on the LAN — a laptop or a printer
       // reachable both ways. They get one link back to self per network.
@@ -100,18 +103,34 @@ class FakeNetwork {
         ifaces: dualHomed
             ? const <Iface>[Iface.ble, Iface.lanWifi]
             : const <Iface>[Iface.ble],
+        distanceM: (2 + random.nextDouble() * 33).roundToDouble(),
       );
     }
-    // A bridge phone: BLE on our side, TCP up to the internet. Two BLE peers
-    // are only reachable through it (2 hops).
+    // A bridge phone: BLE on our side, internet up to the hubs, and a BLE
+    // mesh of its own behind it — it hears six nodes we cannot, and reports
+    // its distance to each of them.
     final bridge = direct(
       name: 'bridge-phone',
       role: MeshRole.bridge,
       ifaces: const <Iface>[Iface.ble, Iface.internet],
+      deviceCount: 6,
+      distanceM: (4 + random.nextDouble() * 12).roundToDouble(),
     );
-    for (var i = 0; i < 2; i++) {
-      dest(via: bridge.hash, iface: Iface.ble, hops: 2);
-    }
+    clusterLeaves[bridge.hash] = <MeshEntity>[
+      for (var d = 0; d < 6; d++)
+        () {
+          final leafHash = _hex(random, 16);
+          return MeshEntity(
+            hash: leafHash,
+            name: _deviceName(random, leafHash),
+            role: MeshRole.leaf,
+            ifaces: const <Iface>[Iface.ble],
+            hops: 2,
+            nextHop: bridge.hash,
+            distanceM: (2 + random.nextDouble() * 28).roundToDouble(),
+          );
+        }(),
+    ];
 
     // --- LAN / WiFi ----------------------------------------------------------
     for (var i = 0; i < 7; i++) {

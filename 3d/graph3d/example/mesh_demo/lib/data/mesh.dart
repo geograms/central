@@ -67,6 +67,7 @@ class MeshEntity {
     this.nextHop,
     this.deviceCount = 0,
     this.region,
+    this.distanceM,
   });
 
   /// 16-byte destination hash, hex.
@@ -89,6 +90,11 @@ class MeshEntity {
   final int deviceCount;
 
   final String? region;
+
+  /// Estimated radio distance in metres to whoever hears this node
+  /// directly: self for direct neighbours, its relay for mesh members.
+  /// BLE meshes report this per hop (RSSI-derived).
+  final double? distanceM;
 
   Iface get iface => ifaces.first;
   String get shortHash => hash.substring(0, 8);

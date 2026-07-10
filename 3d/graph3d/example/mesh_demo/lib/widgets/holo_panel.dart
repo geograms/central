@@ -205,6 +205,12 @@ class _PanelBody extends StatelessWidget {
               'via   ${network.byHash(entity.nextHop!).name}',
               style: kMono,
             ),
+          if (entity.distanceM != null)
+            Text(
+              'range ~${entity.distanceM!.round()} m'
+              '${entity.nextHop != null ? ' from relay' : ''}',
+              style: kMono,
+            ),
           if (entity.isAggregate)
             Text('nodes ${entity.deviceCount} behind it', style: kMono),
           const SizedBox(height: 8),

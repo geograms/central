@@ -60,6 +60,7 @@ NodeSprite spriteOfEntity(
         coreColor: entity.ifaces.first.color,
         secondaryColor:
             entity.ifaces.length > 1 ? entity.ifaces[1].color : null,
+        badge: entity.deviceCount > 0 ? '${entity.deviceCount}' : null,
         label: entity.name,
       );
     case MeshRole.peer:
