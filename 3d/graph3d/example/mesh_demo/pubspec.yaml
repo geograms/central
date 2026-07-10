@@ -1,0 +1,26 @@
+name: mesh_demo
+description: "Reticulum-style mesh network visualization demo for graph3d: hubs, clusters, expand/collapse."
+publish_to: 'none'
+
+version: 0.1.0
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  graph3d:
+    path: ../../
+
+  vector_math: ^2.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

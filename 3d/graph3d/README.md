@@ -1,101 +1,89 @@
 # graph3d
 
-A native Flutter port of the TripleCheck 3D software view — the CSS3D graph in
-`../old/graph-2017-01-09/`. Same graph, same query language, same review flow,
-running on Linux, Android, macOS, Windows and iOS without a browser.
+A native 3D card-graph engine for Flutter. CSS3D-style perspective cards
+rendered as baked GPU quads, an orbit camera with damped inertia, animated
+scene changes with enter/exit, edges with crawling markers, and manual
+picking. Runs the same on Linux, Android, macOS, Windows and iOS; measured at
+72-91fps with hundreds of cards on a low-end 90Hz phone.
 
-## Running it
+Use it as a path dependency:
 
-    ./launch.sh              # build if stale, then run (debug)
-    ./launch.sh release      # optimised
-    ./launch.sh dev          # flutter run, with hot reload
-    ./launch.sh data         # regenerate the dataset from ../old/graph-2017-01-09
+    dependencies:
+      graph3d:
+        path: ../graph3d        # wherever this package sits
 
-Builds go through `~/bin/android-build-locked`, the machine-wide serialisation
-lock, when it is present.
+## The five-minute tour
 
-## The data
+```dart
+import 'package:graph3d/graph3d.dart';
 
-`tool/convert_data.js` runs the original's six loose `.js` files in a sandbox,
-reads the globals back out, and writes one typed bundle to
-`assets/data/triplecheck.json` (426 nodes, 315 links, 7 match groups). It fails
-loudly on a dangling link or a node/detail length mismatch rather than let the
-graph draw the wrong file's licence.
+// 1. Your data, wrapped in keyed nodes. The key is durable identity:
+//    it carries selection, hover and the texture cache across scene changes.
+final scene = GraphScene<MyThing>(
+  nodes: [for (final t in things) SceneNode(key: t.id, data: t)],
+  edges: [SceneEdge(1, 2, style: EdgeStyle(color: Colors.teal, label: 'TCP'))],
+);
 
-**Identity is the array position, not the `id` column.** The dataset's `id`
-values are neither ordered nor unique — nineteen files share an id with another
-— and the original indexes everything by one-based position. `GraphNode.id` is
-that position; `GraphNode.sourceId` keeps the original value for reference and
-is never looked up.
+// 2. A controller owns the camera, transitions, selection and hover.
+final controller = GraphSceneController<MyThing>(vsync: this);
+controller.setScene(scene, layout: gridLayout());
 
-Point the app at another TripleCheck run by swapping the `GraphDataSource` in
-`main.dart`; `FileGraphDataSource` reads the same bundle from disk.
+// 3. A bakery rasterizes each card once into a GPU texture.
+final bakery = CardBakery<MyThing>(
+  paint: (canvas, thing, alpha) { /* draw 120x160 card content */ },
+);
 
-## Controls
+// 4. The view wires gestures, picking and the three render layers.
+Graph3DView<MyThing>(
+  controller: controller,
+  bakery: bakery,
+  liveCardBuilder: (context, node, state) => MyLiveCard(node, state),
+);
+```
 
-Drag to rotate, scroll or pinch to zoom, two fingers to pan. Click a card to
-select it and fly to it; click it again, double-click the background, or press
-Escape to let go. Hovering a card for half a second shows its details without
-selecting it.
+Layouts are plain functions (`LayoutStrategy<T>`); `tableLayout`,
+`helixLayout` and `gridLayout` ship with the engine, and `ringPoses` /
+`sunflowerDiscPoses` help build network-style layouts. `setScene` diffs by
+key: persisting nodes glide to their new poses, new nodes fly in, vanished
+nodes fly out and fade before being pruned — which is what makes
+cluster-style expand/collapse a single call.
 
-Links are hidden in table view, exactly as in the original — a flat grid of 426
-cards crossed by 315 lines is a cat's cradle.
+## Examples
 
-## Rendering
+- **example/mesh_demo** — a Reticulum-style mesh network: internet hubs on a
+  ring with interface-labeled backbone links (BLE/LAN/TCP/UDP), each hub an
+  aggregate card for hundreds of leaf devices. Tapping a hub expands its
+  cluster (and collapses any other), so thousands of devices browse at a
+  bounded render cost. Dummy data, deterministic generator.
+- **example/triplecheck** — the original TripleCheck software view this
+  engine was extracted from: 426 files, search query language, review flow.
 
-The crowd of 426 cards is **baked, not widget-built**. At startup `CardBakery`
-rasterizes every card once into a GPU-resident image; each frame
-`CardCrowdPainter` culls, depth-sorts and draws them as textured quads through
-one `canvas.transform` per card (Canvas takes a full 4x4, perspective
-included). Only the selected and hovered cards render as live widgets, so they
-stay crisp at any zoom and carry the glow. Hit-testing is done in the same
-math: project the card's four corners, point-in-quad, nearest first
-(`pickCard`).
+Both run with `flutter run -d linux` (or build an APK) from their directory.
 
-Why not a Stack of `Transform`ed widgets — the obvious port of CSS3D? Measured
-on an Oukitel C61 (Android 15, arm64, 90Hz):
+## Why cards are baked
 
-1. Flutter's raster cache is disabled under a perspective transform, and
-   Android has no partial repaint, so every animated frame re-drew every glyph
-   of every card: 21-30ms of raster, a hard ceiling near 35fps, and per-card
-   `RepaintBoundary`s could not change that (they cannot cache what the cache
-   refuses to hold).
-2. Per-card blurs cost ~0.74ms each per frame for the same reason.
-3. `Transform.filterQuality` looks like a fix and draws nothing: it snapshots
-   through `ImageFilter.matrix`, which cannot express perspective.
+Flutter disables its raster cache under a perspective transform and Android
+has no partial repaint, so a Stack of `Transform`ed widget cards re-draws
+every glyph of every card on every animated frame — 21-30ms of raster for 426
+cards on an Oukitel C61, a hard ~35fps ceiling that no `RepaintBoundary`
+arrangement fixes. `CardBakery` rasterizes each card once (`toImageSync`,
+LRU-bounded); `CardCrowdPainter` culls, depth-sorts and draws them as
+textured quads through one perspective `canvas.transform` each. Same phone,
+worst case: build 3-7ms, raster 5-14ms. The one or two cards that matter
+(selected, hovered) render as live widgets on top — crisp at any zoom, free
+to carry a glow, which as a per-frame blur only they can afford.
 
-With the baked crowd, same phone, worst case (grid, all 315 links animating,
-dragging):
+Two traps this design routes around, both measured: `Transform.filterQuality`
+snapshots through `ImageFilter.matrix`, which cannot express perspective, so
+it silently draws nothing; and `Quaternion.rotated` in vector_math applies
+the *inverse* rotation while `asRotationMatrix`/`Matrix4.compose` apply the
+forward one — mixing them makes an orbit camera circle a point it is not
+looking at.
 
-    widgets:  build 13-39ms   raster 26-30ms   ~25-38fps
-    baked:    build  3-7ms    raster  8-14ms   72-91fps (90Hz cap in table)
-
-The texture bill is ~74MB (426 cards at 1.5x, 180x240 RGBA). To re-measure:
+## Measuring
 
     flutter build apk --release --dart-define=GRAPH3D_FRAME_STATS=true
     adb logcat | grep -E 'FRAMES|CROWDPAINT|LINKPAINT|ADVANCE'
 
-Note also that `Quaternion.rotated` in `vector_math` applies the *inverse*
-rotation, while `asRotationMatrix`, `Matrix4.compose` and
-`Quaternion.fromRotation` apply the forward one. Mixing the two makes an orbit
-camera circle a point it is not looking at.
-
-## Where it departs from the original
-
-Three of these are bug fixes, and they change what you see:
-
-- The details panel labelled the copyright `License:`. It now says `Copyright:`.
-- A search matching on the licence field reported the *copyright* as the matched
-  text. It now reports the licence.
-- The Matches Bin table's `Similarity` and `Hash` headers were swapped.
-
-And three are deliberate:
-
-- The always-on card glow is now a selection highlight, for the reason above.
-- The camera frames each layout to the viewport instead of sitting at a fixed
-  8000 units, so the table is legible. It never backs off *past* 8000, because
-  fitting a 4200-unit-wide table into a portrait phone would reduce every card
-  to a speck; there the graph overflows and you pan, tethered to the layout so
-  it can never be lost off screen.
-- Review verdicts persist to disk, per project, under the application support
-  directory (`~/.local/share/com.geogram.graph3d/reviews/` on Linux).
+The examples print wall-clock frame windows (even at n=0, so idle is
+provably idle) plus per-subsystem paint timings.

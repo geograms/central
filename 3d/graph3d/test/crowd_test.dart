@@ -1,9 +1,7 @@
 import 'dart:ui' show Offset, Size;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graph3d/scene/crowd_painter.dart';
-import 'package:graph3d/scene/pose.dart';
-import 'package:graph3d/scene/projection.dart';
+import 'package:graph3d/graph3d.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 void main() {

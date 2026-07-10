@@ -1,0 +1,15 @@
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/graph3d
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/data/icudtl.dat
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/lib/libflutter_linux_gtk.so
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/lib/libdartjni.so
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/lib/native_assets.json
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/data/flutter_assets/NativeAssetsManifest.json
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/data/flutter_assets/shaders/ink_sparkle.frag
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/data/flutter_assets/shaders/stretch_effect.frag
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/data/flutter_assets/NOTICES.Z
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/data/flutter_assets/AssetManifest.bin
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/data/flutter_assets/fonts/MaterialIcons-Regular.otf
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/data/flutter_assets/assets/data/triplecheck.json
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/data/flutter_assets/FontManifest.json
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/data/flutter_assets/version.json
+/home/brito/code/geogram/3d/graph3d/example/triplecheck/build/linux/x64/release/bundle/lib/libapp.so

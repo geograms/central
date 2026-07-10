@@ -1,8 +1,11 @@
 name: graph3d
-description: "A native 3D view of a TripleCheck software analysis."
+description: >-
+  A native 3D card-graph engine for Flutter: perspective card crowds rendered
+  as baked GPU quads, orbit camera, deterministic layouts, animated scene
+  changes, edges with crawling markers, and manual picking.
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 0.1.0
 
 environment:
   sdk: ^3.10.0
@@ -14,9 +17,6 @@ dependencies:
   # Matrices and quaternions. Ships with Flutter; not a third-party risk.
   vector_math: ^2.1.4
 
-  # Locates a per-user, per-platform directory for the saved review verdicts.
-  path_provider: ^2.1.5
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -24,7 +24,3 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
-  uses-material-design: true
-
-  assets:
-    - assets/data/

@@ -1,10 +1,6 @@
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graph3d/data/models.dart';
-import 'package:graph3d/scene/layouts.dart';
-import 'package:graph3d/scene/orbit_camera.dart';
-import 'package:graph3d/scene/pose.dart';
-import 'package:graph3d/scene/projection.dart';
+import 'package:graph3d/graph3d.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 /// Tickers created this way are still driven by `tester.pump`.
@@ -21,32 +17,31 @@ Future<void> _settle(WidgetTester tester, {int frames = 400}) async {
   }
 }
 
-GraphNode _node(int id, {int column = 1, int row = 1}) => GraphNode(
-  id: id,
-  sourceId: id,
-  symbol: 'n$id',
-  name: 'file$id',
-  license: '',
-  column: column,
-  row: row,
-  tag: 'source',
-  riskyLicense: false,
-  hasCopyright: false,
-);
-
-/// The real dataset wraps at thirty columns; a single 426-column row would be
-/// sixty thousand units wide and frame nothing like the app does.
+/// Nodes whose data is their one-based (column, row) table cell, wrapping at
+/// thirty columns the way the real dataset does.
 const int _tableColumns = 30;
 
-List<GraphNode> _nodes(int count) => List<GraphNode>.generate(
+List<SceneNode<(int, int)>> _nodes(int count) => List<SceneNode<(int, int)>>.generate(
   count,
-  (i) => _node(i + 1, column: i % _tableColumns + 1, row: i ~/ _tableColumns + 1),
+  (i) => SceneNode<(int, int)>(
+    key: 'n${i + 1}',
+    data: (i % _tableColumns + 1, i ~/ _tableColumns + 1),
+  ),
 );
+
+final LayoutStrategy<(int, int)> _table = tableLayout(cell: (n) => n.data);
+final LayoutStrategy<(int, int)> _helix = helixLayout();
+final LayoutStrategy<(int, int)> _grid = gridLayout();
+final List<LayoutStrategy<(int, int)>> _allLayouts = <LayoutStrategy<(int, int)>>[
+  _table,
+  _helix,
+  _grid,
+];
 
 void main() {
   group('layouts', () {
     test('table lays cards out on the z=0 plane, facing the camera', () {
-      final geometry = buildLayout(GraphLayout.table, _nodes(3));
+      final geometry = _table(_nodes(3));
       for (final pose in geometry.poses) {
         expect(pose.position.z, 0);
         expect(pose.facing.z, closeTo(1, 1e-9));
@@ -54,7 +49,7 @@ void main() {
     });
 
     test('helix cards face outwards from the axis, without tilting', () {
-      final geometry = buildLayout(GraphLayout.helix, _nodes(40));
+      final geometry = _helix(_nodes(40));
       for (final pose in geometry.poses) {
         final radial = Vector3(pose.position.x, 0, pose.position.z)
           ..normalize();
@@ -67,7 +62,7 @@ void main() {
     });
 
     test('grid stacks 9x9 slabs a thousand units apart', () {
-      final geometry = buildLayout(GraphLayout.grid, _nodes(83));
+      final geometry = _grid(_nodes(83));
       expect(geometry.poses[0].position, Vector3(-800, 800, -2000));
       expect(geometry.poses[8].position, Vector3(2400, 800, -2000));
       expect(geometry.poses[9].position, Vector3(-800, 400, -2000));
@@ -75,8 +70,8 @@ void main() {
     });
 
     test('framing centre sits inside the layout it frames', () {
-      for (final layout in GraphLayout.values) {
-        final geometry = buildLayout(layout, _nodes(60));
+      for (final layout in _allLayouts) {
+        final geometry = layout(_nodes(60));
         expect(geometry.radius, greaterThan(0));
         for (final pose in geometry.poses) {
           expect((pose.position - geometry.center).length,
@@ -211,7 +206,7 @@ void main() {
       final camera = OrbitCamera(vsync: _TestVSync());
       addTearDown(camera.dispose);
 
-      final geometry = buildLayout(GraphLayout.helix, _nodes(40));
+      final geometry = _helix(_nodes(40));
       final pose = geometry.poses[17];
       camera.flyToPose(pose, standoff: 990, durationMs: 300);
       await _settle(tester, frames: 30);
@@ -243,11 +238,11 @@ void main() {
       const width = 1280.0;
       const height = 720.0;
 
-      for (final layout in GraphLayout.values) {
+      for (final layout in _allLayouts) {
         final camera = OrbitCamera(vsync: _TestVSync());
         camera.aspect = width / height;
 
-        final geometry = buildLayout(layout, _nodes(426));
+        final geometry = layout(_nodes(426));
         camera.frame(
           geometry.center,
           geometry.radius,
@@ -274,7 +269,7 @@ void main() {
     testWidgets('a narrow screen stops backing off rather than shrink to dust', (
       tester,
     ) async {
-      final geometry = buildLayout(GraphLayout.table, _nodes(426));
+      final geometry = _table(_nodes(426));
 
       final desktop = OrbitCamera(vsync: _TestVSync())..aspect = 1280 / 720;
       addTearDown(desktop.dispose);
