@@ -91,10 +91,15 @@ class FakeNetwork {
 
     // --- BLE neighbourhood: a local mesh around this device ---------------
     for (var i = 0; i < 9; i++) {
+      // A few of these devices are also on the LAN — a laptop or a printer
+      // reachable both ways. They get one link back to self per network.
+      final dualHomed = i % 3 == 0;
       direct(
         name: _deviceName(random, _hex(random, 2)),
         role: MeshRole.peer,
-        ifaces: const <Iface>[Iface.ble],
+        ifaces: dualHomed
+            ? const <Iface>[Iface.ble, Iface.lan]
+            : const <Iface>[Iface.ble],
       );
     }
     // A bridge phone: BLE on our side, TCP up to the internet. Two BLE peers

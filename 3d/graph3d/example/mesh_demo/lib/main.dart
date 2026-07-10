@@ -271,7 +271,7 @@ class _BottomBar extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                const _Legend(),
+                _Legend(controller: controller),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -280,7 +280,12 @@ class _BottomBar extends StatelessWidget {
                   children: <Widget>[
                     if (controller.expandedHash != null)
                       _BarButton('COLLAPSE', onPressed: controller.collapse),
-                    _BarButton('RESET VIEW', onPressed: controller.resetView),
+                    _BarButton(
+                      'RESET VIEW',
+                      onPressed: () {
+                        controller.focusIface(null);
+                      },
+                    ),
                     _BarButton('RESEED', onPressed: onReseed),
                   ],
                 ),
@@ -293,45 +298,101 @@ class _BottomBar extends StatelessWidget {
   }
 }
 
+/// The legend doubles as the network dashboard: each chip carries the count
+/// of known devices on that network, and tapping one lights the group and
+/// flies the camera to face it.
 class _Legend extends StatelessWidget {
-  const _Legend();
+  const _Legend({required this.controller});
+
+  final MeshViewController controller;
 
   @override
   Widget build(BuildContext context) {
+    final counts = controller.network.ifaceCounts;
     return Wrap(
-      spacing: 10,
-      runSpacing: 4,
+      spacing: 6,
+      runSpacing: 5,
       alignment: WrapAlignment.center,
       children: <Widget>[
         for (final iface in Iface.values)
-          Opacity(
-            opacity: iface.forwardLooking ? 0.55 : 1,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Container(
-                  width: 9,
-                  height: 9,
-                  decoration: BoxDecoration(
-                    color: iface.color,
-                    shape: BoxShape.circle,
-                    boxShadow: <BoxShadow>[
-                      BoxShadow(
-                        color: iface.color.withValues(alpha: 0.7),
-                        blurRadius: 5,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  iface.forwardLooking ? '${iface.label}*' : iface.label,
-                  style: kMono.copyWith(fontSize: 10.5, color: kTextDim),
-                ),
-              ],
-            ),
+          _LegendChip(
+            iface: iface,
+            count: counts[iface] ?? 0,
+            active: controller.focusedIface == iface,
+            onTap: () => controller.focusIface(iface),
           ),
       ],
+    );
+  }
+}
+
+class _LegendChip extends StatelessWidget {
+  const _LegendChip({
+    required this.iface,
+    required this.count,
+    required this.active,
+    required this.onTap,
+  });
+
+  final Iface iface;
+  final int count;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Opacity(
+        opacity: iface.forwardLooking && !active ? 0.6 : 1,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          decoration: BoxDecoration(
+            color: active ? iface.color.withValues(alpha: 0.16) : null,
+            border: Border.all(
+              color: iface.color.withValues(alpha: active ? 0.9 : 0.35),
+            ),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: iface.color,
+                  shape: BoxShape.circle,
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: iface.color.withValues(alpha: 0.7),
+                      blurRadius: 5,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                iface.forwardLooking ? '${iface.label}*' : iface.label,
+                style: kMono.copyWith(
+                  fontSize: 10.5,
+                  color: active ? iface.color : kTextDim,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '$count',
+                style: kMono.copyWith(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.bold,
+                  color: iface.color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

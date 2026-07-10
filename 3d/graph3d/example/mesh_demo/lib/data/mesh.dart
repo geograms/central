@@ -136,4 +136,23 @@ class MeshNetwork {
 
   int get totalDevices =>
       clusterLeaves.values.fold(entities.length, (sum, l) => sum + l.length);
+
+  /// How many known devices live on each network type — everything the node
+  /// has paths for, aggregated cluster members included. A dual-homed device
+  /// counts on every network it touches.
+  Map<Iface, int> get ifaceCounts {
+    final counts = <Iface, int>{};
+    void tally(MeshEntity entity) {
+      if (entity.role == MeshRole.self) return;
+      for (final iface in entity.ifaces) {
+        counts[iface] = (counts[iface] ?? 0) + 1;
+      }
+    }
+
+    entities.forEach(tally);
+    for (final leaves in clusterLeaves.values) {
+      leaves.forEach(tally);
+    }
+    return counts;
+  }
 }

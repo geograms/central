@@ -89,6 +89,14 @@ ring with interface-labeled glowing links. Shared node keys mean toggling
 *morphs* the hubs between their ego and backbone positions instead of
 teleporting them.
 
+**The legend is a dashboard.** Each interface chip carries the live count of
+known devices on that network (aggregated cluster members included; a
+dual-homed device counts on every network it touches). Tapping a chip lights
+exactly that group and flies the camera to face it; tapping again lets go.
+Devices that live on two networks at once — a laptop on both BLE and the LAN
+— draw one link back to self per network, as parallel colour-coded lanes,
+and wear a second ring in their other network's colour.
+
 **Navigation is walkable.** Tap any orb: the camera flies to it, its whole
 path back to self lights up, and a holographic panel — docked in the
 upper-right corner so it never covers the graph, tethered to the orb by a

@@ -78,9 +78,20 @@ class LinkPainter extends CustomPainter {
       // a line across the screen that does not exist.
       if (a == null || b == null) continue;
 
-      final start = centre + a.screen;
-      final end = centre + b.screen;
       final style = edge.style;
+      var start = centre + a.screen;
+      var end = centre + b.screen;
+      Offset shift = Offset.zero;
+      if (style.offsetPx != 0) {
+        final delta = end - start;
+        final length = delta.distance;
+        if (length > 1) {
+          final normal = Offset(-delta.dy / length, delta.dx / length);
+          shift = normal * style.offsetPx;
+          start += shift;
+          end += shift;
+        }
+      }
 
       if (style.glow) {
         // Layered strokes read as bloom without any per-frame blur.
@@ -126,13 +137,14 @@ class LinkPainter extends CustomPainter {
           final crawler = projector.project(from + (to - from) * phase);
           if (crawler == null) continue;
 
+          final at = centre + crawler.screen + shift;
           final radius = (_kBallRadius * crawler.scale).clamp(1.0, 10.0);
           if (style.glow) {
             ballHalo.color = style.color.withValues(alpha: 0.3);
-            canvas.drawCircle(centre + crawler.screen, radius * 2.4, ballHalo);
+            canvas.drawCircle(at, radius * 2.4, ballHalo);
           }
           ball.color = style.color;
-          canvas.drawCircle(centre + crawler.screen, radius, ball);
+          canvas.drawCircle(at, radius, ball);
         }
       }
     }

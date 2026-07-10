@@ -45,11 +45,13 @@ class MeshViewController extends ChangeNotifier {
   String? _expandedHash;
   List<String> _pathChain = const <String>[];
   int _pathStep = 0;
+  Iface? _focusedIface;
 
   MeshView get view => _view;
   String? get expandedHash => _expandedHash;
   List<String> get pathChain => _pathChain;
   int get pathStep => _pathStep;
+  Iface? get focusedIface => _focusedIface;
 
   MeshEntity? get selectedEntity {
     final key = scene.selectedKey;
@@ -107,22 +109,29 @@ class MeshViewController extends ChangeNotifier {
       final entity = all[i];
       if (entity.role == MeshRole.self) continue;
       if (entity.nextHop == null) {
-        // A direct neighbour: a live link from self.
+        // A direct neighbour: one live link from self PER shared network —
+        // a device on both BLE and the LAN shows a blue line and a teal
+        // line, drawn parallel so both read.
         final relay = entity.deviceCount > 0 ||
             all.any((e) => e.nextHop == entity.hash);
-        edges.add(
-          SceneEdge(
-            idOf[network.selfHash]!,
-            i + 1,
-            style: EdgeStyle(
-              color: entity.iface.color.withValues(alpha: 0.75),
-              width: relay ? 1.6 : 1.0,
-              glow: true,
-              crawler: relay,
-              pulseCount: relay ? 2 : 1,
+        for (var lane = 0; lane < entity.ifaces.length; lane++) {
+          final iface = entity.ifaces[lane];
+          edges.add(
+            SceneEdge(
+              idOf[network.selfHash]!,
+              i + 1,
+              style: EdgeStyle(
+                color: iface.color.withValues(alpha: lane == 0 ? 0.75 : 0.65),
+                width: relay ? 1.6 : 1.0,
+                glow: true,
+                crawler: relay && lane == 0,
+                pulseCount: relay ? 2 : 1,
+                offsetPx:
+                    (lane - (entity.ifaces.length - 1) / 2) * 7.0,
+              ),
             ),
-          ),
-        );
+          );
+        }
       } else {
         final via = idOf[entity.nextHop];
         if (via == null) continue;
@@ -477,6 +486,69 @@ class MeshViewController extends ChangeNotifier {
 
   // --- interactions -----------------------------------------------------------------
 
+  /// Tapping a legend chip: light every device on that network and fly the
+  /// camera to face the group. Tapping the same chip again lets go.
+  void focusIface(Iface? iface) {
+    if (iface == null || _focusedIface == iface) {
+      _focusedIface = null;
+      scene.highlightKeys = const <String>{};
+      resetView();
+      notifyListeners();
+      return;
+    }
+    _focusedIface = iface;
+    _pathChain = const <String>[];
+    _pathStep = 0;
+    scene.clearSelection();
+
+    scene.advancePoses();
+    final keys = <String>{};
+    var centroid = Vector3.zero();
+    var members = 0;
+    for (var i = 0; i < scene.liveCount; i++) {
+      final entity = scene.renderNodes[i].data;
+      if (entity.role == MeshRole.self) continue;
+      if (!entity.ifaces.contains(iface)) continue;
+      keys.add(keyOf(scene.renderNodes[i].data));
+      centroid += scene.geometry.poses[i].position;
+      members++;
+    }
+    scene.highlightKeys = keys;
+    if (members == 0) {
+      notifyListeners();
+      return;
+    }
+    centroid /= members.toDouble();
+
+    var spread = 0.0;
+    for (var i = 0; i < scene.liveCount; i++) {
+      final entity = scene.renderNodes[i].data;
+      if (entity.role == MeshRole.self || !entity.ifaces.contains(iface)) {
+        continue;
+      }
+      final d = (scene.geometry.poses[i].position - centroid).length;
+      if (d > spread) spread = d;
+    }
+    spread = math.max(spread + 250, 900);
+
+    // Face the group from outside, keeping self visible behind it: approach
+    // off-axis along the centroid direction.
+    final outward = centroid.length < 1
+        ? Vector3(0, 0, 1)
+        : centroid.normalized();
+    final side = Vector3(outward.z, 0, -outward.x);
+    final viewDirection =
+        (outward + side * 0.55 + Vector3(0, 0.4, 0)).normalized();
+    scene.camera.maxFrameDistance = 14000;
+    scene.camera.frameFacing(
+      Pose(centroid, lookAtQuaternion(centroid, centroid + viewDirection)),
+      halfExtent: Vector3(spread, spread * 0.85, spread * 0.8),
+      sceneRadius: spread + 500,
+      durationMs: 1400,
+    );
+    notifyListeners();
+  }
+
   /// Taps: aggregates expand/collapse, everything else selects and lights its
   /// path back to self.
   void tapNode(int id) {
@@ -506,6 +578,7 @@ class MeshViewController extends ChangeNotifier {
   }
 
   void _selectChainFor(MeshEntity entity) {
+    _focusedIface = null;
     if (entity.role == MeshRole.self) {
       _pathChain = const <String>[];
     } else if (entity.nextHop == null) {
@@ -554,6 +627,7 @@ class MeshViewController extends ChangeNotifier {
     _expandedHash = null;
     _pathChain = const <String>[];
     _pathStep = 0;
+    _focusedIface = null;
     scene.clearSelection();
     _apply();
   }
@@ -565,10 +639,12 @@ class MeshViewController extends ChangeNotifier {
     scene.clearSelection();
   }
 
-  /// The escape ladder: selection → cluster → framing.
+  /// The escape ladder: selection → network focus → cluster → framing.
   void back() {
     if (scene.selectedKey != null || _pathChain.isNotEmpty) {
       clearSelection();
+    } else if (_focusedIface != null) {
+      focusIface(null);
     } else if (_expandedHash != null) {
       collapse();
     } else {
@@ -579,6 +655,7 @@ class MeshViewController extends ChangeNotifier {
   String get breadcrumb {
     final parts = <String>['mesh'];
     if (_view == MeshView.god) parts.add('backbone');
+    if (_focusedIface != null) parts.add(_focusedIface!.label);
     if (_expandedHash != null) {
       parts.add(network.byHash(_expandedHash!).name);
     }

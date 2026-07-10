@@ -28,6 +28,7 @@ class EdgeStyle {
     this.dashed = false,
     this.ticks = 0,
     this.pulseCount = 1,
+    this.offsetPx = 0,
   });
 
   final Color color;
@@ -51,6 +52,11 @@ class EdgeStyle {
 
   /// How many phase-offset pulses crawl the edge when [crawler] is on.
   final int pulseCount;
+
+  /// Screen-space perpendicular shift, so several edges between the same two
+  /// nodes (one per shared network) render as parallel lines instead of
+  /// stacking invisibly.
+  final double offsetPx;
 }
 
 /// A directed edge between two nodes of the current scene.

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:graph3d/graph3d.dart';
 import 'package:mesh_demo/data/fake_network.dart';
 import 'package:mesh_demo/data/mesh.dart';
 import 'package:mesh_demo/view_controller.dart';
@@ -67,6 +68,36 @@ void main() {
           for (final e in l) ...e.ifaces,
       };
       expect(used, containsAll(Iface.values));
+    });
+  });
+
+  group('iface stats and multi-homing', () {
+    test('counts every device once per network it touches', () {
+      final network = FakeNetwork.generate(seed: 42);
+      final counts = network.ifaceCounts;
+
+      // Dual-homed BLE+LAN peers exist and count on both networks.
+      final dualHomed = network.entities
+          .where((e) => e.ifaces.length >= 2 && e.role == MeshRole.peer)
+          .toList();
+      expect(dualHomed, isNotEmpty);
+
+      var expectedBle = 0;
+      void tally(MeshEntity e) {
+        if (e.role != MeshRole.self && e.ifaces.contains(Iface.ble)) {
+          expectedBle++;
+        }
+      }
+
+      network.entities.forEach(tally);
+      for (final leaves in network.clusterLeaves.values) {
+        leaves.forEach(tally);
+      }
+      expect(counts[Iface.ble], expectedBle);
+      // Every palette entry has at least one device somewhere.
+      for (final iface in Iface.values) {
+        expect(counts[iface], greaterThan(0), reason: iface.label);
+      }
     });
   });
 
@@ -239,6 +270,61 @@ void main() {
 
       controller.back();
       expect(controller.expandedHash, isNull);
+      await settle(tester);
+    });
+
+    testWidgets('a dual-homed peer has one edge back to self per network', (
+      tester,
+    ) async {
+      controller = build();
+      await settle(tester);
+      final scene = controller.scene;
+
+      final dualId = 1 +
+          scene.renderNodes.indexWhere(
+            (n) =>
+                n.data.role == MeshRole.peer && n.data.ifaces.length == 2,
+          );
+      expect(dualId, greaterThan(0));
+
+      final toDual = scene.edges.where((e) => e.to == dualId).toList();
+      expect(toDual, hasLength(2), reason: 'one link per shared network');
+      final colors = toDual.map((e) => e.style.color.toARGB32()).toSet();
+      expect(colors, hasLength(2), reason: 'each in its own network colour');
+      final offsets = toDual.map((e) => e.style.offsetPx).toSet();
+      expect(offsets, hasLength(2), reason: 'drawn as parallel lanes');
+      // Both connect back to self.
+      for (final edge in toDual) {
+        expect(scene.renderNodes[edge.from - 1].data.role, MeshRole.self);
+      }
+    });
+
+    testWidgets('focusing a network lights exactly its members', (
+      tester,
+    ) async {
+      controller = build();
+      await settle(tester);
+      final scene = controller.scene;
+
+      controller.focusIface(Iface.ble);
+      expect(controller.focusedIface, Iface.ble);
+      expect(controller.breadcrumb, contains('BLE'));
+
+      for (var i = 0; i < scene.liveCount; i++) {
+        final entity = scene.renderNodes[i].data;
+        if (entity.role == MeshRole.self) continue;
+        final lit = scene.emphasisOf(i + 1) == CardEmphasis.highlighted;
+        expect(
+          lit,
+          entity.ifaces.contains(Iface.ble),
+          reason: '\${entity.name} lit=\$lit',
+        );
+      }
+
+      // Same chip again lets go.
+      controller.focusIface(Iface.ble);
+      expect(controller.focusedIface, isNull);
+      expect(scene.highlightKeys, isEmpty);
       await settle(tester);
     });
 
