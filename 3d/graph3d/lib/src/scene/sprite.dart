@@ -15,6 +15,7 @@ class NodeSprite {
     this.ringColor,
     this.secondaryColor,
     this.badge,
+    this.badgeMinPx,
     this.label,
     this.labelMinPx,
   });
@@ -39,6 +40,12 @@ class NodeSprite {
 
   /// Short text centred on the orb, e.g. an aggregate device count.
   final String? badge;
+
+  /// Overrides the painter's minimum projected core radius for showing the
+  /// badge, like [labelMinPx] does for the label. An anchor whose badge IS
+  /// the information (a hub's device count) can set this low so the number
+  /// reads even at overview distance.
+  final double? badgeMinPx;
 
   /// Name drawn under the orb. Level-of-detail gated by projected size, and
   /// budgeted per frame, so a 500-node cluster does not become a wall of text.

@@ -178,7 +178,8 @@ class SpriteCrowdPainter<T> extends CustomPainter {
         canvas.drawCircle(projected.screen, corePx * 1.7, ringPaint);
       }
 
-      if (sprite.badge != null && corePx >= kBadgeMinPx) {
+      if (sprite.badge != null &&
+          corePx >= (sprite.badgeMinPx ?? kBadgeMinPx)) {
         // A dark pill keeps the count readable over the orb's bright core.
         final badge = _text(
           sprite.badge!,
