@@ -113,6 +113,23 @@ void main() {
         }
       }
 
+      // LoRa mesh members and radio nodes carry range estimates too — LoRa
+      // from RSSI+SNR, APRS from the GPS positions its packets carry.
+      final gateway = network.entities.firstWhere(
+        (e) => e.role == MeshRole.gateway,
+      );
+      for (final member in network.clusterLeaves[gateway.hash]!) {
+        expect(member.distanceM, isNotNull);
+        expect(member.distanceM, inInclusiveRange(100, 6500));
+      }
+      for (final entity in network.entities.where(
+        (e) => e.iface == Iface.radio,
+      )) {
+        expect(entity.distanceM, isNotNull);
+        expect(entity.distanceM, inInclusiveRange(2000, 42000));
+        expect(formatRange(entity.distanceM!), endsWith('km'));
+      }
+
       // The BLE bridge aggregates a mesh: count badge + per-member reports.
       final bridge = network.entities.firstWhere(
         (e) => e.role == MeshRole.bridge,
@@ -229,14 +246,18 @@ void main() {
           case 1:
             if (entity.distanceM != null &&
                 entity.role == MeshRole.peer) {
-              // BLE peers sit at their measured range.
+              // Measured peers sit at their range, log-scaled.
               expect(
                 radius,
                 closeTo(
-                  (330 + entity.distanceM! * 22).clamp(330.0, 1150.0),
+                  (330 +
+                          240 *
+                              math.log(1 + entity.distanceM!) /
+                              math.ln10)
+                      .clamp(330.0, 1250.0),
                   1,
                 ),
-                reason: 'radius encodes the metres estimate',
+                reason: 'radius encodes the range estimate',
               );
             } else {
               expect(
@@ -249,9 +270,14 @@ void main() {
             expect(
               radius,
               entity.distanceM != null
-                  ? closeTo(1300 + 200 + entity.distanceM! * 18, 1)
+                  ? closeTo(
+                      1300 +
+                          150 +
+                          240 * math.log(1 + entity.distanceM!) / math.ln10,
+                      1,
+                    )
                   : closeTo(1300 + 340.0 * (entity.hops - 1), 1),
-              reason: 'destination radius encodes hops, or metres when known',
+              reason: 'destination radius encodes hops, or range when known',
             );
         }
       }

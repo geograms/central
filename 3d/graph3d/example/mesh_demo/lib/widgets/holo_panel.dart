@@ -207,7 +207,7 @@ class _PanelBody extends StatelessWidget {
             ),
           if (entity.distanceM != null)
             Text(
-              'range ~${entity.distanceM!.round()} m'
+              'range ~${formatRange(entity.distanceM!)}'
               '${entity.nextHop != null ? ' from relay' : ''}',
               style: kMono,
             ),

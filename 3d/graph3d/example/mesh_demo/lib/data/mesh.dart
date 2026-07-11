@@ -1,5 +1,12 @@
 import 'dart:ui';
 
+/// A radio range estimate, human-formatted: metres up close, kilometres
+/// beyond. BLE ranges come from RSSI, LoRa from RSSI+SNR (coarser), packet
+/// radio from the GPS positions its packets carry.
+String formatRange(double metres) => metres < 1000
+    ? '${metres.round()}m'
+    : '${(metres / 1000).toStringAsFixed(1)}km';
+
 /// The network a device is reached over, grouped the way a person thinks
 /// about them rather than by wire protocol: LAN and WiFi are one local
 /// network, TCP and UDP are both just "the internet". The palette is the

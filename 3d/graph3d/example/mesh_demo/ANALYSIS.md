@@ -93,15 +93,24 @@ ring with interface-labeled glowing links. Shared node keys mean toggling
 *morphs* the hubs between their ego and backbone positions instead of
 teleporting them.
 
-**BLE links know how far they reach.** Every BLE connection carries an
+**Radio links know how far they reach.** Every BLE connection carries an
 RSSI-derived distance estimate in metres: the number rides the link as a
 label, the device's radial distance from whoever hears it encodes the same
-metres spatially (a 5m neighbour sits close, a 34m one far out), and the
-detail panel prints the range. The plan is per-hop reporting on the BLE
-mesh — each relay reports the distance to every node it directly hears —
-so a BLE bridge renders as an aggregate orb with the count of nodes behind
-it, and tapping it expands that mesh with each member at its reported
-range from the bridge.
+range spatially, and the detail panel prints it. The plan is per-hop
+reporting on the BLE mesh — each relay reports the distance to every node
+it directly hears — so a BLE bridge renders as an aggregate orb with the
+count of nodes behind it, and tapping it expands that mesh with each member
+at its reported range from the bridge. The same estimate extends to the
+long-range fringe: LoRa members carry a coarser RSSI+SNR range (hundreds of
+metres to kilometres) and packet-radio nodes an exact one (APRS packets
+carry GPS positions), formatted as `m`/`km`. Because BLE metres and APRS
+tens-of-kilometres must share one map, the range→radius mapping is
+logarithmic (`240·log10(1+m)`): a 5m neighbour, a 2km LoRa node and a 40km
+APRS station all land at readable, still-ordered radii. The handful of
+always-visible anchors (self, hubs, gateways, bridges, direct peers)
+override the label LOD gate (`NodeSprite.labelMinPx`) so their names read
+at overview distance next to the range labels; crowd leaves keep the
+default gate and disclose on approach.
 
 **The legend is a dashboard.** Each interface chip carries the live count of
 known devices on that network (aggregated cluster members included; a

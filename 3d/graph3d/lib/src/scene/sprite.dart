@@ -16,6 +16,7 @@ class NodeSprite {
     this.secondaryColor,
     this.badge,
     this.label,
+    this.labelMinPx,
   });
 
   /// Core radius in world units. The engine's own scale reference: a card is
@@ -42,6 +43,11 @@ class NodeSprite {
   /// Name drawn under the orb. Level-of-detail gated by projected size, and
   /// budgeted per frame, so a 500-node cluster does not become a wall of text.
   final String? label;
+
+  /// Overrides the painter's minimum projected core radius for showing the
+  /// label. The few always-visible anchors of a scene can set this low so
+  /// their names read even at overview distance; crowds keep the default.
+  final double? labelMinPx;
 }
 
 /// Depth-fog parameters: nodes fade with camera distance, which is most of

@@ -35,6 +35,7 @@ NodeSprite spriteOfEntity(
         haloScale: 3.0,
         ringColor: Color(0xFFE0FFFF),
         label: 'this node',
+        labelMinPx: 2.5,
       );
     case MeshRole.transport:
       return NodeSprite(
@@ -44,6 +45,7 @@ NodeSprite spriteOfEntity(
         ringColor: Colors.white70,
         badge: '${entity.deviceCount}',
         label: entity.name,
+        labelMinPx: 2.5,
       );
     case MeshRole.gateway:
       return NodeSprite(
@@ -53,6 +55,7 @@ NodeSprite spriteOfEntity(
             entity.ifaces.length > 1 ? entity.ifaces[1].color : null,
         badge: '${entity.deviceCount}',
         label: entity.name,
+        labelMinPx: 2.5,
       );
     case MeshRole.bridge:
       return NodeSprite(
@@ -62,12 +65,14 @@ NodeSprite spriteOfEntity(
             entity.ifaces.length > 1 ? entity.ifaces[1].color : null,
         badge: entity.deviceCount > 0 ? '${entity.deviceCount}' : null,
         label: entity.name,
+        labelMinPx: 2.5,
       );
     case MeshRole.peer:
       return NodeSprite(
         radius: 22,
         coreColor: entity.iface.color,
         label: entity.name,
+        labelMinPx: 2.5,
       );
     case MeshRole.leaf:
       return NodeSprite(

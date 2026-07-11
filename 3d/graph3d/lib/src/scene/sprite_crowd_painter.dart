@@ -201,7 +201,8 @@ class SpriteCrowdPainter<T> extends CustomPainter {
         );
       }
 
-      if (sprite.label != null && corePx >= kLabelMinPx) {
+      if (sprite.label != null &&
+          corePx >= (sprite.labelMinPx ?? kLabelMinPx)) {
         labelled.add((index, projected.screen, corePx, alpha));
       }
     }

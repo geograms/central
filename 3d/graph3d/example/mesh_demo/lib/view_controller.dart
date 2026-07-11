@@ -24,6 +24,12 @@ const double _kPeerShell = 620;
 const double _kRelayShell = 1300;
 const double _kHopSpacing = 340;
 
+/// Radial offset for a measured range: logarithmic, so a 5m BLE neighbour, a
+/// 2km LoRa node and a 40km APRS station all land on one readable map while
+/// nearer things still sit visibly nearer.
+double _rangeOffset(double metres) =>
+    240 * math.log(1 + metres) / math.ln10;
+
 /// The scene and everything the user does to it: view mode, the one expanded
 /// cluster, the selected entity, and the walk along a path.
 class MeshViewController extends ChangeNotifier {
@@ -116,9 +122,9 @@ class MeshViewController extends ChangeNotifier {
             all.any((e) => e.nextHop == entity.hash);
         for (var lane = 0; lane < entity.ifaces.length; lane++) {
           final iface = entity.ifaces[lane];
-          // BLE links carry their RSSI-derived distance estimate.
-          final metres = iface == Iface.ble && entity.distanceM != null
-              ? '${entity.distanceM!.round()}m'
+          // Radio links carry their range estimate on the first lane.
+          final metres = lane == 0 && entity.distanceM != null
+              ? formatRange(entity.distanceM!)
               : null;
           edges.add(
             SceneEdge(
@@ -154,9 +160,8 @@ class MeshViewController extends ChangeNotifier {
                       alpha: entity.distanceM != null ? 0.45 : 0.16,
                     ),
                     width: 0.8,
-                    label: entity.iface == Iface.ble &&
-                            entity.distanceM != null
-                        ? '${entity.distanceM!.round()}m'
+                    label: entity.distanceM != null
+                        ? formatRange(entity.distanceM!)
                         : null,
                     crawler: false,
                   )
@@ -165,6 +170,9 @@ class MeshViewController extends ChangeNotifier {
                     width: 1.0,
                     dashed: true,
                     ticks: math.max(0, entity.hops - 2),
+                    label: entity.distanceM != null
+                        ? formatRange(entity.distanceM!)
+                        : null,
                     crawler: false,
                   ),
           ),
@@ -240,12 +248,13 @@ class MeshViewController extends ChangeNotifier {
       );
       for (var j = 0; j < indices.length; j++) {
         var position = poses[j].position;
-        // A BLE link knows how far away it is: radial distance from self
-        // encodes the estimated metres, so nearby devices sit close.
+        // A measured link knows how far away it is: radial distance from
+        // self encodes the estimate (log scale), so nearby devices sit
+        // close.
         final metres = all[indices[j]].distanceM;
         if (metres != null) {
           position = position.normalized() *
-              (330 + metres * 22).clamp(330.0, 1150.0);
+              (330 + _rangeOffset(metres)).clamp(330.0, 1250.0);
         }
         positions[indices[j]] = position;
         azimuthOf[all[indices[j]].hash] =
@@ -292,10 +301,10 @@ class MeshViewController extends ChangeNotifier {
           ((ordinal + 0.5) / siblings - 0.5) * 2 * spreadHalf;
       final phi = math.pi / 2 +
           (((ordinal * golden) % 1.0) - 0.5) * (siblings > 40 ? 0.9 : 0.45);
-      // BLE mesh members carry a per-hop distance report from their relay;
+      // Measured members carry a per-hop range report from their relay;
       // everyone else falls back to hop shells.
       final radius = entity.distanceM != null
-          ? _kRelayShell + 200 + entity.distanceM! * 18
+          ? _kRelayShell + 150 + _rangeOffset(entity.distanceM!)
           : _kRelayShell + _kHopSpacing * (entity.hops - 1);
       positions[i] = Vector3(
         radius * math.sin(phi) * math.sin(theta),

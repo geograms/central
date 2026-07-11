@@ -77,6 +77,7 @@ class FakeNetwork {
       required int hops,
       MeshRole role = MeshRole.leaf,
       String? name,
+      double? distanceM,
     }) {
       final hash = _hex(random, 16);
       final entity = MeshEntity(
@@ -86,6 +87,7 @@ class FakeNetwork {
         ifaces: <Iface>[iface],
         hops: hops,
         nextHop: via,
+        distanceM: distanceM,
       );
       entities.add(entity);
       return entity;
@@ -194,6 +196,8 @@ class FakeNetwork {
       ifaces: const <Iface>[Iface.lora, Iface.lanWifi],
       deviceCount: 24,
     );
+    // LoRa ranges come from RSSI+SNR: coarse, hundreds of metres to
+    // kilometres.
     clusterLeaves[lora.hash] = <MeshEntity>[
       for (var d = 0; d < 24; d++)
         () {
@@ -205,16 +209,19 @@ class FakeNetwork {
             ifaces: const <Iface>[Iface.lora],
             hops: 2 + random.nextInt(5),
             nextHop: lora.hash,
+            distanceM: (150 + random.nextDouble() * 5800).roundToDouble(),
           );
         }(),
     ];
-    // Two packet-radio nodes, deep in the mesh, always visible.
+    // Two packet-radio nodes, deep in the mesh, always visible. APRS packets
+    // carry GPS positions, so their distance is actually known.
     for (var i = 0; i < 2; i++) {
       dest(
         via: lora.hash,
         iface: Iface.radio,
         hops: 4 + i * 2,
         name: 'aprs-${_hex(random, 2)}',
+        distanceM: (3000 + random.nextDouble() * 38000).roundToDouble(),
       );
     }
 
