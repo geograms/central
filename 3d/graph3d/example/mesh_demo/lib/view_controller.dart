@@ -312,53 +312,102 @@ class MeshViewController extends ChangeNotifier {
 
   ({GraphScene<MeshEntity> scene, LayoutStrategy<MeshEntity> layout})
   _buildGod() {
-    final hubs = <MeshEntity>[
-      ...network.hubs,
-      network.entities.firstWhere((e) => e.role == MeshRole.gateway),
-    ];
-    final all = <MeshEntity>[...hubs, ..._expandedLeaves];
+    // Self sits at the centre of the backbone: this device really is wired
+    // into all of it, one adapter per network — internet up to the hubs,
+    // LoRa out through the gateway, BLE across to the bridge.
+    final self = network.entities.firstWhere((e) => e.role == MeshRole.self);
+    final gateway =
+        network.entities.firstWhere((e) => e.role == MeshRole.gateway);
+    final bridge =
+        network.entities.firstWhere((e) => e.role == MeshRole.bridge);
+    final ring = <MeshEntity>[...network.hubs, gateway, bridge];
+    final all = <MeshEntity>[self, ...ring, ..._expandedLeaves];
     final nodes = <SceneNode<MeshEntity>>[
       for (final entity in all)
         SceneNode<MeshEntity>(key: keyOf(entity), data: entity),
     ];
+    const selfId = 1;
+    int idOnRing(int ringIndex) => 2 + ringIndex;
+    final gatewayId = idOnRing(ring.indexOf(gateway));
+    final bridgeId = idOnRing(ring.indexOf(bridge));
 
     final edges = <SceneEdge>[
+      // Hub-to-hub backbone. No per-line labels — the colour code and the
+      // legend carry the network type; text on every line just clutters.
       for (final link in network.hubLinks)
         SceneEdge(
-          link.a + 1,
-          link.b + 1,
+          idOnRing(link.a),
+          idOnRing(link.b),
           style: EdgeStyle(
             color: link.iface.color.withValues(alpha: 0.6),
             width: 1.3,
             glow: true,
-            label: link.iface.label,
             pulseCount: 2,
           ),
         ),
-      // The LoRa gateway hangs off the first hub's local network in this
-      // aggregate.
+      // My node's own adapters, one spoke per network. The internet spokes
+      // stay unlabelled — four "Internet" tags would pile up at the centre,
+      // and the yellow already says it.
+      for (final hub in network.hubs)
+        SceneEdge(
+          selfId,
+          idOnRing(ring.indexOf(hub)),
+          style: EdgeStyle(
+            color: Iface.internet.color.withValues(alpha: 0.5),
+            width: 1.1,
+            glow: true,
+          ),
+        ),
       SceneEdge(
-        1,
-        hubs.length,
+        selfId,
+        gatewayId,
         style: EdgeStyle(
-          color: Iface.lanWifi.color.withValues(alpha: 0.55),
-          width: 1.2,
+          color: Iface.lora.color.withValues(alpha: 0.7),
+          width: 1.4,
           glow: true,
-          label: Iface.lanWifi.label,
+          label: Iface.lora.label,
+          pulseCount: 2,
+        ),
+      ),
+      SceneEdge(
+        selfId,
+        bridgeId,
+        style: EdgeStyle(
+          color: Iface.ble.color.withValues(alpha: 0.7),
+          width: 1.4,
+          glow: true,
+          label: Iface.ble.label,
+          pulseCount: 2,
+        ),
+      ),
+      // The bridge's other leg: its own internet uplink.
+      SceneEdge(
+        bridgeId,
+        idOnRing(0),
+        style: EdgeStyle(
+          color: Iface.internet.color.withValues(alpha: 0.35),
+          width: 1.0,
+          glow: true,
         ),
       ),
     ];
     if (_expandedHash != null) {
       final hubId = 1 + all.indexWhere((e) => e.hash == _expandedHash);
       if (hubId > 0) {
-        for (var i = hubs.length; i < all.length; i++) {
+        final firstLeaf = 1 + ring.length;
+        for (var i = firstLeaf; i < all.length; i++) {
           edges.add(
             SceneEdge(
               hubId,
               i + 1,
               style: EdgeStyle(
-                color: all[i].iface.color.withValues(alpha: 0.16),
+                color: all[i].iface.color.withValues(
+                  alpha: all[i].distanceM != null ? 0.45 : 0.16,
+                ),
                 width: 0.8,
+                label: all[i].iface == Iface.ble && all[i].distanceM != null
+                    ? '${all[i].distanceM!.round()}m'
+                    : null,
                 crawler: false,
               ),
             ),
@@ -369,19 +418,22 @@ class MeshViewController extends ChangeNotifier {
 
     return (
       scene: GraphScene<MeshEntity>(nodes: nodes, edges: edges),
-      layout: (nodes) => _godLayout(nodes, hubs.length),
+      layout: (nodes) => _godLayout(nodes, ring.length),
     );
   }
 
-  LayoutGeometry _godLayout(List<SceneNode<MeshEntity>> nodes, int hubCount) {
-    final ring = ringPoses(hubCount, radius: 1050);
-    final poses = <Pose>[...ring.take(nodes.length)];
-    if (nodes.length > hubCount) {
-      final hubIndex =
-          nodes.indexWhere((n) => n.data.hash == _expandedHash);
-      final hubPose = ring[hubIndex.clamp(0, hubCount - 1)];
+  LayoutGeometry _godLayout(List<SceneNode<MeshEntity>> nodes, int ringCount) {
+    final ring = ringPoses(ringCount, radius: 1050);
+    final poses = <Pose>[
+      Pose(Vector3.zero(), Quaternion.identity()), // self, centre stage
+      ...ring.take(math.max(0, nodes.length - 1)),
+    ];
+    final occupied = 1 + ringCount;
+    if (nodes.length > occupied) {
+      final hubIndex = nodes.indexWhere((n) => n.data.hash == _expandedHash);
+      final hubPose = ring[(hubIndex - 1).clamp(0, ringCount - 1)];
       final disc = sunflowerDiscPoses(
-        nodes.length - hubCount,
+        nodes.length - occupied,
         plane: Pose(
           hubPose.position + hubPose.facing * 420,
           hubPose.rotation,

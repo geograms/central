@@ -275,10 +275,23 @@ void main() {
       controller.setView(MeshView.god);
       await settle(tester);
       expect(controller.expandedHash, isNull, reason: 'toggle collapses');
-      // God view: transports + gateway only.
+      // God view: self at the centre, plus transports, gateway and bridge.
       expect(
         controller.scene.liveCount,
-        controller.network.hubs.length + 1,
+        controller.network.hubs.length + 3,
+      );
+      // Self is present, wired to every hub plus the gateway and bridge.
+      final scene = controller.scene;
+      final selfId = 1 +
+          scene.renderNodes.indexWhere((n) => n.data.role == MeshRole.self);
+      expect(selfId, greaterThan(0));
+      expect(scene.poses[selfId - 1].position.length, 0,
+          reason: 'self sits at the centre of the backbone');
+      final spokes = scene.edges.where((e) => e.touches(selfId)).length;
+      expect(
+        spokes,
+        controller.network.hubs.length + 2,
+        reason: 'one adapter spoke per hub, plus LoRa gateway and BLE bridge',
       );
 
       controller.setView(MeshView.ego);
